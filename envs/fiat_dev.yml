@@ -1,0 +1,21 @@
+name: fiat_dev
+
+channels:
+  - conda-forge
+
+dependencies:
+  - black
+  - build
+  - gdal>=3.1
+  - netcdf4
+  - numpy
+  - pip
+  - pyside2
+  - pytest>=2.7.3
+  - pytest-cov 
+  - pytest-mock 
+  - python>=3.7
+  - setuptools>=51.0.0
+  - xarray
+  pip:
+    - pyinstaller

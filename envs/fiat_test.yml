@@ -1,0 +1,17 @@
+name: fiat_test
+
+channels:
+  - conda-forge
+
+dependencies:
+  - black
+  - gdal>=3.1
+  - netcdf4
+  - numpy
+  - pip
+  - pytest>=2.7.3
+  - pytest-cov 
+  - pytest-mock
+  - python>=3.7
+  - responses
+  - xarray 
