@@ -6,6 +6,9 @@ build-backend = "setuptools.build_meta"
 where = ["src"]
 include = ["delft_fiat"]
 
+[tool.setuptools.dynamic]
+version = {attr = "delft_fiat.__version__"}
+
 [project]
 name = "delft_fiat"
 dynamic = ['version']
@@ -19,7 +22,7 @@ maintainers = [
 
 description = "Delft Fast Impact Assessment Tool"
 readme = "README.md"
-license = {file = "LICENSE.txt"}
+license = {text = "MIT"}
 
 requires-python = ">=3.7" 
 dependencies = [
@@ -78,7 +81,6 @@ test = [
 ]
 
 [project.urls]
-Source = "https://github.com/Deltares/Delft-FIAT"
-Tracker = "https://github.com/Deltares/Delft-FIAT/issues"
-
-[project.scripts]
+"Homepage" = "https://github.com/Deltares/Delft-FIAT"
+"Bug Reports" = "https://github.com/Deltares/Delft-FIAT/issues"
+"Source" =  "https://github.com/Deltares/Delft-FIAT"
