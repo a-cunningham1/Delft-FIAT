@@ -1,0 +1,44 @@
+name: Test
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:  
+  Test-matrix:
+    name: ${{ matrix.os }} - py${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        shell: bash -l {0}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest" ] #, "macos-latest", "windows-latest"]
+        python-version: ["3.9", "3.10"] # fix tests to support older versions
+    
+    steps:
+      - uses: actions/checkout@v2
+      - uses: conda-incubator/setup-miniconda@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+          miniforge-variant: Mambaforge
+          channels: conda-forge, defaults
+          channel-priority: strict
+          environment-file: envs/fiat_test.yml
+          activate-environment: fiat_test
+
+      - name: Conda info
+        run: |
+         conda info
+         conda list
+
+      - name: Test
+        run: python -m pytest --verbose --cov=delft_fiat --cov-report xml
+
+      - uses: codecov/codecov-action@v1
+
+      - name: Check style
+        run: black --check .
