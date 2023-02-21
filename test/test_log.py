@@ -1,5 +1,5 @@
 import pytest
-from delft_fiat.log import StreamLogger
+from src.delft_fiat.log import StreamLogger
 
 
 def test_stream():
