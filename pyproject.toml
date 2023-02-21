@@ -14,10 +14,11 @@ name = "delft_fiat"
 dynamic = ['version']
 
 authors = [
-    {name = "Brendan Wybo Dalmijn", email = "brencodeert@outlook.com"},
+    {name = "B.W. Dalmijn", email = "brencodeert@outlook.com"},
+    {name = "F.C. de Groen", email = "frederique.degroen@deltares.nl"}
 ]
 maintainers = [
-    {name = "Brendan Wybo Dalmijn", email = "brencodeert@outlook.com"},
+    {name = "B.W. Dalmijn", email = "brencodeert@outlook.com"},
 ]
 
 description = "Delft Fast Impact Assessment Tool"

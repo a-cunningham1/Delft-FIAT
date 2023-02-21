@@ -18,5 +18,5 @@ dependencies:
   - responses
   - setuptools>=51.0.0
   - xarray
-  pip:
+  - pip:
     - pyinstaller

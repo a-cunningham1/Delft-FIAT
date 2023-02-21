@@ -1,0 +1,2 @@
+class FIATError(Exception):
+    pass
