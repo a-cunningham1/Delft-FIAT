@@ -1,4 +1,4 @@
-name: Test
+name: Tests
 
 on:
   push:
@@ -36,7 +36,7 @@ jobs:
          conda list
 
       - name: Test
-        run: python -m pytest --verbose --cov=src/delft_fiat --cov-report xml
+        run: python -m pytest --verbose --cov=./src/delft_fiat --cov-report xml
 
       - uses: codecov/codecov-action@v1
 
