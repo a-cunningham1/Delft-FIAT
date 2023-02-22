@@ -72,8 +72,6 @@ class StreamLogger:
         else:
             self._Name = name
 
-        print(self.stream)
-
         _Loggers[self._Name] = self
 
         self._Lock = threading.RLock()
