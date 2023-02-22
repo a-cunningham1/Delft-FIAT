@@ -1,3 +1,6 @@
+import tomli
+
+
 class ConfigReader:
     def __init__(
         file: str,
