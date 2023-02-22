@@ -1,1 +1,1 @@
-import src.delft_fiat
+import delft_fiat

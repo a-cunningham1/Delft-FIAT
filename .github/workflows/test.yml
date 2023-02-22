@@ -1,4 +1,4 @@
-name: Tests
+name: Test
 
 on:
   push:
@@ -29,6 +29,9 @@ jobs:
           channel-priority: strict
           environment-file: envs/fiat_test.yml
           activate-environment: fiat_test
+      - name: Install dependencies
+        run:
+          pip install -e .
 
       - name: Conda info
         run: |
