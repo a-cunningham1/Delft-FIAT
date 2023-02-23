@@ -7,3 +7,7 @@ class FIAT:
 
     def Run():
         pass
+
+
+if __name__ == "__main__":
+    pass
