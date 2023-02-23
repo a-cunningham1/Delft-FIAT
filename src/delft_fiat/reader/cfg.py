@@ -1,5 +1,6 @@
-from delft_fiat.io import *
+from delft_fiat.reader.util import DamageLookup, GenericFileCheck, Path
 
+import os
 import tomli
 
 
@@ -8,12 +9,22 @@ class ConfigReader:
         self,
         file: str,
     ):
-        self._f = open(file, "r")
+        self._Path = Path(file).parent
+        f = open(file, "rb")
+        self._config = tomli.load(f)
+        f.close()
 
-    def Read():
+    def GetDamage(
+        self,
+        code: str,
+    ):
+        GenericFileCheck(self._config["damage"]["file"])
+        pass
+
+    def GetExposure():
         pass
 
 
 if __name__ == "__main__":
-    c = ConfigReader("")
+    c = ConfigReader(r"C:\CODING\PYTHON_DEV\Delft_FIAT\tmp\settings.toml")
     pass
