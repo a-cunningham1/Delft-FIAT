@@ -10,27 +10,30 @@ def GenericFileCheck(
     if not path.is_absolute():
         path = Path(root, path)
     if not path.is_file():
-        raise FileNotFoundError(f"File: {str(path)} is not a valid path to a file")
+        raise FileNotFoundError(f"{str(path)} is not a valid path")
+    return path
 
 
 def DamageLookup(
-    f: str,
+    csv: str,
     oid: str,
+    root: str,
 ):
-    f = open(f, "r")
+    f = open(csv, "r")
     ncol = len(f.readline().split(","))
     r = re.compile(f"{oid}" + ".+" * (ncol - 1))
     m = r.findall(f.read())
     if not m:
-        print("Blyat")
-        return
+        return None
     else:
-        return m[0]
+        oid, path, method = m[0].split(",")
+        path = GenericFileCheck(path, root)
+        return path, method
 
 
 if __name__ == "__main__":
     DamageLookup(
-        r"C:\CODING\PYTHON_DEV\Delft_FIAT\tmp\damage.csv",
+        r"C:\CODING\PYTHON_DEV\Delft_FIAT\tmp\damage_curves.csv",
         "h_struct_501",
     )
     pass
