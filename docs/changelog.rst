@@ -3,7 +3,7 @@ Unreleased
 
 - Everything!
 
-v0.1.0 (Date)
+v0.1.0 (21-06-2023)
 ========================
 
 NEW!
