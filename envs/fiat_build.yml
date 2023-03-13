@@ -1,0 +1,15 @@
+name: fiat_build
+
+channels:
+  - conda-forge
+
+dependencies:
+  - pip
+  - python==3.10.*
+  - pip:
+    - click
+    - GDAL-3.6.2-cp310-cp310-win_amd64.whl
+    - netcdf4
+    - pyinstaller
+    - regex
+    - xarray
