@@ -1,2 +1,6 @@
+from osgeo import osr
+
+
 class CRS:
-    pass
+    def __init__(self):
+        pass

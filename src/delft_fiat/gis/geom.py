@@ -1,9 +1,19 @@
-from osgeo import ogr, osr
+from osgeo import ogr
 
 
-def ReadGeomFile():
-    return
+def GeomCentroid(ft: ogr.Feature):
+    pass
 
 
-def GeomCentroid():
+def Reproject(ft: ogr.Feature):
+    pass
+
+
+if __name__ == "__main__":
+    d = ogr.GetDriverByName("ESRI Shapefile")
+    e = d.Open(
+        r"c:\CODING\PYTHON_DEV\Delft_FIAT\tmp\Database\Exposure\C8\C8_Spatial.shp"
+    )
+    l = e.GetLayer()
+    ld = l.GetLayerDefn()
     pass
