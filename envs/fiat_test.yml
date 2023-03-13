@@ -5,6 +5,7 @@ channels:
 
 dependencies:
   - black
+  - click
   - gdal>=3.1
   - netcdf4
   - numpy
@@ -12,8 +13,9 @@ dependencies:
   - pytest>=2.7.3
   - pytest-cov 
   - pytest-mock
-  - python>=3.7
+  - python>=3.7<3.11
   - responses
   - xarray 
   - pip:
     - cython
+    - regex
