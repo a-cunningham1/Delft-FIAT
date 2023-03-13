@@ -14,7 +14,13 @@ _Loggers = weakref.WeakValueDictionary()
 
 
 class LogItem:
-    def __init__(self, level, msg):
+    def __init__(
+        self,
+        level: str,
+        msg: str,
+    ):
+        """_summary_"""
+
         self.timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
         self.level = level
         self.msg = msg
@@ -24,8 +30,10 @@ class LogItem:
 
 
 def _Destruction():
+    """_summary_"""
+
     items = list(_Loggers.items())
-    for key, logger in items:
+    for _, logger in items:
         logger.Acquire()
         logger.Flush()
         logger.Close()
@@ -36,12 +44,16 @@ atexit.register(_Destruction)
 
 
 def _Level(level):
+    """_summary_"""
+
     if level not in LogLevels._value2member_map_:
         raise ValueError("")
     return level
 
 
 class LogLevels(Enum):
+    """_summary_"""
+
     DEBUG = 1
     INFO = 2
     WARNING = 3
@@ -56,6 +68,18 @@ class StreamLogger:
         name: str = None,
         stream: type = None,
     ):
+        """_summary_
+
+        Parameters
+        ----------
+        level : int, optional
+            _description_, by default 2
+        name : str, optional
+            _description_, by default None
+        stream : type, optional
+            _description_, by default None
+        """
+
         self.Level = _Level(level)
 
         if stream is None:
@@ -100,6 +124,18 @@ class StreamLogger:
 
 class FileLogger(StreamLogger):
     def __init__(self, level: int, dst: str, name: str = None):
+        """_summary_
+
+        Parameters
+        ----------
+        level : int
+            _description_
+        dst : str
+            _description_
+        name : str, optional
+            _description_, by default None
+        """
+
         if name is None:
             name = "fiat_logging"
         self._filename = os.path.join(dst, f"{name}.log")
