@@ -1,5 +1,6 @@
-from delft_fiat.io import ReadCSV
-from delft_fiat.reader.util import DamageLookup, GenericFileCheck, Path
+from delft_fiat.io import FileHandler, ReadCSV
+from delft_fiat.util import GenericPathCheck, Path
+from delft_fiat.reader.util import DamageLookup
 
 import os
 import tomli
@@ -19,30 +20,37 @@ class ConfigReader:
         f.close()
 
         # Do some checking concerning the file paths in the settings file
-        for item in self._config.values():
-            if not isinstance(item, dict):
+        for group in self._config.values():
+            if not isinstance(group, dict):
                 continue
-            if "file" in item:
-                path = GenericFileCheck(
-                    item["file"],
-                    self._Path,
-                )
-                item["file"] = path
+            else:
+                for key, item in group.items():
+                    if key.endswith("file"):
+                        path = GenericPathCheck(
+                            item,
+                            self._Path,
+                        )
+                        group[key] = path
 
     def GetDamageCurve(
         self,
         code: str,
     ) -> dict:
         path, method = DamageLookup(
-            self._config["damage"]["file"],
+            self._config["damage"]["dbase_file"],
             code,
             self._Path,
         )
-        print(path)
         c = ReadCSV(path)
         return c
 
-    def GetExposure():
+    def GetExposure(
+        self,
+        bla,
+    ):
+        pass
+
+    def GetObjects():
         pass
 
 

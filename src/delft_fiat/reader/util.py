@@ -1,17 +1,7 @@
+from delft_fiat.util import GenericPathCheck
+
 import re
 from pathlib import Path
-
-
-def GenericFileCheck(
-    path: str,
-    root: str,
-):
-    path = Path(path)
-    if not path.is_absolute():
-        path = Path(root, path)
-    if not path.is_file():
-        raise FileNotFoundError(f"{str(path)} is not a valid path")
-    return path
 
 
 def DamageLookup(
@@ -24,10 +14,10 @@ def DamageLookup(
     r = re.compile(f"{oid}" + ".+" * (ncol - 1))
     m = r.findall(f.read())
     if not m:
-        return None
+        raise FileNotFoundError(f"{oid}")
     else:
         oid, path, method = m[0].split(",")
-        path = GenericFileCheck(path, root)
+        path = GenericPathCheck(path, root)
         return path, method
 
 
