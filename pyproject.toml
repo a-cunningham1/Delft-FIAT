@@ -7,7 +7,7 @@ where = ["src"]
 include = ["delft_fiat"]
 
 [tool.setuptools.dynamic]
-version = {attr = "delft_fiat.__version__"}
+version = {attr = "delft_fiat.version.__version__"}
 
 [project]
 name = "delft_fiat"
@@ -66,7 +66,6 @@ classifiers = [
 'Programming Language :: Python :: 3.8',
 'Programming Language :: Python :: 3.9',
 'Programming Language :: Python :: 3.10',
-'Programming Language :: Python :: 3.11',
 ]
 
 [project.optional-dependencies] # Optional
