@@ -1,3 +1,9 @@
+# Visual Studio
+.vs/
+
+# C++ compilation
+src/bin/
+
 # Visual Studio Code
 .vscode/
 
