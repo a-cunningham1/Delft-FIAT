@@ -1,0 +1,23 @@
+[global]
+output_dir = 'run_default'
+epsg = 4326
+
+[hazard]
+grid_file = '.\Database\Hazard\Current no mitigation\current_no_mitigation_5yr_reprojected.tif'
+epsg = 4326
+return_period = 'Event'
+spatial_reference = 'DEM'
+
+[exposure]
+geom_file = 'blabla'
+dbase_file = '.\Database\Exposure\C8C9_centroid\exposure.csv'
+epsg = 4326
+
+[damage]
+dbase_file = 'damage_curves.csv'
+
+[categorical_bins]
+low = 0.25
+medium-low = 0.5
+medium-high = 0.75
+high = 1
