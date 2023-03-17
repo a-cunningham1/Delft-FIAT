@@ -7,7 +7,6 @@ dependencies:
   - black
   - click
   - gdal>=3.1
-  - netcdf4
   - numpy
   - pip
   - pytest>=2.7.3
@@ -15,7 +14,9 @@ dependencies:
   - pytest-mock
   - python>=3.7,<3.11
   - responses
-  - xarray 
+  - xlsxwriter
   - pip:
     - cython
     - regex
+    - tomli
+    - xlsxwriter
