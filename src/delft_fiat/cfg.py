@@ -12,10 +12,10 @@ class ConfigReader(dict):
         # Set the root directory
         self._filepath = Path(file)
         self._path = self._filepath.parent
-        
+
         # Load the config as a simple dictionary
         f = open(file, "rb")
-        dict.__init__(self,tomli.load(f))
+        dict.__init__(self, tomli.load(f))
         f.close()
 
         # Do some checking concerning the file paths in the settings file
@@ -32,11 +32,21 @@ class ConfigReader(dict):
                         group[key] = path
 
     def __repr__(self):
-        return f"<ConfigReader object file={self._filepath}>"
-    
+        return f"<ConfigReader object file='{self._filepath}'>"
+
     def get_model_type():
-        pass 
+        pass
+
+    def get_path(
+        self,
+        gr: str,
+        item: str,
+    ):
+        """_Summary_"""
+
+        return str(self[gr][item])
+
 
 if __name__ == "__main__":
-    c = ConfigReader(r"C:\CODING\PYTHON_DEV\Delft_FIAT\tmp\settings.toml")
+    c = ConfigReader(r"C:\CODING\PYTHON_DEV\Delft_FIAT\tmp\Casus\settings.toml")
     pass
