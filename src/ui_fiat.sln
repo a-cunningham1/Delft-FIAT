@@ -3,7 +3,7 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.4.33213.308
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ui_fiat", "ui_fiat\ui_fiat.vcxproj", "{E8894DB1-D2C8-411A-A423-19EED2258675}"
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "ui_fiat", "ui_fiat\ui_fiat.vcxproj", "{14B9FD82-FD06-4344-A34F-FF90D3557B27}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,15 +11,15 @@ Global
 		Release|x64 = Release|x64
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{E8894DB1-D2C8-411A-A423-19EED2258675}.Debug|x64.ActiveCfg = Debug|x64
-		{E8894DB1-D2C8-411A-A423-19EED2258675}.Debug|x64.Build.0 = Debug|x64
-		{E8894DB1-D2C8-411A-A423-19EED2258675}.Release|x64.ActiveCfg = Release|x64
-		{E8894DB1-D2C8-411A-A423-19EED2258675}.Release|x64.Build.0 = Release|x64
+		{14B9FD82-FD06-4344-A34F-FF90D3557B27}.Debug|x64.ActiveCfg = Debug|x64
+		{14B9FD82-FD06-4344-A34F-FF90D3557B27}.Debug|x64.Build.0 = Debug|x64
+		{14B9FD82-FD06-4344-A34F-FF90D3557B27}.Release|x64.ActiveCfg = Release|x64
+		{14B9FD82-FD06-4344-A34F-FF90D3557B27}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {BEBA6CD8-4B88-4D01-9EE2-B79C4AEF8B30}
+		SolutionGuid = {D4A36270-3FD5-4077-B3BB-668C9BCC89E7}
 	EndGlobalSection
 EndGlobal
