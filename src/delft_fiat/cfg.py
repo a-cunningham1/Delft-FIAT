@@ -34,8 +34,15 @@ class ConfigReader(dict):
     def __repr__(self):
         return f"<ConfigReader object file='{self._filepath}'>"
 
-    def get_model_type():
-        pass
+    def get_model_type(
+        self,
+    ):
+        """_Summary_"""
+
+        if ["geom_file"] in self["exposure"]:
+            return 0
+        else:
+            return 1
 
     def get_path(
         self,
