@@ -5,7 +5,7 @@ class FIAT:
     def __init__(self, file: str):
         pass
 
-    def Run():
+    def run():
         pass
 
 

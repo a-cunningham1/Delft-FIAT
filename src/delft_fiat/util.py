@@ -8,19 +8,30 @@ from types import ModuleType, FunctionType
 BLACKLIST = type, ModuleType, FunctionType
 
 _GeomDriverTable = {
+    "": "Memory",
+    ".csv": "CSV",
+    ".gdb": "FileGDB",
     ".geojson": "GeoJSON",
+    ".gpkg": "GPKG",
     ".nc": "netCDF",
-    ".shp": "ESRI Shapfile",
+    ".shp": "ESRI Shapefile",
 }
 
 _GridDriverTable = {
+    "": "MEM",
     ".nc": "netCDF",
     ".tif": "GTiff",
     ".vrt": "VRT",
 }
 
 
-def _detertype(elem):
+def replace_empty(l):
+    """_summary_"""
+
+    return ["nan" if not e else e.decode() for e in l]
+
+
+def deter_type(elem):
     """_summary_"""
 
     try:
@@ -37,11 +48,14 @@ def ObjectSize(obj):
 
     Just for internal and debugging uses
     """
+
     if isinstance(obj, BLACKLIST):
         raise TypeError("getsize() does not take argument of type: " + str(type(obj)))
+
     seen_ids = set()
     size = 0
     objects = [obj]
+
     while objects:
         need_referents = []
         for obj in objects:
@@ -50,6 +64,7 @@ def ObjectSize(obj):
                 size += sys.getsizeof(obj)
                 need_referents.append(obj)
         objects = get_referents(*need_referents)
+
     return size
 
 

@@ -142,13 +142,19 @@ class FileLogger(StreamLogger):
         StreamLogger.__init__(self, level, name, self._Open())
 
     def _Open(self):
+        """_summary_"""
+
         return open(self._filename, "w")
 
     def Close(self):
+        """_summary_"""
+
         self.Acquire()
         self.Flush()
+
         stream = self.stream
         self.stream = None
+
         stream.close()
         StreamLogger.Close()
         self.Release()
