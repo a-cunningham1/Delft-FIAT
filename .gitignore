@@ -2,6 +2,8 @@
 .vs/
 
 # C++ compilation
+*.manifest
+!.build/gui/*.manifest
 src/bin/
 
 # Visual Studio Code
@@ -39,11 +41,6 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
-
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
-*.manifest
 
 # Installer logs
 pip-log.txt
