@@ -7,8 +7,9 @@ def test_stream():
 
 
 def test_log(tmpdir):
-    log = Log(str(tmpdir), "Delft_fiat")
-    log.Info("Start of test logging")
-    log.Warning("Warning about stuff")
-    log.Error("Something has really gone wrong...")
-    log.Dead("Bye")
+    log = Log("fiat")
+    log.add_loggers(str(tmpdir))
+    log.info("Start of test logging")
+    log.warning("Warning about stuff")
+    log.error("Something has really gone wrong...")
+    log.dead("Bye")
