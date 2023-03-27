@@ -588,6 +588,11 @@ class GeomSource(_BaseIO):
 
         self.layer = self.src.CopyLayer(layer, self.path.stem, ["OVERWRITE=YES"])
 
+    def get_bbox(self):
+        """_summary_"""
+
+        return self.layer.GetExtent()
+
     def get_layer(self, l_id):
         pass
 
@@ -680,11 +685,11 @@ class GridSource(_BaseIO):
     def __next__(self):
         pass
 
-    def __getitem__(self):
-        pass
+    def __getitem__(self, oid):
+        return self.src.GetRasterBand(oid)
 
     def close(self):
-        _BaseIO.close()
+        _BaseIO.close(self)
 
         self.src = None
         self._driver = None
@@ -693,6 +698,21 @@ class GridSource(_BaseIO):
 
     def flush(self):
         self.src.FlushCache()
+
+    def reopen(self):
+        """_summary_"""
+
+        if not self._closed:
+            return self
+        return GridSource.__new__(GridSource, self.path)
+
+    @_BaseIO._check_state
+    def create_band(
+        self,
+        band: "array",
+    ):
+        self.count += 1
+        pass
 
     @_BaseIO._check_state
     def create_source(
@@ -708,6 +728,21 @@ class GridSource(_BaseIO):
         )
 
         self.src.SetSpatialRef(srs)
+
+    @_BaseIO._check_state
+    def get_bbox(self):
+        """_summary_"""
+
+        gtf = self.src.GetGeoTransform()
+        bbox = (
+            gtf[0],
+            gtf[0] + gtf[1] * self.src.RasterXSize,
+            gtf[3] + gtf[5] * self.src.RasterYSize,
+            gtf[3],
+        )
+        gtf = None
+
+        return bbox
 
     @_BaseIO._check_state
     def get_geotransform(self):
