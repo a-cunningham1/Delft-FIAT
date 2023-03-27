@@ -38,6 +38,21 @@ def reproject(
     gs: "GeomSource",
     crs: str,
 ) -> object:
+    """_summary_
+
+    Parameters
+    ----------
+    gs : GeomSource
+        _description_
+    crs : str
+        _description_
+
+    Returns
+    -------
+    object
+        _description_
+    """
+
     out_srs = osr.SpatialReference()
     out_srs.SetFromUserInput(crs)
     out_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
