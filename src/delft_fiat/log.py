@@ -10,7 +10,8 @@ from enum import Enum
 STREAM_COUNT = 1
 
 _Global_and_Destruct_Lock = threading.RLock()
-_Loggers = weakref.WeakValueDictionary()
+_streams = weakref.WeakValueDictionary()
+_loggers = weakref.WeakValueDictionary()
 
 
 class LogItem:
@@ -32,7 +33,7 @@ class LogItem:
 def _Destruction():
     """_summary_"""
 
-    items = list(_Loggers.items())
+    items = list(_streams.items())
     for _, logger in items:
         logger.Acquire()
         logger.Flush()
@@ -96,7 +97,7 @@ class StreamLogger:
         else:
             self._Name = name
 
-        _Loggers[self._Name] = self
+        _streams[self._Name] = self
 
         self._Lock = threading.RLock()
 
@@ -118,7 +119,7 @@ class StreamLogger:
     def Close(self):
         _Global_and_Destruct_Lock.acquire()
         self._Closed = True
-        del _Loggers[self._Name]
+        del _streams[self._Name]
         _Global_and_Destruct_Lock.release()
 
 
@@ -156,75 +157,151 @@ class FileLogger(StreamLogger):
         self.stream = None
 
         stream.close()
-        StreamLogger.Close()
+        StreamLogger.Close(self)
         self.Release()
+
+
+def spawn_child_logger(
+    name: str,
+) -> "Log":
+    """_summary_
+
+    Parameters
+    ----------
+    name : str
+        _description_
+
+    Returns
+    -------
+    Log
+        _description_
+    """
+
+    idx = name.rfind(".")
+    if not name[:idx] in _loggers:
+        raise ValueError(f"Unknown parent logger: {name[:idx]}")
+
+    parent = _loggers[name[:idx]]
+
+    log = Log(name, parent.log_level)
+    log.parent = parent
+    log.main = False
+
+    return log
 
 
 class Log:
     def __init__(
         self,
-        dst: str,
-        name: str = None,
+        name: str,
         log_level: int = 2,
-        cmd_stream=True,
-        cmd_level: int = 2,
     ):
         """_summary_
 
         Parameters
         ----------
-        name : _type_
+        name : str
             _description_
         log_level : int, optional
             _description_, by default 2
-        cmd_stream : bool, optional
-            _description_, by default True
-        cmd_level : int, optional
-            _description_, by default 3
         """
-        self._loggers = []
-        self._loggers.append(FileLogger(level=log_level, dst=dst, name=name))
-        if cmd_stream:
-            self._loggers.append(StreamLogger(level=cmd_level))
+
+        self.log_level = log_level
+        self.main = True
+        self.name = name
+        self.parent = None
+        self._streams = []
+
+        _loggers[self.name] = self
 
     def __del__(self):
         pass
 
-    def _Log(self, item):
-        for logger in self._loggers:
-            if LogLevels[item.level].value < logger.Level:
-                continue
-            else:
-                logger.Emit(str(item))
+    def _log(self, item):
+        """_summary_"""
 
-    def HandleLog(log_m):
+        obj = self
+        while obj:
+            for logger in obj._streams:
+                if LogLevels[item.level].value < logger.Level:
+                    continue
+                else:
+                    logger.Emit(str(item))
+            if obj.main:
+                obj = None
+            else:
+                obj = obj.parent
+
+    def handleLog(log_m):
         def handle(self, *args, **kwargs):
             lvl, msg = log_m(self, *args, **kwargs)
-            self._Log(LogItem(level=lvl, msg=msg))
+            self._log(LogItem(level=lvl, msg=msg))
 
         return handle
 
-    @HandleLog
-    def Debug(self, msg: str):
+    def add_loggers(
+        self,
+        dst: str,
+        name: str = None,
+        cmd_stream: bool = True,
+        cmd_level_diff: int = 0,
+    ):
+        """_summary_
+
+        Parameters
+        ----------
+        dst : str
+            _description_
+        cmd_stream : bool, optional
+            _description_, by default True
+        cmd_level_diff : int, optional
+            _description_, by default 0
+        """
+
+        self._streams.append(FileLogger(level=self.log_level, dst=dst, name=self.name))
+        if cmd_stream:
+            self._streams.append(StreamLogger(level=(self.log_level - cmd_level_diff)))
+
+    @handleLog
+    def debug(self, msg: str):
+        """_summary_"""
+
         return "DEBUG", msg
 
-    @HandleLog
-    def Info(self, msg: str):
+    @handleLog
+    def info(self, msg: str):
+        """_summary_"""
+
         return "INFO", msg
 
-    @HandleLog
-    def Warning(self, msg: str):
+    @handleLog
+    def warning(self, msg: str):
+        """_summary_"""
+
         return "WARNING", msg
 
-    @HandleLog
-    def Error(self, msg: str):
+    @handleLog
+    def error(self, msg: str):
+        """_summary_"""
+
         return "ERROR", msg
 
-    @HandleLog
-    def Dead(self, msg: str):
+    @handleLog
+    def dead(self, msg: str):
+        """_summary_"""
+
         return "DEAD", msg
+
+    def direct(self, msg):
+        """_summary_"""
+
+        self._log()
 
 
 if __name__ == "__main__":
-    log = Log("C:\\temp")
+    log = Log("fiat")
+    log.add_loggers("C:\\temp")
+    a = spawn_child_logger("fiat.twee")
+    log.info("blabla")
+    a.info("blabla2")
     pass
