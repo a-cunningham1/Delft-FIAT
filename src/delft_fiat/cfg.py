@@ -1,3 +1,4 @@
+from delft_fiat.check import check_config_data
 from delft_fiat.util import GenericPathCheck, Path
 
 import os
@@ -11,7 +12,7 @@ class ConfigReader(dict):
     ):
         # Set the root directory
         self._filepath = Path(file)
-        self._path = self._filepath.parent
+        self.path = self._filepath.parent
 
         # Load the config as a simple dictionary
         f = open(file, "rb")
@@ -27,7 +28,7 @@ class ConfigReader(dict):
                     if key.endswith("file"):
                         path = GenericPathCheck(
                             item,
-                            self._path,
+                            self.path,
                         )
                         group[key] = path
 
