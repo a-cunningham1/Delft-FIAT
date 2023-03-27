@@ -1,49 +1,46 @@
+from delft_fiat.io import open_grid
+
+import gc
+import os
 from osgeo import gdal, osr
+from pathlib import Path
 
 
 def reproject(
     gs: "GridSource",
     crs: str,
 ) -> object:
-    osng = osr.SpatialReference()
-    osng.ImportFromEPSG(epsg_to)
-    wgs84 = osr.SpatialReference()
-    wgs84.ImportFromEPSG(epsg_from)
-    tx = osr.CoordinateTransformation(wgs84, osng)
+    """_summary_
 
-    g = gdal.Open(dataset)
+    Parameters
+    ----------
+    gs : GridSource
+        _description_
+    crs : str
+        _description_
 
-    geo_t = g.GetGeoTransform()
-    x_size = g.RasterXSize
-    y_size = g.RasterYSize
+    Returns
+    -------
+    object
+        _description_
+    """
 
-    (ulx, uly, ulz) = tx.TransformPoint(geo_t[0], geo_t[3])
-    (lrx, lry, lrz) = tx.TransformPoint(
-        geo_t[0] + geo_t[1] * x_size, geo_t[3] + geo_t[5] * y_size
-    )
+    fname_int = Path(gs.path.parent, f"{gs.path.stem}_repr.tif")
+    fname = Path(gs.path.parent, f"{gs.path.stem}_repr{gs.path.suffix}")
 
-    mem_drv = gdal.GetDriverByName("MEM")
+    out_srs = osr.SpatialReference()
+    out_srs.SetFromUserInput(crs)
+    out_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
 
-    dest = mem_drv.Create(
-        "",
-        int((lrx - ulx) / pixel_spacing),
-        int((uly - lry) / pixel_spacing),
-        1,
-        gdal.GDT_Float32,
-    )
+    dst_src = gdal.Warp(str(fname_int), gs.src, dstSRS=out_srs)
+    tr_src = gdal.Translate(str(fname), dst_src)
 
-    new_geo = (ulx, pixel_spacing, geo_t[2], uly, geo_t[4], -pixel_spacing)
+    out_srs = None
+    tr_src = None
+    dst_src = None
+    gs.close()
+    gc.collect()
 
-    dest.SetGeoTransform(new_geo)
-    dest.SetProjection(osng.ExportToWkt())
+    os.remove(fname_int)
 
-    res = gdal.ReprojectImage(
-        g, dest, wgs84.ExportToWkt(), osng.ExportToWkt(), gdal.GRA_Bilinear
-    )
-    return dest
-
-    pass
-
-
-if __name__ == "__main__":
-    pass
+    return open_grid(fname)
