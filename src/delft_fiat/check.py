@@ -1,141 +1,22 @@
+from delft_fiat.log import Log
+from delft_fiat.util import GenericPathCheck
+
 import sys
 from decimal import Decimal
-from pathlib import Path
-
-import pandas as pd
 from osgeo import gdal
 from osgeo import osr
+from pathlib import Path
 
 
-def check_config_data(config_data, config_path):
-    """Check if the configuration is complete"""
-    for key in config_data.keys():
-        if isinstance(config_data[key], pd.DataFrame):
-            continue
-
-        # Check if any of the keys in config_data are NaN.
-        if not config_data[key] == config_data[key]:
+def check_config_data(
+    cfg: "ConfigReader",
+    logger: "Log",
+):
+    """General checking of the configurations file"""
+    for key, item in cfg.values().items():
+        if not cfg[key]:
             logging.warning(
                 f"{key} is a missing value. Check the configuration file '{config_path}'.\n--------------------The simulation has been stopped.--------------------"
-            )
-            sys.exit()
-
-        # Check if any of the values in config_data is empty.
-        if not config_data[key]:
-            logging.warning(
-                f"{key} is empty. Check the configuration file '{config_path}'.\n--------------------The simulation has been stopped.--------------------"
-            )
-            sys.exit()
-
-    """ Check if the Exposure data input is complete and correct """
-    # Check if the Exposure and Exposure Modification Files exist.
-    if not config_data["exposure_file"].is_file():
-        logging.warning(
-            f"The Exposure File does not exist. Check the location and name of the file ({str(config_data['exposure_file'].resolve())}) in the configuration file '{config_path}'.\n--------------------The simulation has been stopped.--------------------"
-        )
-        sys.exit()
-
-    if "exposure_modification_file" in config_data:
-        if not config_data["exposure_modification_file"].is_file():
-            logging.warning(
-                f"The Exposure Modification File does not exist. Check the location and name of the file ({str(config_data['exposure_modification_file'])}) in the configuration file '{config_path}'.\n--------------------The simulation has been stopped.--------------------"
-            )
-            sys.exit()
-
-    """ Check if the Hazard data input is complete and correct """
-    # Check if all the Hazard Files exist.
-    for input_path, tag in zip(["hazard_files"], ["Hazard Files"]):
-        for ip in config_data[input_path]:
-            if not ip.is_file() and not ip.is_dir():
-                logging.warning(
-                    f"One of the {tag} does not exist. Check the location and name of the file/folder ({str(ip)}) in the configuration file '{config_path}'.\n--------------------The simulation has been stopped.--------------------"
-                )
-                sys.exit()
-
-        if not len(config_data[input_path]) == len(
-            set([ip.stem for ip in config_data[input_path]])
-        ):
-            # Check if the names of the input hazard maps are unique.
-            logging.warning(
-                f"The file names of the {tag} are not unique. Rename the files so that they are unique and change this accordingly in the configuration file '{config_path}'.\n--------------------The simulation has been stopped.--------------------"
-            )
-            sys.exit()
-
-    # Check if there are 2 or more return period flood maps if the user entered multiple flood maps.
-    if all(
-        isinstance(rp, (int, float, complex)) and not isinstance(rp, bool)
-        for rp in config_data["return_periods"]
-    ):
-        if len(config_data["return_periods"]) < 2:
-            logging.warning(
-                f"For risk calculation, 2 or more flood maps are required. Please submit 2 or more flood maps in the configuration file '{config_path}'.\n--------------------The simulation has been stopped.--------------------"
-            )
-            sys.exit()
-
-    # Check if the Inundation References are correctly assigned.
-    if not all(
-        (ref == "DEM") or (ref == "DATUM")
-        for ref in config_data["inundation_references"]
-    ):
-        logging.warning(
-            f"Inundation Reference for the hazards in the configuration file '{config_path}' must be either DEM or DATUM.\n--------------------The simulation has been stopped.--------------------"
-        )
-        sys.exit()
-
-    """ Check if the Damage Functions data input is complete and correct """
-    # Check if all Damage Function IDs are assigned.
-    if len(config_data["damage_function_files"]) != len(
-        config_data["damage_function_ids"]
-    ):
-        logging.warning(
-            f"Not all Damage Functions have a corresponding Damage Function ID attribute. Please check the configuration file '{config_path}'.\n--------------------The simulation has been stopped.--------------------"
-        )
-        sys.exit()
-
-    # Check if all the Damage Function Files exist.
-    for input_path, tag in zip(["damage_function_files"], ["Damage Function Files"]):
-        for ip in config_data[input_path]:
-            if not ip.is_file():
-                logging.warning(
-                    f"One of the {tag} does not exist. Check the location and name of the file ({str(ip)}) in the configuration file '{config_path}'.\n--------------------The simulation has been stopped.--------------------"
-                )
-                sys.exit()
-
-    # Check if all Water Depth Over Aerial Objects are correctly assigned.
-    if len(config_data["damage_function_files"]) != len(
-        config_data["water_depth_over_areal_objects"]
-    ):
-        logging.warning(
-            f"Not all Damage Functions have a corresponding 'Average or Max Inundation over Areal Objects' attribute. Please check the configuration file '{config_path}'.\n--------------------The simulation has been stopped.--------------------"
-        )
-        sys.exit()
-
-    if not all(
-        (ref == "AVERAGE") or (ref == "MAX")
-        for ref in config_data["water_depth_over_areal_objects"]
-    ):
-        logging.warning(
-            f"The 'Average or Max Inundation over Areal Objects' field for the damage functions must be either AVERAGE or MAX. Please check the configuration file '{config_path}'.\n--------------------The simulation has been stopped.--------------------"
-        )
-        sys.exit()
-
-    """ Check if the Settings information is complete and correct """
-    # Check if the Site Name and the Vertical Units are strings.
-    for input_string, tag in zip(
-        ["site_name", "scenario_name", "vertical_unit"],
-        ["Site Name", "Scenario Name", "Vertical Unit"],
-    ):
-        if not isinstance(config_data[input_string], str):
-            logging.warning(
-                f"Check the {tag} in the configuration file '{config_path}'. This should be a string, but was entered as a {type(config_data[input_string])}."
-            )
-
-    if all(isinstance(rp, str) for rp in config_data["return_periods"]):
-        if ("event" in set(rp.lower() for rp in config_data["return_periods"])) & (
-            len(config_data["return_periods"]) > 1
-        ):
-            logging.warning(
-                f"Only one event can be used as input. Please configure the configuration file '{config_path}' to only input one event.\n--------------------The simulation has been stopped.--------------------"
             )
             sys.exit()
 
