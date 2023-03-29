@@ -144,7 +144,17 @@ class _BaseHandler(metaclass=ABCMeta):
         self._skip += len(line)
         self.flush()
         return line
+    
+class _BaseStruct(metaclass=ABCMeta):
+    """A struct container
+    """
 
+    @abstractmethod
+    def __del__(self):
+        pass
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} object at {id(self):#018x}>"
 
 ## Handlers
 class BufferHandler(_BaseHandler, BufferedReader):
@@ -225,7 +235,7 @@ def _Parse_CSV(
 
 
 ## Structs
-class _CSV(metaclass=ABCMeta):
+class _CSV(_BaseStruct ,metaclass=ABCMeta):
     def __init__(
         self,
         file: str,
@@ -248,9 +258,6 @@ class _CSV(metaclass=ABCMeta):
 
     def __iter__(self):
         pass
-
-    def __repr__(self) -> str:
-        return super().__repr__()
 
 
 class CSVLarge(_CSV):
@@ -299,21 +306,27 @@ class CSVLarge(_CSV):
     def __next__(self):
         pass
 
-    def __getitem__(self, key):
-        return super().__getitem__()
-
-    def select(
-        self,
-        oid: str,
+    def __getitem__(
+        self, 
+        oid: "ANY",
     ):
+        """_summary_"""
+
         try:
             idx = self.data[oid]
         except Exception:
             return None
         self.Handler.seek(idx)
+
         return replace_empty(self.re.split(self.Handler.readline().strip()))
 
-
+    def select(
+        self,
+        oid: str,
+    ):
+        
+        return self.__getitem__[oid]
+        
 class CSVSmall(_CSV):
     def __init__(
         self,
@@ -361,6 +374,10 @@ class CSVSmall(_CSV):
     def __repr__(self):
         if len(self.hdrs) > 6:
             return self._small_repr()
+        else:   
+            return self._big_repr()
+
+    def _big_repr(self):
         repr = ""
         repr += ", ".join([f"{item:6s}" for item in self.hdrs]) + "\n"
         m = zip(*[row[0:3] for row in [*self.data.values()]])
@@ -368,9 +385,6 @@ class CSVSmall(_CSV):
             repr += ", ".join([f"{str(val):6s}" for val in item]) + "\n"
         repr += f"{'...':6s}, ...\n"
         return repr
-
-    def _big_repr(self):
-        pass
 
     def _small_repr(self):
         repr = ""
@@ -404,7 +418,22 @@ class CSVSmall(_CSV):
     def max():
         pass
 
-    def upscale(self, delta: float, inplace=True):
+    def upscale(
+            self,
+            delta: float, 
+            inplace: bool=True,
+        ):
+        """_summary_
+
+        Parameters
+        ----------
+        delta : float
+            _description_
+        inplace : bool, optional
+            _description_, by default True
+
+        """
+
         _rnd = abs(floor(log10(delta)))
 
         _x = tuple(
@@ -674,18 +703,28 @@ class GridSource(_BaseIO):
 
         self.src = None
         self.count = 0
+        self._cur_index = 1
 
         if not self._mode:
             self.src = gdal.Open(str(self.path))
             self.count = self.src.RasterCount
 
     def __iter__(self):
+        self._cur_index = 1
         return self
 
     def __next__(self):
-        pass
+        if self._cur_index < self.count+1:
+            r = self.src.GetRasterBand(self._cur_index)
+            self._cur_index += 1
+            return r
+        else:
+            raise StopIteration
 
-    def __getitem__(self, oid):
+    def __getitem__(
+            self,
+            oid: int,
+        ):
         return self.src.GetRasterBand(oid)
 
     def close(self):
@@ -705,29 +744,34 @@ class GridSource(_BaseIO):
         if not self._closed:
             return self
         return GridSource.__new__(GridSource, self.path)
-
+    
+    @_BaseIO._check_mode
     @_BaseIO._check_state
     def create_band(
         self,
-        band: "array",
     ):
-        self.count += 1
-        pass
+        """_summary_"""
 
+        self.src.AddBand()
+        self.count += 1
+
+    @_BaseIO._check_mode
     @_BaseIO._check_state
     def create_source(
         self,
         shape: tuple,
+        nb: int,
         type: int,
         srs: osr.SpatialReference,
     ):
         """_summary_"""
 
         self.src = self._driver.Create(
-            str(self.path), shape[0], shape[1], 1, GridSource._type_map[type]
+            str(self.path), shape[0], shape[1], nb, GridSource._type_map[type]
         )
 
         self.src.SetSpatialRef(srs)
+        self.count = nb
 
     @_BaseIO._check_state
     def get_bbox(self):
@@ -754,9 +798,11 @@ class GridSource(_BaseIO):
 
         return self.src.GetSpatialRef()
 
+    @_BaseIO._check_mode
     def set_geotransform(self, affine: tuple):
         self.src.SetGeoTransform(affine)
 
+    @_BaseIO._check_mode
     @_BaseIO._check_state
     def set_srs(
         self,
@@ -764,6 +810,16 @@ class GridSource(_BaseIO):
     ):
         self.src.SetSpatialRef(srs)
 
+    @_BaseIO._check_mode
+    @_BaseIO._check_state
+    def write_array(
+        self,
+        array: "array",
+        band: int,
+    ):
+        """_summary_"""
+
+        pass
 
 ## Open
 def open_csv(
@@ -816,3 +872,5 @@ if __name__ == "__main__":
     with f as _f:
         print(_f.readline())
     print(f.read())
+    c = CSVSmall(r"C:\CODING\PYTHON_DEV\Delft_FIAT\tmp\Database\Vulnerability\h_struct_370.csv")
+    pass
