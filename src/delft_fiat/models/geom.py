@@ -7,7 +7,7 @@ from osgeo import gdal, ogr
 class GeomModel(BaseModel):
     def __init__(
         self,
-        cfg: "cfg.ConfigReader",
+        cfg: "ConfigReader",
     ):
         super().__init__(cfg)
         pass

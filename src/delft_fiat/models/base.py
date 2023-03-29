@@ -4,7 +4,7 @@ from abc import ABCMeta, abstractmethod
 
 
 class BaseModel(metaclass=ABCMeta):
-    def __init__(self, cfg: "cfg.ConfigReader"):
+    def __init__(self, cfg: "ConfigReader"):
         # Declarations
         self.hazard_data = None
         self.exposure_geoms = None
