@@ -3,7 +3,8 @@ from delft_fiat.log import Log
 import gc
 import math
 import os
-from numpy import arange, random
+from itertools import product
+from numpy import arange, random, zeros
 from osgeo import gdal, ogr
 from osgeo import osr
 from pathlib import Path
@@ -107,10 +108,12 @@ def create_hazard_map():
     src.SetGeoTransform(gtf)
 
     band = src.GetRasterBand(1)
-    data = random.rand(10,10)*3
+    data = zeros((10,10))
+    oneD = tuple(range(10))
+    for x,y in product(oneD,oneD):
+        data[x,y] = 3.6 - ((x+y)*0.2)
     band.WriteArray(data)
 
-    
     band.FlushCache()
     src.FlushCache()
 
