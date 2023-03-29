@@ -32,7 +32,8 @@ class ConfigReader(dict):
                         )
                         group[key] = path
                     else:
-                        if isinstance(item, str): group[key] = item.lower()
+                        if isinstance(item, str):
+                            group[key] = item.lower()
 
     def __repr__(self):
         return f"<ConfigReader object file='{self._filepath}'>"

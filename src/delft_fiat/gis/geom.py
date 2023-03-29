@@ -37,7 +37,7 @@ def reproject_feature(
 def reproject(
     gs: "GeomSource",
     crs: str,
-    out: str=None,
+    out: str = None,
 ) -> object:
     """_summary_
 
@@ -48,7 +48,7 @@ def reproject(
     crs : str
         _description_
     out : str
-        _description_ 
+        _description_
 
     Returns
     -------
@@ -60,7 +60,7 @@ def reproject(
         out = gs.path.parent
 
     fname = Path(out, f"{gs.path.stem}_repr{gs.path.suffix}")
-    
+
     out_srs = osr.SpatialReference()
     out_srs.SetFromUserInput(crs)
     out_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)

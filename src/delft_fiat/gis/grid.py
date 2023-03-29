@@ -9,7 +9,7 @@ from pathlib import Path
 def reproject(
     gs: "GridSource",
     crs: str,
-    out: str=None,
+    out: str = None,
 ) -> object:
     """_summary_
 

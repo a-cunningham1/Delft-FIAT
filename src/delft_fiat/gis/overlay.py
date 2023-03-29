@@ -100,4 +100,4 @@ def pin(
 
     value = band.ReadAsArray(X, Y, 1, 1)
 
-    return value
+    return value[0]

@@ -12,9 +12,9 @@ def test_clip_grid_geom(gm, gr):
             gr[1],
             ft,
         )
-    
+
     assert len(hazard) == 7
-    assert round(mean(hazard),2) == 1.71
+    assert round(mean(hazard), 2) == 1.71
 
 
 def test_pin(gm, gr):
@@ -26,7 +26,7 @@ def test_pin(gm, gr):
             gr[1],
             XY,
         )
-    
+
     assert hazard[0] == 2
 
 
@@ -44,6 +44,6 @@ def test_reproject(tmpdir, gm, gr):
         dst_crs,
         str(tmpdir),
     )
-    
+
     assert new_gm.get_srs().GetAuthorityCode(None) == "3857"
     assert new_gr.get_srs().GetAuthorityCode(None) == "3857"
