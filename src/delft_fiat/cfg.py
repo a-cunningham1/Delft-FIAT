@@ -1,5 +1,5 @@
 from delft_fiat.check import check_config_data
-from delft_fiat.util import GenericPathCheck, Path
+from delft_fiat.util import generic_path_check, Path
 
 import os
 import tomli
@@ -26,7 +26,7 @@ class ConfigReader(dict):
             else:
                 for key, item in group.items():
                     if key.endswith("file"):
-                        path = GenericPathCheck(
+                        path = generic_path_check(
                             item,
                             self.path,
                         )

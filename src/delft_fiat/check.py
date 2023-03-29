@@ -1,5 +1,5 @@
 from delft_fiat.log import Log
-from delft_fiat.util import GenericPathCheck
+from delft_fiat.util import generic_path_check
 
 import sys
 from decimal import Decimal
