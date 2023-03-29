@@ -1,5 +1,8 @@
+from delft_fiat.cfg import ConfigReader
+
 import pytest
+from pathlib import Path
 
 
-def test_test():
-    assert 1 == 1
+def test_settings():
+    c = ConfigReader(Path(Path.cwd(),".data","settings.toml"))
