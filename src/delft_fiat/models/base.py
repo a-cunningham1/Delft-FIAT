@@ -1,5 +1,4 @@
 from delft_fiat.io import open_csv, open_geom
-from delft_fiat.models.util import DamageLookup
 
 from abc import ABCMeta, abstractmethod
 
@@ -10,7 +9,7 @@ class BaseModel(metaclass=ABCMeta):
         self.hazard_data = None
         self.exposure_geoms = None
         self.exposure_base = None
-        self.damage_data = None
+        self.vul_data = None
         self._cfg = cfg
 
     def read_damage_files():
@@ -24,15 +23,11 @@ class BaseModel(metaclass=ABCMeta):
 
     def get_damage_curve(
         self,
-        code: str,
+        oid: str,
     ) -> dict:
-        path, method = DamageLookup(
-            self._cfg["damage"]["file"],
-            code,
-            self._cfg._path,
-        )
-        c = open_csv(path)
-        return c
+
+        dc = self.vul_data[oid]
+        return dc
 
     def get_exposure(
         self,
