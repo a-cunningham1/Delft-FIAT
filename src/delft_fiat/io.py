@@ -218,8 +218,15 @@ def _Parse_CSV(
     while True:
         line = obj.handler.readline().decode("utf-8-sig")
         if line.startswith("#"):
-            key, item = line.strip().split("=")
-            meta[key.strip().replace("#", "")] = item.strip()
+            t = line.strip().split("=")
+            if len(t) == 1:
+                lst = t[0].split(",")
+                meta[lst[0].strip().replace("#", "")] = [
+                    item.strip() for item in lst[1:]
+                ]
+            else:
+                key, item = t
+                meta[key.strip().replace("#", "")] = item.strip()
         else:
             hdrs = [item.strip() for item in line.split(",")]
             break
