@@ -97,18 +97,3 @@ def reproject(
     gc.collect()
 
     return new_gs.reopen()
-
-
-if __name__ == "__main__":
-    from delft_fiat.cfg import ConfigReader
-
-    c = ConfigReader(r"C:\CODING\PYTHON_DEV\Delft_FIAT\tmp\Casus\settings.toml")
-
-    a = open_geom(c.get_path("exposure", "geom_file"), mode="r")
-    import time
-
-    s = time.time()
-    gs = reproject(a, "EPSG:4326")
-    e = time.time() - s
-    print(f"{e} seconds!")
-    pass
