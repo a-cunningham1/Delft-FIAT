@@ -42,9 +42,17 @@ body:
     validations:
       required: true
   - type: textarea
+    id: resolve
+    attributes:
+      label: Resolve Description
+      description: >
+        At first glance: how could this be resolved?
+    validations:
+      required: false
+  - type: textarea
     id: Additional
     attributes:
-      label: Additional context
+      label: Additional Context
       description: >
         Please add any other context about the bug here:
     validations:
