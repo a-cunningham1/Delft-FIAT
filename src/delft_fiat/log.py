@@ -35,10 +35,10 @@ def _Destruction():
 
     items = list(_streams.items())
     for _, logger in items:
-        logger.Acquire()
-        logger.Flush()
-        logger.Close()
-        logger.Release()
+        logger.acquire()
+        logger.flush()
+        logger.close()
+        logger.release()
 
 
 atexit.register(_Destruction)
@@ -80,8 +80,9 @@ class StreamLogger:
         stream : type, optional
             _description_, by default None
         """
-
-        self.Level = _Level(level)
+        
+        self._closed = False
+        self.level = _Level(level)
 
         if stream is None:
             stream = sys.stdout
@@ -89,37 +90,37 @@ class StreamLogger:
 
         if name is None:
             if hasattr(self.stream, "name"):
-                self._Name = self.stream.name
+                self._name = self.stream.name
             else:
                 global STREAM_COUNT
-                self._Name = f"Generic_Stream{STREAM_COUNT}"
+                self._name = f"Generic_Stream{STREAM_COUNT}"
                 STREAM_COUNT += 1
         else:
-            self._Name = name
+            self._name = name
 
-        _streams[self._Name] = self
+        _streams[self._name] = self
 
-        self._Lock = threading.RLock()
+        self._lock = threading.RLock()
 
-    def Acquire(self):
-        self._Lock.acquire()
+    def acquire(self):
+        self._lock.acquire()
 
-    def Release(self):
-        self._Lock.release()
+    def release(self):
+        self._lock.release()
 
-    def Emit(self, msg):
+    def emit(self, msg):
         self.stream.write(msg)
-        self.Flush()
+        self.flush()
 
-    def Flush(self):
-        self.Acquire()
+    def flush(self):
+        self.acquire()
         self.stream.flush()
-        self.Release()
+        self.release()
 
-    def Close(self):
+    def close(self):
         _Global_and_Destruct_Lock.acquire()
-        self._Closed = True
-        del _streams[self._Name]
+        self._closed = True
+        del _streams[self._name]
         _Global_and_Destruct_Lock.release()
 
 
@@ -140,25 +141,25 @@ class FileLogger(StreamLogger):
         if name is None:
             name = "fiat_logging"
         self._filename = os.path.join(dst, f"{name}.log")
-        StreamLogger.__init__(self, level, name, self._Open())
+        StreamLogger.__init__(self, level, name, self._open())
 
-    def _Open(self):
+    def _open(self):
         """_summary_"""
 
         return open(self._filename, "w")
 
-    def Close(self):
+    def close(self):
         """_summary_"""
 
-        self.Acquire()
-        self.Flush()
+        self.acquire()
+        self.flush()
 
         stream = self.stream
         self.stream = None
 
         stream.close()
-        StreamLogger.Close(self)
-        self.Release()
+        StreamLogger.close(self)
+        self.release()
 
 
 def spawn_child_logger(
@@ -223,10 +224,10 @@ class Log:
         obj = self
         while obj:
             for logger in obj._streams:
-                if LogLevels[item.level].value < logger.Level:
+                if LogLevels[item.level].value < logger.level:
                     continue
                 else:
-                    logger.Emit(str(item))
+                    logger.emit(str(item))
             if obj.main:
                 obj = None
             else:
