@@ -325,7 +325,7 @@ class CSVLarge(_CSV):
         self,
         oid: str,
     ):
-        return self.__getitem__[oid]
+        return self.__getitem__(oid)
 
 
 class CSVSmall(_CSV):
@@ -865,16 +865,3 @@ def open_grid(
     """_summary_"""
 
     return GridSource(file, mode)
-
-
-if __name__ == "__main__":
-    f = BufferHandler(
-        r"C:\CODING\PYTHON_DEV\Delft_FIAT\tmp\Database\Vulnerability\h_struct_370.csv"
-    )
-    with f as _f:
-        print(_f.readline())
-    print(f.read())
-    c = CSVSmall(
-        r"C:\CODING\PYTHON_DEV\Delft_FIAT\tmp\Database\Vulnerability\h_struct_370.csv"
-    )
-    pass
