@@ -1,7 +1,9 @@
+from delft_fiat.gis import overlay
+
 import pytest
 
 
-def test_clip(tmpdir):
+def test_clip_grid_geom(tmpdir):
     pass
 
 
