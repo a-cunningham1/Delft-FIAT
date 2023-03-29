@@ -18,10 +18,12 @@ folders = (
     "vulnerability",
 )
 
+
 def create_dbase_stucture():
     for f in folders:
         if not Path(p, f).exists():
             os.mkdir(Path(p, f))
+
 
 def create_exposure_geoms():
     geoms = (
@@ -33,9 +35,7 @@ def create_exposure_geoms():
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(4326)
     dr = ogr.GetDriverByName("GPKG")
-    src = dr.CreateDataSource(
-        str(Path(p, "exposure", "spatial.gpkg"))
-    )
+    src = dr.CreateDataSource(str(Path(p, "exposure", "spatial.gpkg")))
     layer = src.CreateLayer(
         "spatial",
         srs,
@@ -56,16 +56,14 @@ def create_exposure_geoms():
     layer.CreateField(field)
 
     for idx, geom in enumerate(geoms):
-        geom = ogr.CreateGeometryFromWkt(
-            geom
-        )
+        geom = ogr.CreateGeometryFromWkt(geom)
         ft = ogr.Feature(layer.GetLayerDefn())
-        ft.SetField("Object_ID", idx+1)
+        ft.SetField("Object_ID", idx + 1)
         ft.SetField("ObjectName", f"fp_{idx+1}")
         ft.SetGeometry(geom)
 
         layer.CreateFeature(ft)
-    
+
     srs = None
     field = None
     geom = None
@@ -74,16 +72,18 @@ def create_exposure_geoms():
     src = None
     dr = None
 
+
 def create_exposure_dbase():
     with open(Path(p, "exposure", "spatial.csv"), "w") as f:
         f.write("Object ID,Extraction Method,Ground Floor Height,")
         f.write("Damage Function: struct,Max Potential Damage: struct\n")
         for n in range(4):
-            if (n+1) % 2 != 0:
+            if (n + 1) % 2 != 0:
                 dmc = "struct_1"
             else:
                 dmc = "struct_2"
             f.write(f"{n+1},area,0,{dmc},{(n+1)*1000}\n")
+
 
 def create_hazard_map():
     srs = osr.SpatialReference()
@@ -108,10 +108,10 @@ def create_hazard_map():
     src.SetGeoTransform(gtf)
 
     band = src.GetRasterBand(1)
-    data = zeros((10,10))
+    data = zeros((10, 10))
     oneD = tuple(range(10))
-    for x,y in product(oneD,oneD):
-        data[x,y] = 3.6 - ((x+y)*0.2)
+    for x, y in product(oneD, oneD):
+        data[x, y] = 3.6 - ((x + y) * 0.2)
     band.WriteArray(data)
 
     band.FlushCache()
@@ -120,24 +120,26 @@ def create_hazard_map():
     srs = None
     band = None
     src = None
-    dr = None    
+    dr = None
+
 
 def create_vulnerability():
     def log_base(b, x):
-        r = math.log(x)/math.log(b)
+        r = math.log(x) / math.log(b)
         if r < 0:
             return 0
         return r
-    
+
     wd = arange(0, 5.25, 0.25)
-    dc1 = [0] + [round(min(log_base(5, x), 0.96),2) for x in wd[1:]]
-    dc2 = [0] + [round(min(log_base(3, x), 0.96),2) for x in wd[1:]]
+    dc1 = [0] + [round(min(log_base(5, x), 0.96), 2) for x in wd[1:]]
+    dc2 = [0] + [round(min(log_base(3, x), 0.96), 2) for x in wd[1:]]
 
     with open(Path(p, "vulnerability", "vulnerability_curves.csv"), mode="w") as f:
         f.write("#UNIT=meter\n")
         f.write("water depth,struct_1,struct_2\n")
         for idx, item in enumerate(wd):
             f.write(f"{item},{dc1[idx]},{dc2[idx]}\n")
+
 
 if __name__ == "__main__":
     create_dbase_stucture()

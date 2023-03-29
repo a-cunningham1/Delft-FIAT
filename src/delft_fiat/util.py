@@ -68,6 +68,7 @@ def ObjectSize(obj):
 
     return size
 
+
 def generic_folder_check(
     path: str,
 ):
@@ -82,6 +83,7 @@ def generic_folder_check(
     path = Path(path)
     if not path.exists():
         os.makedirs(path)
+
 
 def generic_path_check(
     path: str,

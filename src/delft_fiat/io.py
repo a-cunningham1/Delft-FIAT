@@ -144,10 +144,10 @@ class _BaseHandler(metaclass=ABCMeta):
         self._skip += len(line)
         self.flush()
         return line
-    
+
+
 class _BaseStruct(metaclass=ABCMeta):
-    """A struct container
-    """
+    """A struct container"""
 
     @abstractmethod
     def __del__(self):
@@ -155,6 +155,7 @@ class _BaseStruct(metaclass=ABCMeta):
 
     def __repr__(self):
         return f"<{self.__class__.__name__} object at {id(self):#018x}>"
+
 
 ## Handlers
 class BufferHandler(_BaseHandler, BufferedReader):
@@ -235,7 +236,7 @@ def _Parse_CSV(
 
 
 ## Structs
-class _CSV(_BaseStruct ,metaclass=ABCMeta):
+class _CSV(_BaseStruct, metaclass=ABCMeta):
     def __init__(
         self,
         file: str,
@@ -307,7 +308,7 @@ class CSVLarge(_CSV):
         pass
 
     def __getitem__(
-        self, 
+        self,
         oid: "ANY",
     ):
         """_summary_"""
@@ -324,9 +325,9 @@ class CSVLarge(_CSV):
         self,
         oid: str,
     ):
-        
         return self.__getitem__[oid]
-        
+
+
 class CSVSmall(_CSV):
     def __init__(
         self,
@@ -374,7 +375,7 @@ class CSVSmall(_CSV):
     def __repr__(self):
         if len(self.hdrs) > 6:
             return self._small_repr()
-        else:   
+        else:
             return self._big_repr()
 
     def _big_repr(self):
@@ -419,10 +420,10 @@ class CSVSmall(_CSV):
         pass
 
     def upscale(
-            self,
-            delta: float, 
-            inplace: bool=True,
-        ):
+        self,
+        delta: float,
+        inplace: bool = True,
+    ):
         """_summary_
 
         Parameters
@@ -714,7 +715,7 @@ class GridSource(_BaseIO):
         return self
 
     def __next__(self):
-        if self._cur_index < self.count+1:
+        if self._cur_index < self.count + 1:
             r = self.src.GetRasterBand(self._cur_index)
             self._cur_index += 1
             return r
@@ -722,9 +723,9 @@ class GridSource(_BaseIO):
             raise StopIteration
 
     def __getitem__(
-            self,
-            oid: int,
-        ):
+        self,
+        oid: int,
+    ):
         return self.src.GetRasterBand(oid)
 
     def close(self):
@@ -744,7 +745,7 @@ class GridSource(_BaseIO):
         if not self._closed:
             return self
         return GridSource.__new__(GridSource, self.path)
-    
+
     @_BaseIO._check_mode
     @_BaseIO._check_state
     def create_band(
@@ -821,6 +822,7 @@ class GridSource(_BaseIO):
 
         pass
 
+
 ## Open
 def open_csv(
     file: str,
@@ -872,5 +874,7 @@ if __name__ == "__main__":
     with f as _f:
         print(_f.readline())
     print(f.read())
-    c = CSVSmall(r"C:\CODING\PYTHON_DEV\Delft_FIAT\tmp\Database\Vulnerability\h_struct_370.csv")
+    c = CSVSmall(
+        r"C:\CODING\PYTHON_DEV\Delft_FIAT\tmp\Database\Vulnerability\h_struct_370.csv"
+    )
     pass

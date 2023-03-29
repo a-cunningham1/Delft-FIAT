@@ -25,7 +25,6 @@ class BaseModel(metaclass=ABCMeta):
         self,
         oid: str,
     ) -> dict:
-
         dc = self.vul_data[oid]
         return dc
 

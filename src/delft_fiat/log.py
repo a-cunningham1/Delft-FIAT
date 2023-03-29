@@ -80,7 +80,7 @@ class StreamLogger:
         stream : type, optional
             _description_, by default None
         """
-        
+
         self._closed = False
         self.level = _Level(level)
 

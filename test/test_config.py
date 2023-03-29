@@ -5,4 +5,4 @@ from pathlib import Path
 
 
 def test_settings():
-    c = ConfigReader(Path(Path.cwd(),".data","settings.toml"))
+    c = ConfigReader(Path(Path.cwd(), ".data", "settings.toml"))

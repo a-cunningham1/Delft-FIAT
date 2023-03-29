@@ -15,6 +15,7 @@ def test_stream():
     stream.seek(0)
     assert stream.readline().strip() == "Hello!"
 
+
 def test_log(tmpdir):
     log = Log("fiat", log_level=2)
     log.add_loggers(
