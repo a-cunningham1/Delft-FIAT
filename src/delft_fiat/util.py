@@ -1,3 +1,4 @@
+import os
 import sys
 from ast import literal_eval
 from gc import get_referents
@@ -67,8 +68,22 @@ def ObjectSize(obj):
 
     return size
 
+def generic_folder_check(
+    path: str,
+):
+    """_summary_
 
-def GenericPathCheck(
+    Parameters
+    ----------
+    path : str
+        _description_
+    """
+
+    path = Path(path)
+    if not path.exists():
+        os.makedirs(path)
+
+def generic_path_check(
     path: str,
     root: str,
 ) -> Path:
@@ -95,6 +110,6 @@ def GenericPathCheck(
     path = Path(path)
     if not path.is_absolute():
         path = Path(root, path)
-    if not (not path.is_file() or not path.is_dir()):
+    if not (path.is_file() | path.is_dir()):
         raise FileNotFoundError(f"{str(path)} is not a valid path")
     return path
