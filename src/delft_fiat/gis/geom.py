@@ -37,6 +37,7 @@ def reproject_feature(
 def reproject(
     gs: "GeomSource",
     crs: str,
+    out: str=None,
 ) -> object:
     """_summary_
 
@@ -46,6 +47,8 @@ def reproject(
         _description_
     crs : str
         _description_
+    out : str
+        _description_ 
 
     Returns
     -------
@@ -53,6 +56,11 @@ def reproject(
         _description_
     """
 
+    if not Path(str(out)).is_dir():
+        out = gs.path.parent
+
+    fname = Path(out, f"{gs.path.stem}_repr{gs.path.suffix}")
+    
     out_srs = osr.SpatialReference()
     out_srs.SetFromUserInput(crs)
     out_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
@@ -88,7 +96,6 @@ def reproject(
     out_srs = None
     transform = None
 
-    fname = Path(gs.path.parent, f"{gs.path.stem}_repr{gs.path.suffix}")
     with open_geom(fname, gs._driver.GetName(), mode="w") as new_gs:
         new_gs.create_layer_from_copy(mem_gs.layer)
 
