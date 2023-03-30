@@ -5,6 +5,7 @@ from delft_fiat.util import (
     replace_empty,
     _GeomDriverTable,
     _GridDriverTable,
+    _dtypes_reversed,
 )
 
 import atexit
@@ -221,20 +222,34 @@ def _Parse_CSV(
             t = line.strip().split("=")
             if len(t) == 1:
                 lst = t[0].split(",")
-                meta[lst[0].strip().replace("#", "")] = [
+                meta[lst[0].strip().replace("#", "").lower()] = [
                     item.strip() for item in lst[1:]
                 ]
             else:
                 key, item = t
-                meta[key.strip().replace("#", "")] = item.strip()
-        else:
-            hdrs = [item.strip() for item in line.split(",")]
-            break
+                meta[key.strip().replace("#", "").lower()] = item.strip()
+            continue
+        hdrs = [item.strip() for item in line.split(",")]
+        break
 
     obj.handler.skip = obj.handler.tell()
-    t = obj.handler.readline().strip()
-    obj.re = regex.compile(rb'"[^"]*"(*SKIP)(*FAIL)|,')
-    obj.dtypes = [deter_type(elem.decode()) for elem in obj.re.split(t)]
+
+    if not "dtypes" in meta:
+        _old = [0] * len(hdrs)
+        while True:
+            line = obj.handler.readline()
+            if not line:
+                break
+            _new = [
+                deter_type(e.strip()) for e in obj.re.split(line)
+            ]
+            _new = [*map(max, zip(_new, _old))]
+            _old = _new.copy()
+
+        meta["dtypes"] = [
+            _dtypes_reversed[n] for n in _new
+        ]
+
     obj.handler.seek(obj.handler.skip)
 
     obj._meta = _meta
@@ -248,6 +263,9 @@ class _CSV(_BaseStruct, metaclass=ABCMeta):
         self,
         file: str,
     ):
+        """_summary_"""
+
+        self.re = regex.compile(rb'"[^"]*"(*SKIP)(*FAIL)|,')
         self.handler = BufferHandler(file)
         # Create body of struct
         _Parse_CSV(
@@ -255,7 +273,6 @@ class _CSV(_BaseStruct, metaclass=ABCMeta):
         )
 
         self.index_col = self.headers[0]
-
         self.header_index = dict(zip(self.headers, range(len(self.headers))))
 
     def __del__(self):
@@ -361,7 +378,7 @@ class CSVSmall(_CSV):
         self.handler = None
 
         self.data = dict(
-            zip(self.headers, [tuple(map(x, y)) for x, y in zip(self.dtypes, zip(*b))])
+            zip(self.headers, [tuple(map(x, y)) for x, y in zip(self.meta["dtypes"], zip(*b))])
         )
 
     def __iter__(self):

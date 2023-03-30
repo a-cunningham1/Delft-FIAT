@@ -1,8 +1,7 @@
 import os
+import re
 import sys
-from ast import literal_eval
 from gc import get_referents
-from enum import Enum
 from pathlib import Path
 from types import ModuleType, FunctionType
 
@@ -25,6 +24,18 @@ _GridDriverTable = {
     ".vrt": "VRT",
 }
 
+_dtypes = {
+    0: 3,
+    1: 1,
+    2: 2,
+}
+
+_dtypes_reversed = {
+    1: int,
+    2: float,
+    3: str,
+}
+
 
 def replace_empty(l):
     """_summary_"""
@@ -32,17 +43,17 @@ def replace_empty(l):
     return ["nan" if not e else e.decode() for e in l]
 
 
-def deter_type(elem):
+def deter_type(e):
     """_summary_"""
 
-    try:
-        dt = type(literal_eval(elem))
-        return dt
-    except Exception:
-        return str
+    l = (
+        bool(re.match(b"(^(-)?\d+)|^$|nan", e)),
+        bool(re.match(b"^(-)?\d+\.\d+", e)),
+    )
+    return _dtypes[sum(l)]
 
 
-def ObjectSize(obj):
+def object_size(obj):
     """Actual size of an object (bit overestimated)
     Thanks to this post on stackoverflow:
     (https://stackoverflow.com/questions/449560/how-do-i-determine-the-size-of-an-object-in-python)
