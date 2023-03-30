@@ -240,15 +240,11 @@ def _Parse_CSV(
             line = obj.handler.readline()
             if not line:
                 break
-            _new = [
-                deter_type(e.strip()) for e in obj.re.split(line)
-            ]
+            _new = [deter_type(e.strip()) for e in obj.re.split(line)]
             _new = [*map(max, zip(_new, _old))]
             _old = _new.copy()
 
-        meta["dtypes"] = [
-            _dtypes_reversed[n] for n in _new
-        ]
+        meta["dtypes"] = [_dtypes_reversed[n] for n in _new]
 
     obj.handler.seek(obj.handler.skip)
 
@@ -378,7 +374,10 @@ class CSVSmall(_CSV):
         self.handler = None
 
         self.data = dict(
-            zip(self.headers, [tuple(map(x, y)) for x, y in zip(self.meta["dtypes"], zip(*b))])
+            zip(
+                self.headers,
+                [tuple(map(x, y)) for x, y in zip(self.meta["dtypes"], zip(*b))],
+            )
         )
 
     def __iter__(self):
