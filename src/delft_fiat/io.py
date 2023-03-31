@@ -210,6 +210,8 @@ class TextHandler(_BaseHandler, TextIOWrapper):
 def _Parse_CSV(
     obj,
 ):
+    """_summary_"""
+
     meta = {}
     _meta = {}
     hdrs = []
@@ -217,18 +219,25 @@ def _Parse_CSV(
     obj.handler.seek(0)
 
     while True:
+        cur_pos = obj.handler.tell()
         line = obj.handler.readline().decode("utf-8-sig")
         if line.startswith("#"):
             t = line.strip().split("=")
             if len(t) == 1:
                 lst = t[0].split(",")
-                meta[lst[0].strip().replace("#", "").lower()] = [
-                    item.strip() for item in lst[1:]
-                ]
+                _entry = lst[0].strip().replace("#", "").lower()
+                _val = [item.strip() for item in lst[1:]]
+                meta[_entry] = _val
+                setattr(obj, _entry, tuple(_val))
             else:
                 key, item = t
                 meta[key.strip().replace("#", "").lower()] = item.strip()
             continue
+        if not obj._header:
+            _ncol = len(obj.re.split(line.encode("utf-8-sig")))
+            hdrs = [f"col_{n}" for n in range(_ncol)]
+            obj.handler.seek(cur_pos)
+            break
         hdrs = [item.strip() for item in line.split(",")]
         break
 
@@ -245,6 +254,7 @@ def _Parse_CSV(
             _old = _new.copy()
 
         meta["dtypes"] = [_dtypes_reversed[n] for n in _new]
+        setattr(obj, "dtypes", tuple(meta["dtypes"]))
 
     obj.handler.seek(obj.handler.skip)
 
@@ -258,10 +268,13 @@ class _CSV(_BaseStruct, metaclass=ABCMeta):
     def __init__(
         self,
         file: str,
+        header: bool = True,
     ):
         """_summary_"""
 
+        self._header = header
         self.re = regex.compile(rb'"[^"]*"(*SKIP)(*FAIL)|,')
+
         self.handler = BufferHandler(file)
         # Create body of struct
         _Parse_CSV(
@@ -285,6 +298,7 @@ class CSVLarge(_CSV):
     def __init__(
         self,
         file: str,
+        header: bool = True,
     ) -> object:
         """_summary_
 
@@ -299,7 +313,7 @@ class CSVLarge(_CSV):
             _description_
         """
 
-        _CSV.__init__(self, file)
+        _CSV.__init__(self, file, header)
 
         index = [None] * self.handler.size
         lines = [None] * self.handler.size
@@ -352,6 +366,7 @@ class CSVSmall(_CSV):
     def __init__(
         self,
         file: str,
+        header: bool = True,
     ) -> object:
         """_summary_
 
@@ -366,7 +381,7 @@ class CSVSmall(_CSV):
             _description_
         """
 
-        _CSV.__init__(self, file)
+        _CSV.__init__(self, file, header)
 
         with self.handler as h:
             b = [replace_empty(self.re.split(line.strip())) for line in h.readlines()]
@@ -376,7 +391,7 @@ class CSVSmall(_CSV):
         self.data = dict(
             zip(
                 self.headers,
-                [tuple(map(x, y)) for x, y in zip(self.meta["dtypes"], zip(*b))],
+                [tuple(map(x, y)) for x, y in zip(self.dtypes, zip(*b))],
             )
         )
 
