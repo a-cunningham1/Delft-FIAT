@@ -242,17 +242,36 @@ def _Parse_CSV(
         break
 
     obj.handler.skip = obj.handler.tell()
+    _ncol = len(hdrs)
 
     if not "dtypes" in meta:
-        _old = [0] * len(hdrs)
+        b_re = regex.compile(rb'"[^"]*"(*SKIP)(*FAIL)|,|\r\n')
+        # _old = [0] * len(hdrs)
+        # while True:
+        #     line = obj.handler.readline()
+        #     if not line:
+        #         break
+        #     _new = [deter_type(e.strip()) for e in obj.re.split(line)]
+        #     _new = [*map(max, zip(_new, _old))]
+        #     _old = _new.copy()
+        _new = [0] * _ncol
+        _res = b""
         while True:
-            line = obj.handler.readline()
-            if not line:
+            t = obj.handler.read(100000)
+            if not t:
                 break
-            _new = [deter_type(e.strip()) for e in obj.re.split(line)]
-            _new = [*map(max, zip(_new, _old))]
-            _old = _new.copy()
-
+            t = _res + t
+            try:
+                t, _res = t.rsplit(b"\r\n", 1)
+            except Exception:
+                _res = b""
+            _nlines = t.count(b"\r\n")
+            sd = b_re.split(t)
+            for idx in range(_ncol):
+                _new[idx] = max(
+                    deter_type(b"\n".join(sd[idx::_ncol]), _nlines),
+                    _new[idx],
+                )
         meta["dtypes"] = [_dtypes_reversed[n] for n in _new]
         setattr(obj, "dtypes", tuple(meta["dtypes"]))
 

@@ -1,3 +1,4 @@
+import math
 import os
 import re
 import sys
@@ -26,8 +27,8 @@ _GridDriverTable = {
 
 _dtypes = {
     0: 3,
-    1: 1,
-    2: 2,
+    1: 2,
+    2: 1,
 }
 
 _dtypes_reversed = {
@@ -37,20 +38,44 @@ _dtypes_reversed = {
 }
 
 
-def replace_empty(l):
+def replace_empty(l: list):
     """_summary_"""
 
     return ["nan" if not e else e.decode() for e in l]
 
 
-def deter_type(e):
+def deter_type(
+    e: bytes,
+    l: int,
+):
     """_summary_"""
 
+    f_p = rf"((^(-)?\d+(\.\d*)*(E(\+|\-){1}\d+)*)|^$)(\n((^(-)?\d+(\.\d*)*(E(\+|\-){1}\d+)*)|^$)){{{l}}}"
+    f_c = re.compile(bytes(f_p, "utf-8"), re.MULTILINE)
+
+    i_p = rf"(^(-)?\d+(E(\+|\-){1}\d+)*|^$)(\n(^(-)?\d+(E(\+|\-){1}\d+)*|^$)){{{l}}}"
+    i_c = re.compile(bytes(i_p, "utf-8"), re.MULTILINE)
+
+    # l = (
+    #     bool(re.match(b"(^(-)?\d+)|^$|nan", e)),
+    #     bool(re.match(b"^(-)?\d+\.\d+", e)),
+    # )
+
     l = (
-        bool(re.match(b"(^(-)?\d+)|^$|nan", e)),
-        bool(re.match(b"^(-)?\d+\.\d+", e)),
+        bool(f_c.match(e)),
+        bool(i_c.match(e)),
     )
     return _dtypes[sum(l)]
+
+
+def deter_dec(
+    e: float,
+    base: float=10.0,
+):
+    """_summary_"""
+
+    ndec = math.floor(math.log(e)/math.log(base))
+    return abs(ndec)
 
 
 def object_size(obj):
