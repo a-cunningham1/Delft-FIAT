@@ -70,11 +70,11 @@ def deter_type(
 
 def deter_dec(
     e: float,
-    base: float=10.0,
+    base: float = 10.0,
 ):
     """_summary_"""
 
-    ndec = math.floor(math.log(e)/math.log(base))
+    ndec = math.floor(math.log(e) / math.log(base))
     return abs(ndec)
 
 
