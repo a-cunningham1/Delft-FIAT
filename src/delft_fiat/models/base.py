@@ -38,6 +38,7 @@ class BaseModel(metaclass=ABCMeta):
     def read_hazard_grid(self):
         data = open_grid(self._cfg.get_path("hazard.grid_file"))
         ## checks
+        
         self.hazard_data = data
 
     @abstractmethod
