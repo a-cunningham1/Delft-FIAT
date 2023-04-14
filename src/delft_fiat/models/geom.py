@@ -9,6 +9,10 @@ from osgeo import gdal, ogr
 
 
 class GeomModel(BaseModel):
+    _method = {
+        "area": overlay.clip,
+        "average": overlay.pin,
+    }
     def __init__(
         self,
         cfg: "ConfigReader",
@@ -37,4 +41,5 @@ class GeomModel(BaseModel):
 
     def run(self):
         for ft in self.exposure_geoms:
+            
             pass
