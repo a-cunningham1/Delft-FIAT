@@ -38,10 +38,11 @@ _dtypes_reversed = {
     3: str,
 }
 
+
 def _text_chunk_gen(
     h: "FileHandler",
     regex: "re.Pattern",
-    chunk_size: int=100000,
+    chunk_size: int = 100000,
 ):
     _res = b""
     while True:
@@ -57,6 +58,7 @@ def _text_chunk_gen(
         sd = regex.split(t)
         del t
         yield _nlines, sd
+
 
 def replace_empty(l: list):
     """_summary_"""

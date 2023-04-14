@@ -13,6 +13,7 @@ class GeomModel(BaseModel):
         "area": overlay.clip,
         "average": overlay.pin,
     }
+
     def __init__(
         self,
         cfg: "ConfigReader",
@@ -41,5 +42,4 @@ class GeomModel(BaseModel):
 
     def run(self):
         for ft in self.exposure_geoms:
-            
             pass

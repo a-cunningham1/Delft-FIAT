@@ -252,7 +252,7 @@ def _Parse_CSV(
                         deter_type(b"\n".join(sd[idx::_ncol]), _nlines),
                         _new[idx],
                     )
-            
+
             del sd
             meta["dtypes"] = [_dtypes_reversed[n] for n in _new]
             setattr(obj, "dtypes", tuple(meta["dtypes"]))
@@ -371,16 +371,16 @@ class CSVLarge(_CSV):
 
         if not key in self.headers:
             raise ValueError("")
-        
+
         if key == self.index_col:
             return
-        
+
         idx = self.header_index[key]
         new_index = [None] * self.handler.size
 
         with self.handler as h:
             c = 0
-            
+
             for _nlines, sd in _text_chunk_gen(h, self.re_m):
                 new_index[c:_nlines] = [
                     *map(
@@ -895,7 +895,7 @@ class GridSource(_BaseIO, _BaseStruct):
 ## Open
 def open_csv(
     file: str,
-    large: bool= False,
+    large: bool = False,
 ) -> object:
     """_summary_
 
@@ -912,7 +912,7 @@ def open_csv(
 
     if large:
         return CSVLarge(file)
-    
+
     size = 20 * 1024 * 1024
     if os.path.getsize(file) < size:
         return CSVSmall(file)
