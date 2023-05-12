@@ -5,6 +5,7 @@
 *.manifest
 !.build/gui/*.manifest
 src/bin/
+bin/
 
 # Visual Studio Code
 .vscode/

@@ -13,4 +13,6 @@ dependencies:
     - pyinstaller
     - regex
     - setuptools>=61.0.0
+    - tomli
     - xlsxwriter
+    - -e ..

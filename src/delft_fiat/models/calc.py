@@ -1,4 +1,11 @@
-from delft_fiat.gis import overlay
+from delft_fiat.util import mean
+
+import math
+
+_inun_calc = {
+    "mean": mean,
+    "max": max,
+}
 
 
 def calculate_coefficients(T):
@@ -46,8 +53,38 @@ def calculate_coefficients(T):
     return alpha
 
 
-def damage_factor(inun, gr_lvl, method=None):
-    return inun.mean()
+def get_damage_factor(
+    haz: float,
+    idx: tuple,
+    values: tuple,
+    sig: int,
+) -> float:
+    """_summary_
+
+    Parameters
+    ----------
+    haz : float
+        _description_
+    idx : tuple
+        _description_
+    values : tuple
+        _description_
+    sig : int
+        significant figures
+
+    Returns
+    -------
+    float
+        Damage factor
+    """
+
+    if math.isnan(haz):
+        return 0.0
+
+    # Clip based on min and max vulnerability values
+    haz = max(min(haz, idx[-1]), idx[0])
+
+    return values[idx.index(round(haz, sig))]
 
 
 def damage_calculator():
@@ -56,36 +93,58 @@ def damage_calculator():
     pass
 
 
-def inundation_depth(
-    h: "numpy.array",
+def get_inundation_depth(
+    haz: list,
     ref: str,
-    dem: float,
     gfh: float,
-):
+    ge: float = 0,
+    method: str = "mean",
+) -> float:
     """_summary_
 
     Parameters
     ----------
-    h : numpy.array
+    haz : list
         _description_
     ref : str
         _description_
-    dem : float
-        _description_
     gfh : float
         _description_
+    ge : float, optional
+        Ground Elevation, by default 0
+    method : str, optional
+        _description_, by default "mean"
 
     Returns
     -------
-    _type_
+    float
         _description_
     """
 
-    if ref == "DEM":
-        return h.mean()
+    # Remove the negative hazard values to 0.
+    raw_l = len(haz)
+    haz = [n for n in haz if n >= 0]
 
-    elif ref == "DATUM":
-        return
+    if not haz:
+        return math.nan, math.nan
+
+    redf = 1
+
+    if len(haz) > 1:
+        if method.lower() == "mean":
+            redf = len(haz) / raw_l
+        haz = _inun_calc[method.lower()](haz)
+    else:
+        haz = haz[0]
+
+    if ref.lower() == "datum":
+        # The hazard data is referenced to a Datum (e.g., for flooding this is the water elevation).
+        haz = haz - ge
+
+    # Subtract the Ground Floor Height from the hazard value
+    haz = haz - gfh
+
+    return haz, redf
 
 
 def risk_calculator():

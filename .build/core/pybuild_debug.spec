@@ -1,33 +1,34 @@
 import os
 import sys
+from pathlib import Path
 
 sys.setrecursionlimit(5000)
 
 env_path =  os.path.dirname(sys.executable)
-dlls = os.path.join(env_path, 'DLLs')
-bins = os.path.join(env_path, 'Library', 'bin')
-share = os.path.join(env_path, 'Library', 'share')
+dlls = Path(env_path, 'DLLs')
+bin = Path(env_path, 'Library', 'bin')
+proj = Path(os.environ["PROJ_LIB"])
 
 paths = [
     os.getcwd(),
     env_path,
     dlls,
-    bins,
+    bin,
 ]
 
 binaries = [
-    (os.path.join(bins,'geos.dll'),'.'),
-    (os.path.join(bins,'geos_c.dll'),'.'),
-    (os.path.join(bins,'spatialindex_c-64.dll'),'.'),
-    (os.path.join(bins,'spatialindex-64.dll'),'.'),
-	(os.path.join(share,'proj','proj.db'),'.')
+    (Path(bin,'geos.dll'),'.'),
+    (Path(bin,'geos_c.dll'),'.'),
+    (Path(bin,'spatialindex_c-64.dll'),'.'),
+    (Path(bin,'spatialindex-64.dll'),'.'),
+	(Path(proj,'proj.db'),'.')
 ]
 
 block_cipher = None
 
 a = Analysis(
     ['path_to_python_file'],
-    pathex=['path_to_folder', 'path_to_env_packages', bins],
+    pathex=['path_to_folder', 'path_to_env_packages', bin],
     binaries=binaries,
     datas=[],
     hiddenimports=[],
