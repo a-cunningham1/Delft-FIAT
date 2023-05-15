@@ -157,7 +157,7 @@ def create_risk_map():
         band = None
 
     src.FlushCache()
-    
+
     srs = None
     src = None
     dr = None
