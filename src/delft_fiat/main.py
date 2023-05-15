@@ -1,11 +1,19 @@
-from delft_fiat.models import *
+from delft_fiat.models import GeomModel, GridModel
 
 
 class FIAT:
     def __init__(self, file: str):
+        """_summary_
+
+        Parameters
+        ----------
+        file : str
+            _description_
+        """
+
         pass
 
-    def run():
+    def run(self):
         pass
 
 
