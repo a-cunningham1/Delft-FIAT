@@ -1,34 +1,44 @@
+from delft_fiat.util import generic_folder_check
+
 import os
 import sys
+import PyInstaller.config
 from pathlib import Path
 
 sys.setrecursionlimit(5000)
+generic_folder_check("../../bin/core")
 
+cwd = Path.cwd()
 env_path =  os.path.dirname(sys.executable)
-dlls = Path(env_path, 'DLLs')
+
+# PyInstaller.config.CONF["DISTPATH"] = Path(cwd,"../../bin/core/dist")
+# PyInstaller.config.CONF["workpath"] = Path(cwd,"../../bin/core/build")
+
 bin = Path(env_path, 'Library', 'bin')
+dlls = Path(env_path, 'DLLs')
+osgeo = Path(env_path, 'Lib\site-packages\osgeo')
 proj = Path(os.environ["PROJ_LIB"])
 
 paths = [
-    os.getcwd(),
+    cwd,
     env_path,
     dlls,
     bin,
 ]
 
 binaries = [
-    (Path(bin,'geos.dll'),'.'),
-    (Path(bin,'geos_c.dll'),'.'),
-    (Path(bin,'spatialindex_c-64.dll'),'.'),
-    (Path(bin,'spatialindex-64.dll'),'.'),
-	(Path(proj,'proj.db'),'.')
+    (Path(osgeo,'geos.dll'),'.'),
+    (Path(osgeo,'geos_c.dll'),'.'),
+    # (Path(bin,'spatialindex_c-64.dll'),'.'),
+    # (Path(bin,'spatialindex-64.dll'),'.'),
+	(Path(proj,'proj.db'),'.'),
 ]
 
 block_cipher = None
 
 a = Analysis(
-    ['path_to_python_file'],
-    pathex=['path_to_folder', 'path_to_env_packages', bin],
+    ["../../src/delft_fiat/cli/main.py"],
+    pathex=["../../src", Path(env_path, "lib/site-packages"), bin],
     binaries=binaries,
     datas=[],
     hiddenimports=[],
@@ -38,26 +48,27 @@ a = Analysis(
     win_no_prefer_redirects=False,
     win_private_assemblies=False,
     cipher=block_cipher,
-    noarchive=False
+    noarchive=False,
 )
 
 pyz = PYZ(
     a.pure,
     a.zipped_data,
-    cipher=block_cipher
+    cipher=block_cipher,
 )
 
 exe = EXE(
     pyz,
     a.scripts,
     [],
+    icon="NONE",
     exclude_binaries=True,
-    name='fiat_core',
+    name='fiat',
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    console=False
+    console=True,
 )
 
 coll = COLLECT(
@@ -68,5 +79,5 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name='fiat_core'
+    name='fiat',
 )
