@@ -4,7 +4,7 @@ import gc
 import math
 import os
 from itertools import product
-from numpy import arange, random, zeros
+from numpy import arange, random, zeros, float32
 from osgeo import gdal, ogr
 from osgeo import osr
 from pathlib import Path
@@ -94,7 +94,7 @@ def create_hazard_map():
         10,
         10,
         1,
-        gdal.GFT_Real,
+        gdal.GDT_Float32,
     )
     gtf = (
         4.35,
@@ -123,6 +123,46 @@ def create_hazard_map():
     dr = None
 
 
+def create_risk_map():
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(4326)
+    dr = gdal.GetDriverByName("GTiff")
+    src = dr.Create(
+        str(Path(p, "hazard", "risk_map.tif")),
+        10,
+        10,
+        4,
+        gdal.GDT_Float32,
+    )
+    gtf = (
+        4.35,
+        0.01,
+        0.0,
+        52.05,
+        0.0,
+        -0.01,
+    )
+    src.SetSpatialRef(srs)
+    src.SetGeoTransform(gtf)
+
+    for idx, fc in enumerate((1.5, 1.8, 1.9, 1.95)):
+        band = src.GetRasterBand(idx + 1)
+        data = zeros((10, 10))
+        oneD = tuple(range(10))
+        for x, y in product(oneD, oneD):
+            data[x, y] = 3.6 - ((x + y) * 0.2)
+        data *= fc
+        band.WriteArray(data)
+        band.FlushCache()
+        band = None
+
+    src.FlushCache()
+    
+    srs = None
+    src = None
+    dr = None
+
+
 def create_vulnerability():
     def log_base(b, x):
         r = math.log(x) / math.log(b)
@@ -147,6 +187,7 @@ if __name__ == "__main__":
     create_exposure_dbase()
     create_exposure_geoms()
     create_hazard_map()
+    create_risk_map()
     create_vulnerability()
     gc.collect()
     pass
