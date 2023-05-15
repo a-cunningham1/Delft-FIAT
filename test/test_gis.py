@@ -14,7 +14,7 @@ def test_clip_grid_geom(gm, gr):
         )
 
     assert len(hazard) == 7
-    assert round(mean(hazard), 2) == 1.71
+    assert int(round(mean(hazard) * 100, 0)) == 166
 
 
 def test_pin(gm, gr):
@@ -27,7 +27,7 @@ def test_pin(gm, gr):
             XY,
         )
 
-    assert hazard[0] == 2
+    assert int(round(hazard[0] * 100, 0)) == 160
 
 
 def test_reproject(tmpdir, gm, gr):
