@@ -1,18 +1,19 @@
 from delft_fiat.util import generic_folder_check
 
 import os
+import shutil
+import subprocess
 import sys
 import PyInstaller.config
 from pathlib import Path
 
+#Pre build event setup
+app_name = "fiat"
 sys.setrecursionlimit(5000)
 generic_folder_check("../../bin/core")
 
 cwd = Path.cwd()
 env_path =  os.path.dirname(sys.executable)
-
-# PyInstaller.config.CONF["DISTPATH"] = Path(cwd,"../../bin/core/dist")
-# PyInstaller.config.CONF["workpath"] = Path(cwd,"../../bin/core/build")
 
 bin = Path(env_path, 'Library', 'bin')
 dlls = Path(env_path, 'DLLs')
@@ -36,6 +37,7 @@ binaries = [
 
 block_cipher = None
 
+# Build event
 a = Analysis(
     ["../../src/delft_fiat/cli/main.py"],
     pathex=["../../src", Path(env_path, "lib/site-packages"), bin],
@@ -63,7 +65,7 @@ exe = EXE(
     [],
     icon="NONE",
     exclude_binaries=True,
-    name='fiat',
+    name=app_name,
     debug=False,
     bootloader_ignore_signals=False,
     strip=False,
@@ -79,5 +81,20 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name='fiat',
+    name=app_name,
 )
+
+# Post build event
+sys.stdout.write("1E10 INFO: Moving libraries to seperatate lib folder...\n")
+app_path = Path(DISTPATH, app_name)
+lib_path = Path(app_path, "lib")
+if not lib_path.is_dir():
+    os.makedirs(lib_path)
+for item in Path(app_path).iterdir():
+    if (item.is_file() and item.suffix in [".pyd", ".dll", ".db"]
+        and item.name not in ["python310.dll", "zlib.dll"]):
+        shutil.move(item, Path(lib_path, item.name))
+        sp = subprocess.run([str(Path(app_path, f"{app_name}.exe"))], capture_output=True)
+        sys.stdout.write(f"1E10 INFO: Code: {sp.returncode} -> Binary: {item}\n")
+        if sp.returncode != 0:
+            shutil.move(Path(lib_path, item.name), item)
