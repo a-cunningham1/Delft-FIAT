@@ -4,8 +4,9 @@ from osgeo import gdal, ogr
 
 
 def clip(
-    src: gdal.Dataset,
     band: gdal.Band,
+    srs: "osr.SpatialReference",
+    gtf: tuple,
     ft: ogr.Feature,
 ) -> "numpy.array":
     """_summary_
@@ -25,7 +26,6 @@ def clip(
         _description_
     """
 
-    gtf = src.GetGeoTransform()
     geom = ft.GetGeometryRef()
 
     minX, maxX, minY, maxY = geom.GetEnvelope()
@@ -46,12 +46,12 @@ def clip(
 
     dr_r = gdal.GetDriverByName("MEM")
     b_r = dr_r.Create("memset", pxWidth, pxHeight, 1, gdal.GDT_Int16)
-    b_r.SetSpatialRef(src.GetSpatialRef())
+    b_r.SetSpatialRef(srs)
     b_r.SetGeoTransform(new_gtf)
 
     dr_g = ogr.GetDriverByName("Memory")
     src_g = dr_g.CreateDataSource("memdata")
-    lay_g = src_g.CreateLayer("mem", src.GetSpatialRef())
+    lay_g = src_g.CreateLayer("mem", srs)
     lay_g.CreateFeature(ft)
 
     gdal.RasterizeLayer(b_r, [1], lay_g, None, None, [1], ["ALL_TOUCHED=TRUE"])
@@ -73,8 +73,8 @@ def mask(
 
 
 def pin(
-    src: gdal.Band,
     band: gdal.Band,
+    gtf: tuple,
     point: tuple,
 ) -> "numpy.array":
     """_summary_
@@ -93,8 +93,6 @@ def pin(
     numpy.array
         _description_
     """
-
-    gtf = src.GetGeoTransform()
 
     X, Y = world2Pixel(gtf, *point)
 
