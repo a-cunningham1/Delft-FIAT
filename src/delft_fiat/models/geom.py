@@ -16,7 +16,17 @@ def worker_coord(haz, idx, vul, exp):
 def worker_geoms(haz, idx, vul, exp_data, exp):
     for ft in exp:
         ft_info = exp_data[ft.GetField(0)]
-        res = overlay.clip(haz, haz[idx], ft)
+        ft_info = [x(y) for x, y in zip(exp_data.dtypes, ft_info)]
+        res = overlay.clip(haz[idx], haz.get_srs(), haz.get_geotransform(), ft)
+        inun = get_inundation_depth(
+            res,
+            "DEM",
+            float(ft_info[exp_data.header_index["Ground Floor Height"]]),
+        )
+        get_damage_factor(
+            inun[0],
+            vul[ft_info[exp_data.header_index["Damage Function: struct"]]],
+        )
         pass
 
 
@@ -41,7 +51,7 @@ class GeomModel(BaseModel):
         BaseModel.__del__(self)
 
     def _read_exposure_data(self):
-        data = open_csv(self._cfg.get("exposure.dbase_file"))
+        data = open_csv(self._cfg.get("exposure.dbase_file"), large=True)
         ##checks
         self._exposure_data = data
         self._args.append(self._exposure_data)
@@ -49,7 +59,10 @@ class GeomModel(BaseModel):
     def _read_exposure_geoms(self):
         data = open_geom(self._cfg.get_path("exposure.geom_file"))
         ##checks
-        if not self.srs.IsSame(data.get_srs()):
+        if not (
+            self.srs.IsSame(data.get_srs())
+            or self.srs.ExportToWkt() == data.get_srs().ExportToWkt()
+        ):
             data = geom.reproject(data, data.get_srs().ExportToWkt())
         self._exposure_geoms = data
         self._args.append(self._exposure_geoms)
