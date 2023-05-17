@@ -8,7 +8,7 @@ import click
 
 @click.group(
     options_metavar="<options>",
-    subcommand_metavar="<command>",
+    subcommand_metavar="<commands>",
 )
 @click.version_option(__version__, message=f"Delft-FIAT v{__version__}")
 @click.pass_context
@@ -55,7 +55,6 @@ def run(
     <cfg>  Configurations file (toml) containing the settings for the FIAT model
     """
     model = FIAT(cfg)
-    print(verbose)
     model.run()
 
 
