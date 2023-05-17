@@ -16,10 +16,13 @@ dependencies:
   - pytest-mock 
   - python>=3.7,<3.11
   - responses
+  - sphinx
   - setuptools>=61.0.0
   - pip:
     - cython
     - pyinstaller
     - regex
+    - sphinx_design
+    - sphinx_autosummary_accessors
     - tomli
     - xlsxwriter
