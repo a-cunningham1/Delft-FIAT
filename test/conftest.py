@@ -6,8 +6,13 @@ from pathlib import Path
 
 
 @pytest.fixture
-def cfg():
-    c = ConfigReader(Path(Path.cwd(), ".testdata", "settings.toml"))
+def settings_toml():
+    return Path(Path.cwd(), ".testdata", "settings.toml")
+
+
+@pytest.fixture
+def cfg(settings_toml):
+    c = ConfigReader(settings_toml)
     return c
 
 

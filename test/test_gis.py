@@ -8,8 +8,9 @@ from numpy import mean
 def test_clip_grid_geom(gm, gr):
     for ft in gm:
         hazard = overlay.clip(
-            gr.src,
             gr[1],
+            gr.get_srs(),
+            gr.get_geotransform(),
             ft,
         )
 
@@ -22,8 +23,8 @@ def test_pin(gm, gr):
         XY = geom.point_in_geom(ft)
 
         hazard = overlay.pin(
-            gr.src,
             gr[1],
+            gr.get_geotransform(),
             XY,
         )
 
