@@ -1,4 +1,4 @@
-===============
+
 Getting started
 ===============
 
@@ -27,6 +27,17 @@ Getting started
         +++
         User guide
 
+    .. grid-item-card:: 
+        :text-align: center
+        :columns: 4
+        :margin: 4
+        :link: examples
+        :link-type: ref
+                
+        :octicon:`graph;10em`
+        +++
+        Examples
+
     .. grid-item-card::
         :text-align: center
         :columns: 4
@@ -49,19 +60,9 @@ Getting started
         +++
         API reference
 
-    .. grid-item-card:: 
-        :text-align: center
-        :columns: 4
-        :margin: 4
-        :link: examples
-        :link-type: ref
-                
-        :octicon:`graph;10em`
-        +++
-        Examples
-
 .. toctree::
    :caption: Table of Contents
-   :maxdepth: 2
+   :maxdepth: 1
    :hidden:
 
+    

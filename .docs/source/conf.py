@@ -27,7 +27,7 @@ extensions = [
     "sphinx_design",
 ]
 
-templates_path = ["_templates", sphinx_autosummary_accessors.templates_path]
+templates_path = ["../_templates", sphinx_autosummary_accessors.templates_path]
 master_doc = "index"
 language = "en"
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
@@ -38,23 +38,26 @@ todo_include_todos = False
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
 html_theme = "pydata_sphinx_theme"
-html_logo = "../res/FIAT.png"
+html_logo = "../../res/FIAT.png"
 autodoc_member_order = "bysource"
 autoclass_content = "both"
 html_static_path = ["_static"]
 html_css_files = ["theme-deltares.css"]
 html_show_sourcelink = False
 html_theme_options = {
-    "show_nav_level": 2,
+    "show_nav_level": 1,
+    "navigation_depth": 4,
     "navbar_align": "content",
+    "search_bar_text": "Search the docs...",
+    "search_bar_position": "navbar",
     "use_edit_page_button": False,
     "show_prev_next": False,
     "icon_links": [
         {
             "name": "GitHub",
             "url": "https://github.com/Deltares/Delft-FIAT",
-            "icon": "https://upload.wikimedia.org/wikipedia/commons/9/91/Octicons-mark-github.svg",
-            "type": "url",
+            "icon": "fab fa-github",
+            "type": "fontawesome",
         },
         {
             "name": "Deltares",
@@ -66,7 +69,7 @@ html_theme_options = {
     "logo": {
         "text": "Delft-FIAT",
     },
-    "navbar_end": ["navbar-icon-links"],
+    # "navbar_end": ["navbar-icon-links"],
 }
 
 html_context = {
