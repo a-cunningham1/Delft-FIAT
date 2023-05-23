@@ -78,7 +78,7 @@ html_context = {
     "github_repo": "Delft-FIAT",
     "github_version": "master",  # FIXME
     "doc_path": "docs",
-    "default_mode": "light",
+    "default_mode": "auto",
 }
 
 remove_from_toctrees = ["_generated/*"]
