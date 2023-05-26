@@ -119,7 +119,7 @@ class _BaseHandler(metaclass=ABCMeta):
         self.path = Path(file)
 
         self.skip = 0
-        self.size = sum(1 for _ in self)
+        self.size = self.read().count(b"\r\n")
 
         self.seek(self.skip)
 
@@ -272,6 +272,7 @@ class CSVParser:
         with self.data as _h:
             for _nlines, sd in _text_chunk_gen(_h):
                 for idx in range(self._ncol):
+
                     _new[idx] = max(
                         deter_type(b"\n".join(sd[idx::self._ncol]), _nlines),
                         _new[idx],
@@ -294,7 +295,11 @@ class CSVParser:
                 columns = self.columns,
                 **self.meta,               
             )
-        pass
+        
+        return Table(
+            data = self.data,
+            columns = self.columns,
+        )
 
 
 ## Structs
