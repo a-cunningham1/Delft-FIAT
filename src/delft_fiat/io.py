@@ -208,22 +208,15 @@ class TextHandler(_BaseHandler, TextIOWrapper):
 
 ## Parsing
 class CSVParser:
-    def __init__(
-        self,
-        handler: BufferHandler,
-        header: bool
-    ):
-        
-
+    def __init__(self, handler: BufferHandler, header: bool):
         self.data = handler
         self.meta = {}
+        self.index = None
         self.columns = None
         self._nrow = self.data.size
         self._ncol = 0
 
         self._parse_meta(header)
-        if not "dtypes" in self.meta:
-            self._deter_dtypes()
 
     def _parse_meta(
         self,
@@ -232,7 +225,7 @@ class CSVParser:
         """_summary_"""
 
         self.data.seek(0)
-        
+
         while True:
             self._nrow -= 1
             cur_pos = self.data.tell()
@@ -265,40 +258,58 @@ class CSVParser:
         self.meta["ncol"] = self._ncol
         self.meta["nrow"] = self._nrow
 
-    def _deter_dtypes(self):
-        """_summary_"""
-
-        _new = [0] * self._ncol
-        with self.data as _h:
-            for _nlines, sd in _text_chunk_gen(_h):
-                for idx in range(self._ncol):
-
-                    _new[idx] = max(
-                        deter_type(b"\n".join(sd[idx::self._ncol]), _nlines),
-                        _new[idx],
-                    )
-
-            del sd
-            self.meta["dtypes"] = [_dtypes_reversed[n] for n in _new]
-
-    def read(
+    def _deter_extra_meta(
         self,
-        index: str=None,
-        large: bool=False,
+        index: str = None,
     ):
         """_summary_"""
 
+        if index is not None:
+            try:
+                idcol = self.columns.index(index)
+            except Exception:
+                idcol = 0
+            self.meta["index_col"] = self.columns[idcol]
+            _index = []
+
+        _dtypes = [0] * self._ncol
+        with self.data as _h:
+            for _nlines, sd in _text_chunk_gen(_h):
+                for idx in range(self._ncol):
+                    _dtypes[idx] = max(
+                        deter_type(b"\n".join(sd[idx :: self._ncol]), _nlines),
+                        _dtypes[idx],
+                    )
+                if index is not None:
+                    _index += sd[idcol :: self._ncol]
+
+            del sd
+            self.meta["dtypes"] = [_dtypes_reversed[item] for item in _dtypes]
+            if index is not None:
+                func = self.meta["dtypes"][idcol]
+                self.index = [func(item.decode()) for item in _index]
+
+    def read(
+        self,
+        index: str = None,
+        large: bool = False,
+    ):
+        """_summary_"""
+
+        if index is not None or "dtypes" not in self.meta:
+            self._deter_extra_meta(index=index)
+
         if large:
             return TableLazy(
-                data = self.data,
-                index = index,
-                columns = self.columns,
-                **self.meta,               
+                data=self.data,
+                index=self.index,
+                columns=self.columns,
+                **self.meta,
             )
-        
+
         return Table(
-            data = self.data,
-            columns = self.columns,
+            data=self.data,
+            columns=self.columns,
         )
 
 
@@ -676,8 +687,8 @@ class GridSource(_BaseIO, _BaseStruct):
 class _Table(_BaseStruct, metaclass=ABCMeta):
     def __init__(
         self,
-        index: tuple=None,
-        columns: tuple=None,
+        index: tuple = None,
+        columns: tuple = None,
         **kwargs,
     ) -> object:
         """_summary_"""
@@ -687,18 +698,16 @@ class _Table(_BaseStruct, metaclass=ABCMeta):
         self.meta = kwargs
 
         # Create body of struct
+        if "dtypes" in kwargs:
+            self.dtypes = kwargs.pop("dtypes")
+
         if columns is None:
-            columns = [
-                f"col_{num}" for num in range(kwargs["ncol"])
-            ]
-        self._columns = dict(
-            zip(columns, range(kwargs["ncol"]))
-        )
+            columns = [f"col_{num}" for num in range(kwargs["ncol"])]
+        self._columns = dict(zip(columns, range(kwargs["ncol"])))
 
-        self._index = dict(
-            zip(index, kwargs["index_int"])
-        )
-
+        if index is None:
+            index = tuple(range(kwargs["nrow"]))
+        self._index = dict(zip(index, kwargs.pop("index_int")))
 
     def __del__(self):
         data = None
@@ -720,16 +729,18 @@ class _Table(_BaseStruct, metaclass=ABCMeta):
 
     @property
     def columns(self):
-        return tuple(
-            self._columns.keys()
-        )
+        return tuple(self._columns.keys())
+
+    @property
+    def index(self):
+        return tuple(self._index.keys())
 
 
 class Table(_Table):
     def __init__(
         self,
         data: "ANY",
-        columns: tuple=None,
+        columns: tuple = None,
     ) -> object:
         """_summary_
 
@@ -744,11 +755,7 @@ class Table(_Table):
             _description_
         """
 
-        _Table.__init__(
-            self, 
-            data, 
-            columns
-            )
+        _Table.__init__(self, data, columns)
 
         with self.handler as h:
             b = [replace_empty(self.re.split(line.strip())) for line in h.readlines()]
@@ -881,52 +888,26 @@ class TableLazy(_Table):
 
         self.data = data
 
-        _dtypes = kwargs["dtypes"]
-        # # Get internal indexing
-        index_int = [None] * (kwargs["nrow"] + 1)
-        index_int[0] = self.data.skip
-        
-        with self.data as h:
-            index_int[1:] = tuple(
-                map(len, h.read().strip().split(b"\r\n"))
-            )
+        # Get internal indexing
+        index_int = [None] * kwargs["nrow"]
+        _c = 0
 
-        index_int = array(index_int)
-        index_int[1:] += 2
-        kwargs["index_int"] = cumsum(index_int)
+        with self.data as h:
+            while True:
+                index_int[_c] = h.tell()
+                _c += 1
+                if not h.readline() or _c == kwargs["nrow"]:
+                    break
+
+        kwargs["index_int"] = index_int
         del index_int
-        
-        # # Get external indexing
-        # if index is not None:
-        #     with self.data as h:
-        #         idx = columns.index(index)
-        #         index = tuple(
-        #             map(
-        #             kwargs["dtypes"][idx],
-        #             _pat_multi.split(h.read().strip())[idx :: kwargs["ncol"]]
-        #         )
-        #     )
-        #     index = (None,) + index
-        
-        if index is not None:
-            idx = columns.index(index)
-            index = [None] * self.data.size
-            with self.data as h:
-                c = 0
-                while True:
-                    line = h.readline().strip()
-                    if not line:
-                        break
-                    z = _pat.split(line)[idx]
-                    index[c] = _dtypes[0](z.decode())
-                    c += 1
 
         _Table.__init__(
-                self,
-                index,
-                columns,
-                **kwargs,
-            ) 
+            self,
+            index,
+            columns,
+            **kwargs,
+        )
 
     def __iter__(self):
         pass
@@ -947,7 +928,7 @@ class TableLazy(_Table):
         self.data.seek(idx)
 
         return replace_empty(_pat.split(self.data.readline().strip()))
-    
+
     def _build_lazy(self):
         pass
 
@@ -992,9 +973,9 @@ class TableLazy(_Table):
 ## Open
 def open_csv(
     file: str,
-    sep: str=",",
-    header: bool=True,
-    index: str=None,
+    sep: str = ",",
+    header: bool = True,
+    index: str = None,
     large: bool = False,
 ) -> object:
     """_summary_
