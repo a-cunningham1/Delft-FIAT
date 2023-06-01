@@ -18,7 +18,7 @@ import weakref
 from abc import ABCMeta, abstractmethod
 from io import BufferedReader, FileIO, TextIOWrapper
 from math import nan, floor, log10
-from numpy import arange, array, cumsum, interp
+from numpy import arange, column_stack, cumsum, interp
 from osgeo import gdal, ogr
 from osgeo import osr
 
@@ -209,8 +209,11 @@ class TextHandler(_BaseHandler, TextIOWrapper):
 ## Parsing
 class CSVParser:
     def __init__(self, handler: BufferHandler, header: bool):
+        """_summary_"""
+
         self.data = handler
         self.meta = {}
+        self.meta["index_col"] = -1
         self.index = None
         self.columns = None
         self._nrow = self.data.size
@@ -269,7 +272,7 @@ class CSVParser:
                 idcol = self.columns.index(index)
             except Exception:
                 idcol = 0
-            self.meta["index_col"] = self.columns[idcol]
+            self.meta["index_col"] = idcol
             _index = []
 
         _dtypes = [0] * self._ncol
@@ -309,7 +312,9 @@ class CSVParser:
 
         return Table(
             data=self.data,
+            index=self.index,
             columns=self.columns,
+            **self.meta,
         )
 
 
@@ -697,6 +702,11 @@ class _Table(_BaseStruct, metaclass=ABCMeta):
         self.dtypes = ()
         self.meta = kwargs
 
+        index_int = list(range(kwargs["nrow"]))
+
+        if "index_int" in kwargs:
+            index_int = kwargs.pop("index_int")
+
         # Create body of struct
         if "dtypes" in kwargs:
             self.dtypes = kwargs.pop("dtypes")
@@ -707,7 +717,7 @@ class _Table(_BaseStruct, metaclass=ABCMeta):
 
         if index is None:
             index = tuple(range(kwargs["nrow"]))
-        self._index = dict(zip(index, kwargs.pop("index_int")))
+        self._index = dict(zip(index, index_int))
 
     def __del__(self):
         data = None
@@ -739,8 +749,10 @@ class _Table(_BaseStruct, metaclass=ABCMeta):
 class Table(_Table):
     def __init__(
         self,
-        data: "ANY",
+        data: BufferHandler or dict,
+        index: str or tuple = None,
         columns: tuple = None,
+        **kwargs,
     ) -> object:
         """_summary_
 
@@ -755,28 +767,62 @@ class Table(_Table):
             _description_
         """
 
-        _Table.__init__(self, data, columns)
-
-        with self.handler as h:
-            b = [replace_empty(self.re.split(line.strip())) for line in h.readlines()]
-
-        self.handler = None
-
-        self.data = dict(
-            zip(
-                self.headers,
-                [tuple(map(x, y)) for x, y in zip(self.dtypes, zip(*b))],
+        if isinstance(data, BufferHandler):
+            self._build_from_stream(
+                data,
+                kwargs,
             )
+
+        _Table.__init__(
+            self,
+            index,
+            columns,
+            **kwargs,
         )
 
     def __iter__(self):
         pass
 
+    def _build_from_stream(
+        self,
+        data: BufferHandler,
+        kwargs,
+    ):
+        dtypes = kwargs["dtypes"]
+        ncol = kwargs["ncol"]
+        nrow = kwargs["nrow"]
+        index_col = kwargs["index_col"]
+        with data as h:
+            _d = _pat_multi.split(h.read().strip())
+
+        _f = []
+        cols = list(range(ncol))
+
+        if index_col >= 0 and index_col in cols:
+            cols.remove(index_col)
+
+        for c in cols:
+            _f.append([dtypes[c](item.decode()) for item in _d[c::ncol]])
+
+        self.data = column_stack((*_f,))
+
+    def _build_from_dict(
+        self,
+        data: dict,
+    ):
+        pass
+
     def next(self):
         pass
 
-    def __getitem__(self, key):
-        return self.data[key]
+    def __getitem__(self, keys):
+        keys += (slice(None, None, None),)
+        keys = list(keys[0:2])
+        if keys[0] != slice(None, None, None):
+            keys[0] = self._index[keys[0]]
+        if keys[1] != slice(None, None, None):
+            keys[0] = self._columns[keys[1]]
+        return self.data[keys[0], keys[1]]
 
     def __setitem__(self, key, value):
         self.data[key] = value
@@ -801,28 +847,6 @@ class Table(_Table):
 
     def _small_repr(self):
         repr = ""
-
-        char_len = [len(h) for h in self.headers]
-
-        repr += ", ".join([f"{item:6s}" for item in self.headers[0:3]]) + " ... "
-        repr += ", ".join([f"{item:6s}" for item in self.headers[-3:]]) + "\n"
-
-        m = zip(*[row[0:4] for row in [*self.data.values()]])
-        for item in m:
-            repr += (
-                ", ".join(
-                    [f"{str(val):{l}s}" for val, l in zip(item[0:3], char_len[0:3])]
-                )
-                + " ... "
-            )
-            repr += (
-                ", ".join(
-                    [f"{str(val):{l}s}" for val, l in zip(item[-3:], char_len[-3:])]
-                )
-                + "\n"
-            )
-
-        repr += "...\n"
         return repr
 
     def mean():
@@ -869,7 +893,7 @@ class TableLazy(_Table):
     def __init__(
         self,
         data: BufferHandler,
-        index: str = None,
+        index: str or tuple = None,
         columns: tuple = None,
         **kwargs,
     ) -> object:
