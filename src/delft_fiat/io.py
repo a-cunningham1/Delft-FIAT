@@ -119,7 +119,7 @@ class _BaseHandler(metaclass=ABCMeta):
         self.path = Path(file)
 
         self.skip = 0
-        self.size = self.read().count(b"\r\n")
+        self.size = self.read().count(os.linesep.encode())
 
         self.seek(self.skip)
 
