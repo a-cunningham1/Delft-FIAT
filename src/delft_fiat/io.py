@@ -6,18 +6,19 @@ from delft_fiat.util import (
     _GeomDriverTable,
     _GridDriverTable,
     _dtypes_reversed,
+    _pat,
+    _pat_multi,
     _text_chunk_gen,
 )
 
 import atexit
 import gc
 import os
-import regex
 import weakref
 from abc import ABCMeta, abstractmethod
 from io import BufferedReader, FileIO, TextIOWrapper
 from math import nan, floor, log10
-from numpy import arange, cumsum, interp
+from numpy import arange, column_stack, interp, ndarray
 from osgeo import gdal, ogr
 from osgeo import osr
 
@@ -118,7 +119,7 @@ class _BaseHandler(metaclass=ABCMeta):
         self.path = Path(file)
 
         self.skip = 0
-        self.size = sum(1 for _ in self)
+        self.size = self.read().count(os.linesep.encode())
 
         self.seek(self.skip)
 
@@ -153,7 +154,8 @@ class _BaseStruct(metaclass=ABCMeta):
         pass
 
     def __repr__(self):
-        return f"<{self.__class__.__name__} object at {id(self):#018x}>"
+        _mem_loc = f"{id(self):#018x}".upper()
+        return f"<{self.__class__.__name__} object at {_mem_loc}>"
 
 
 ## Handlers
@@ -205,323 +207,120 @@ class TextHandler(_BaseHandler, TextIOWrapper):
 
 
 ## Parsing
-def _Parse_CSV(
-    obj,
-):
-    """_summary_"""
+class CSVParser:
+    def __init__(self, handler: BufferHandler, header: bool):
+        """_summary_"""
 
-    meta = {}
-    _meta = {}
-    hdrs = []
+        self.data = handler
+        self.meta = {}
+        self.meta["index_col"] = -1
+        self.meta["index_name"] = None
+        self.index = None
+        self.columns = None
+        self._nrow = self.data.size
+        self._ncol = 0
 
-    obj.handler.seek(0)
+        self._parse_meta(header)
 
-    while True:
-        cur_pos = obj.handler.tell()
-        line = obj.handler.readline().decode("utf-8-sig")
-        if line.startswith("#"):
-            t = line.strip().split("=")
-            if len(t) == 1:
-                lst = t[0].split(",")
-                _entry = lst[0].strip().replace("#", "").lower()
-                _val = [item.strip() for item in lst[1:]]
-                meta[_entry] = _val
-                setattr(obj, _entry, tuple(_val))
-            else:
-                key, item = t
-                meta[key.strip().replace("#", "").lower()] = item.strip()
-            continue
-        if not obj._header:
-            _ncol = len(obj.re.split(line.encode("utf-8-sig")))
-            hdrs = [f"col_{n}" for n in range(_ncol)]
-            obj.handler.seek(cur_pos)
+    def _parse_meta(
+        self,
+        header: bool,
+    ):
+        """_summary_"""
+
+        self.data.seek(0)
+
+        while True:
+            self._nrow -= 1
+            cur_pos = self.data.tell()
+            line = self.data.readline().decode("utf-8-sig")
+
+            if line.startswith("#"):
+                t = line.strip().split("=")
+                if len(t) == 1:
+                    lst = t[0].split(",")
+                    _entry = lst[0].strip().replace("#", "").lower()
+                    _val = [item.strip() for item in lst[1:]]
+                    self.meta[_entry] = _val
+                else:
+                    key, item = t
+                    self.meta[key.strip().replace("#", "").lower()] = item.strip()
+                continue
+
+            if not header:
+                self.columns = None
+                self._ncol = len(_pat.split(line.encode("utf-8-sig")))
+                self.data.seek(cur_pos)
+                self._nrow += 1
+                break
+
+            self.columns = [item.strip() for item in line.split(",")]
+            self._ncol = len(self.columns)
             break
-        hdrs = [item.strip() for item in line.split(",")]
-        break
 
-    obj.handler.skip = obj.handler.tell()
-    _ncol = len(hdrs)
-    obj._ncol = _ncol
+        self.data.skip = self.data.tell()
+        self.meta["ncol"] = self._ncol
+        self.meta["nrow"] = self._nrow
 
-    if not "dtypes" in meta:
-        _new = [0] * _ncol
-        with obj.handler as _h:
-            for _nlines, sd in _text_chunk_gen(_h, obj.re_m):
-                for idx in range(_ncol):
-                    _new[idx] = max(
-                        deter_type(b"\n".join(sd[idx::_ncol]), _nlines),
-                        _new[idx],
+    def _deter_extra_meta(
+        self,
+        index: str = None,
+    ):
+        """_summary_"""
+
+        if index is not None:
+            try:
+                idcol = self.columns.index(index)
+            except Exception:
+                idcol = 0
+            self.meta["index_col"] = idcol
+            self.meta["index_name"] = self.columns[idcol]
+            _index = []
+
+        _dtypes = [0] * self._ncol
+        with self.data as _h:
+            for _nlines, sd in _text_chunk_gen(_h):
+                for idx in range(self._ncol):
+                    _dtypes[idx] = max(
+                        deter_type(b"\n".join(sd[idx :: self._ncol]), _nlines),
+                        _dtypes[idx],
                     )
+                if index is not None:
+                    _index += sd[idcol :: self._ncol]
 
             del sd
-            meta["dtypes"] = [_dtypes_reversed[n] for n in _new]
-            setattr(obj, "dtypes", tuple(meta["dtypes"]))
+            self.meta["dtypes"] = [_dtypes_reversed[item] for item in _dtypes]
+            if index is not None:
+                func = self.meta["dtypes"][idcol]
+                self.index = [func(item.decode()) for item in _index]
 
-    obj._meta = _meta
-    obj.meta = meta
-    obj.headers = hdrs
+    def read(
+        self,
+        index: str = None,
+        large: bool = False,
+    ):
+        """_summary_"""
+
+        if index is not None or "dtypes" not in self.meta:
+            self._deter_extra_meta(index=index)
+
+        if large:
+            return TableLazy(
+                data=self.data,
+                index=self.index,
+                columns=self.columns,
+                **self.meta,
+            )
+
+        return Table(
+            data=self.data,
+            index=self.index,
+            columns=self.columns,
+            **self.meta,
+        )
 
 
 ## Structs
-class _CSV(_BaseStruct, metaclass=ABCMeta):
-    def __init__(
-        self,
-        file: str,
-        header: bool = True,
-    ):
-        """_summary_"""
-
-        self._header = header
-        self.re = regex.compile(rb'"[^"]*"(*SKIP)(*FAIL)|,')
-        self.re_m = regex.compile(rb'"[^"]*"(*SKIP)(*FAIL)|,|\r\n')
-
-        self.handler = BufferHandler(file)
-        # Create body of struct
-        _Parse_CSV(
-            self,
-        )
-
-        self.index_col = self.headers[0]
-        self.header_index = dict(zip(self.headers, range(len(self.headers))))
-
-    def __del__(self):
-        self.handler = None
-
-    def __getitem__(self):
-        pass
-
-    def __iter__(self):
-        pass
-
-
-class CSVLarge(_CSV):
-    def __init__(
-        self,
-        file: str,
-        header: bool = True,
-    ) -> object:
-        """_summary_
-
-        Parameters
-        ----------
-        file : str
-            _description_
-
-        Returns
-        -------
-        object
-            _description_
-        """
-
-        _CSV.__init__(self, file, header)
-
-        index = [None] * self.handler.size
-        lines = [None] * self.handler.size
-        lines[0] = self.handler.skip
-
-        with self.handler as h:
-            c = 0
-            while True:
-                line = h.readline().strip()
-                if not line:
-                    break
-                z = self.re.split(line)[0]
-                index[c] = self.dtypes[0](z.decode())
-                lines[c + 1] = len(line) + 2
-                c += 1
-
-        self.data = dict(zip(index, cumsum(lines)))
-
-        del lines
-        del index
-
-    def __iter__(self):
-        pass
-
-    def __next__(self):
-        pass
-
-    def __getitem__(
-        self,
-        oid: "ANY",
-    ):
-        """_summary_"""
-
-        try:
-            idx = self.data[oid]
-        except Exception:
-            return None
-        self.handler.seek(idx)
-
-        return replace_empty(self.re.split(self.handler.readline().strip()))
-
-    def get(
-        self,
-        oid: str,
-    ):
-        """_summary_"""
-
-        return self.__getitem__(oid)
-
-    def set_index(
-        self,
-        key: str,
-    ):
-        """_summary_"""
-
-        if not key in self.headers:
-            raise ValueError("")
-
-        if key == self.index_col:
-            return
-
-        idx = self.header_index[key]
-        new_index = [None] * self.handler.size
-
-        with self.handler as h:
-            c = 0
-
-            for _nlines, sd in _text_chunk_gen(h, self.re_m):
-                new_index[c:_nlines] = [
-                    *map(
-                        self.dtypes[idx],
-                        [item.decode() for item in sd[idx :: self._ncol]],
-                    )
-                ]
-                c += _nlines
-            del sd
-        self.data = dict(zip(new_index, self.data.values()))
-
-
-class CSVSmall(_CSV):
-    def __init__(
-        self,
-        file: str,
-        header: bool = True,
-    ) -> object:
-        """_summary_
-
-        Parameters
-        ----------
-        file : str
-            _description_
-
-        Returns
-        -------
-        object
-            _description_
-        """
-
-        _CSV.__init__(self, file, header)
-
-        with self.handler as h:
-            b = [replace_empty(self.re.split(line.strip())) for line in h.readlines()]
-
-        self.handler = None
-
-        self.data = dict(
-            zip(
-                self.headers,
-                [tuple(map(x, y)) for x, y in zip(self.dtypes, zip(*b))],
-            )
-        )
-
-    def __iter__(self):
-        pass
-
-    def next(self):
-        pass
-
-    def __getitem__(self, key):
-        return self.data[key]
-
-    def __setitem__(self, key, value):
-        self.data[key] = value
-
-    def __eq__(self):
-        pass
-
-    def __repr__(self):
-        if len(self.headers) > 6:
-            return self._small_repr()
-        else:
-            return self._big_repr()
-
-    def _big_repr(self):
-        repr = ""
-        repr += ", ".join([f"{item:6s}" for item in self.headers]) + "\n"
-        m = zip(*[row[0:3] for row in [*self.data.values()]])
-        for item in m:
-            repr += ", ".join([f"{str(val):6s}" for val in item]) + "\n"
-        repr += f"{'...':6s}, ...\n"
-        return repr
-
-    def _small_repr(self):
-        repr = ""
-
-        char_len = [len(h) for h in self.headers]
-
-        repr += ", ".join([f"{item:6s}" for item in self.headers[0:3]]) + " ... "
-        repr += ", ".join([f"{item:6s}" for item in self.headers[-3:]]) + "\n"
-
-        m = zip(*[row[0:4] for row in [*self.data.values()]])
-        for item in m:
-            repr += (
-                ", ".join(
-                    [f"{str(val):{l}s}" for val, l in zip(item[0:3], char_len[0:3])]
-                )
-                + " ... "
-            )
-            repr += (
-                ", ".join(
-                    [f"{str(val):{l}s}" for val, l in zip(item[-3:], char_len[-3:])]
-                )
-                + "\n"
-            )
-
-        repr += "...\n"
-        return repr
-
-    def mean():
-        pass
-
-    def max():
-        pass
-
-    def upscale(
-        self,
-        delta: float,
-        inplace: bool = True,
-    ):
-        """_summary_
-
-        Parameters
-        ----------
-        delta : float
-            _description_
-        inplace : bool, optional
-            _description_, by default True
-
-        """
-
-        _rnd = abs(floor(log10(delta)))
-
-        _x = tuple(
-            arange(
-                min(self[self.index_col]), max(self[self.index_col]) + delta, delta
-            ).round(_rnd)
-        )
-
-        _hdrs = self.headers.copy()
-        _hdrs.remove(self.index_col)
-
-        for c in _hdrs:
-            self[c] = tuple(interp(_x, self[self.index_col], self[c]))
-
-        self[self.index_col] = _x
-        return None
-
-
 class GeomSource(_BaseIO, _BaseStruct):
     def __new__(
         cls,
@@ -892,9 +691,364 @@ class GridSource(_BaseIO, _BaseStruct):
         pass
 
 
+class _Table(_BaseStruct, metaclass=ABCMeta):
+    def __init__(
+        self,
+        index: tuple = None,
+        columns: tuple = None,
+        **kwargs,
+    ) -> object:
+        """_summary_"""
+
+        # Declarations
+        self.dtypes = ()
+        self.meta = kwargs
+
+        index_int = list(range(kwargs["nrow"]))
+
+        if "index_int" in kwargs:
+            index_int = kwargs.pop("index_int")
+
+        # Create body of struct
+        if "dtypes" in kwargs:
+            self.dtypes = kwargs.pop("dtypes")
+
+        if columns is None:
+            columns = [f"col_{num}" for num in range(kwargs["ncol"])]
+        self._columns = dict(zip(columns, range(kwargs["ncol"])))
+
+        if index is None:
+            index = tuple(range(kwargs["nrow"]))
+        self._index = dict(zip(index, index_int))
+
+    def __del__(self):
+        data = None
+
+    def __len__(self):
+        return self.meta["nrow"]
+
+    @abstractmethod
+    def __getitem__(self):
+        pass
+
+    # @abstractmethod
+    # def __iter__(self):
+    #     pass
+
+    # @abstractmethod
+    # def __next__(self):
+    #     pass
+
+    @property
+    def columns(self):
+        return tuple(self._columns.keys())
+
+    @property
+    def index(self):
+        return tuple(self._index.keys())
+
+    @property
+    def shape(self):
+        return (
+            self.meta["nrow"],
+            self.meta["ncol"],
+        )
+
+
+class Table(_Table):
+    def __init__(
+        self,
+        data: BufferHandler or dict,
+        index: str or tuple = None,
+        columns: list = None,
+        **kwargs,
+    ) -> object:
+        """_summary_
+
+        Parameters
+        ----------
+        file : str
+            _description_
+
+        Returns
+        -------
+        object
+            _description_
+        """
+
+        if isinstance(data, BufferHandler):
+            self._build_from_stream(
+                data,
+                columns,
+                kwargs,
+            )
+
+        elif isinstance(data, ndarray):
+            self.data = data
+
+        _Table.__init__(
+            self,
+            index,
+            columns,
+            **kwargs,
+        )
+
+    def __iter__(self):
+        pass
+
+    def __next__(self):
+        pass
+
+    def __getitem__(self, keys):
+        """_summary_"""
+
+        keys = list(keys)
+
+        if keys[0] != slice(None):
+            keys[0] = self._index[keys[0]]
+
+        if keys[1] != slice(None):
+            keys[1] = self._columns[keys[1]]
+
+        return self.data[keys[0], keys[1]]
+
+    def __setitem__(self, key, value):
+        self.data[key] = value
+
+    def __eq__(self):
+        pass
+
+    def __str__(self):
+        if len(self.columns) > 6:
+            return self._small_repr()
+        else:
+            return self._big_repr()
+
+    def _big_repr(self):
+        repr = ""
+        repr += ", ".join([f"{item:6s}" for item in self.columns]) + "\n"
+        m = zip(*[row[0:3] for row in self.data])
+        for item in m:
+            repr += ", ".join([f"{str(val):6s}" for val in item]) + "\n"
+        repr += f"{'...':6s}, ...\n"
+        return repr
+
+    def _small_repr(self):
+        repr = ""
+        return repr
+
+    def _build_from_stream(
+        self,
+        data: BufferHandler,
+        columns: list,
+        kwargs,
+    ):
+        """_summary_"""
+
+        dtypes = kwargs["dtypes"]
+        ncol = kwargs["ncol"]
+        nrow = kwargs["nrow"]
+        index_col = kwargs["index_col"]
+        with data as h:
+            _d = _pat_multi.split(h.read().strip())
+
+        _f = []
+        cols = list(range(ncol))
+
+        if kwargs["index_name"] is not None:
+            columns.remove(kwargs["index_name"])
+            kwargs["ncol"] -= 1
+
+        if index_col >= 0 and index_col in cols:
+            cols.remove(index_col)
+
+        for c in cols:
+            _f.append([dtypes[c](item.decode()) for item in _d[c::ncol]])
+
+        self.data = column_stack((*_f,))
+
+    def _build_from_dict(
+        self,
+        data: dict,
+    ):
+        pass
+
+    def mean():
+        """_summary_"""
+
+        pass
+
+    def max():
+        """_summary_"""
+
+        pass
+
+    def upscale(
+        self,
+        delta: float,
+        inplace: bool = False,
+    ):
+        """_summary_
+
+        Parameters
+        ----------
+        delta : float
+            _description_
+        inplace : bool, optional
+            _description_, by default True
+
+        """
+
+        meta = self.meta.copy()
+
+        _rnd = abs(floor(log10(delta)))
+
+        _x = tuple(arange(min(self.index), max(self.index) + delta, delta).round(_rnd))
+        _x = list(set(_x + self.index))
+        _x.sort()
+
+        _f = []
+
+        for c in self.columns:
+            _f.append(interp(_x, self.index, self[:, c]).tolist())
+
+        data = column_stack(_f)
+
+        meta.update(
+            {
+                "ncol": self.meta["ncol"],
+                "nrow": len(data),
+            }
+        )
+
+        if inplace:
+            self.__init__(
+                data=data,
+                index=_x,
+                columns=self.columns,
+                **meta,
+            )
+            return None
+
+        return Table(
+            data=data,
+            index=_x,
+            columns=list(self.columns),
+            **meta,
+        )
+
+
+class TableLazy(_Table):
+    def __init__(
+        self,
+        data: BufferHandler,
+        index: str or tuple = None,
+        columns: list = None,
+        **kwargs,
+    ) -> object:
+        """_summary_
+
+        Parameters
+        ----------
+        file : str
+            _description_
+
+        Returns
+        -------
+        object
+            _description_
+        """
+
+        self.data = data
+
+        # Get internal indexing
+        index_int = [None] * kwargs["nrow"]
+        _c = 0
+
+        with self.data as h:
+            while True:
+                index_int[_c] = h.tell()
+                _c += 1
+                if not h.readline() or _c == kwargs["nrow"]:
+                    break
+
+        kwargs["index_int"] = index_int
+        del index_int
+
+        _Table.__init__(
+            self,
+            index,
+            columns,
+            **kwargs,
+        )
+
+    def __iter__(self):
+        pass
+
+    def __next__(self):
+        pass
+
+    def __getitem__(
+        self,
+        oid: "ANY",
+    ):
+        """_summary_"""
+
+        try:
+            idx = self._index[oid]
+        except Exception:
+            return None
+        self.data.seek(idx)
+
+        return replace_empty(_pat.split(self.data.readline().strip()))
+
+    def _build_lazy(self):
+        pass
+
+    def get(
+        self,
+        oid: str,
+    ):
+        """_summary_"""
+
+        return self.__getitem__(oid)
+
+    def set_index(
+        self,
+        key: str,
+    ):
+        """_summary_"""
+
+        if not key in self.headers:
+            raise ValueError("")
+
+        if key == self.index_col:
+            return
+
+        idx = self.header_index[key]
+        new_index = [None] * self.handler.size
+
+        with self.handler as h:
+            c = 0
+
+            for _nlines, sd in _text_chunk_gen(h):
+                new_index[c:_nlines] = [
+                    *map(
+                        self.dtypes[idx],
+                        [item.decode() for item in sd[idx :: self._ncol]],
+                    )
+                ]
+                c += _nlines
+            del sd
+        self.data = dict(zip(new_index, self.data.values()))
+
+
 ## Open
 def open_csv(
     file: str,
+    sep: str = ",",
+    header: bool = True,
+    index: str = None,
     large: bool = False,
 ) -> object:
     """_summary_
@@ -910,14 +1064,14 @@ def open_csv(
         _description_
     """
 
-    if large:
-        return CSVLarge(file)
+    _handler = BufferHandler(file)
 
-    size = 20 * 1024 * 1024
-    if os.path.getsize(file) < size:
-        return CSVSmall(file)
-    else:
-        return CSVLarge(file)
+    parser = CSVParser(_handler, header)
+
+    return parser.read(
+        index=index,
+        large=large,
+    )
 
 
 def open_geom(

@@ -1,6 +1,7 @@
 import math
 import os
 import re
+import regex
 import sys
 from collections.abc import MutableMapping
 from gc import get_referents
@@ -38,10 +39,12 @@ _dtypes_reversed = {
     3: str,
 }
 
+_pat = regex.compile(rb'"[^"]*"(*SKIP)(*FAIL)|,')
+_pat_multi = regex.compile(rf'"[^"]*"(*SKIP)(*FAIL)|,|{os.linesep}'.encode())
+
 
 def _text_chunk_gen(
     h: "FileHandler",
-    regex: "re.Pattern",
     chunk_size: int = 100000,
 ):
     _res = b""
@@ -51,11 +54,14 @@ def _text_chunk_gen(
             break
         t = _res + t
         try:
-            t, _res = t.rsplit(b"\r\n", 1)
+            t, _res = t.rsplit(
+                os.linesep.encode(),
+                1,
+            )
         except Exception:
             _res = b""
-        _nlines = t.count(b"\r\n")
-        sd = regex.split(t)
+        _nlines = t.count(os.linesep.encode())
+        sd = _pat_multi.split(t)
         del t
         yield _nlines, sd
 
