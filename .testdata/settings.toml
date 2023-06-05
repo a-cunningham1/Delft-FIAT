@@ -1,20 +1,26 @@
 [global]
-output_dir = 'run_default'
-crs = 'EPSG:4326'
+output_dir = "run_default"
+crs = "EPSG:4326"
 
 [hazard]
-grid_file = 'hazard/event_map.nc'
-crs = 'EPSG:4326'
-return_period = 'Event'
-spatial_reference = 'DEM'
+file = "hazard/event_map.nc"
+crs = "EPSG:4326"
+risk = false
+spatial_reference = "DEM"
 
 [exposure]
-geom_file = 'exposure/spatial.gpkg'
-dbase_file = 'exposure/spatial.csv'
-crs = 'EPSG:4326'
+file = "exposure/spatial.csv"
+
+[exposure.raster]
+file = "exposure/spatial.nc"
+crs = "EPSG:4326"
+
+[exposure.vector]
+file1 = "exposure/spatial.gpkg"
+crs = "EPSG:4326"
 
 [vulnerability]
-dbase_file = 'vulnerability/vulnerability_curves.csv'
+file = "vulnerability/vulnerability_curves.csv"
 
 [categorical_bins]
 low = 0.25

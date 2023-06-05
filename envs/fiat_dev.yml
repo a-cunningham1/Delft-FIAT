@@ -27,4 +27,5 @@ dependencies:
     - sphinx_design
     - sphinx_autosummary_accessors
     - tomli
+    - tomli_w
     - xlsxwriter
