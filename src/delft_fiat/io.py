@@ -18,7 +18,7 @@ import weakref
 from abc import ABCMeta, abstractmethod
 from io import BufferedReader, FileIO, TextIOWrapper
 from math import nan, floor, log10
-from numpy import arange, column_stack, cumsum, interp
+from numpy import arange, column_stack, interp, ndarray
 from osgeo import gdal, ogr
 from osgeo import osr
 
@@ -214,6 +214,7 @@ class CSVParser:
         self.data = handler
         self.meta = {}
         self.meta["index_col"] = -1
+        self.meta["index_name"] = None
         self.index = None
         self.columns = None
         self._nrow = self.data.size
@@ -273,6 +274,7 @@ class CSVParser:
             except Exception:
                 idcol = 0
             self.meta["index_col"] = idcol
+            self.meta["index_name"] = self.columns[idcol]
             _index = []
 
         _dtypes = [0] * self._ncol
@@ -722,6 +724,9 @@ class _Table(_BaseStruct, metaclass=ABCMeta):
     def __del__(self):
         data = None
 
+    def __len__(self):
+        return self.meta["nrow"]
+
     @abstractmethod
     def __getitem__(self):
         pass
@@ -734,9 +739,6 @@ class _Table(_BaseStruct, metaclass=ABCMeta):
     # def __next__(self):
     #     pass
 
-    def _build(self):
-        pass
-
     @property
     def columns(self):
         return tuple(self._columns.keys())
@@ -745,13 +747,20 @@ class _Table(_BaseStruct, metaclass=ABCMeta):
     def index(self):
         return tuple(self._index.keys())
 
+    @property
+    def shape(self):
+        return (
+            self.meta["nrow"],
+            self.meta["ncol"],
+        )
+
 
 class Table(_Table):
     def __init__(
         self,
         data: BufferHandler or dict,
         index: str or tuple = None,
-        columns: tuple = None,
+        columns: list = None,
         **kwargs,
     ) -> object:
         """_summary_
@@ -770,8 +779,12 @@ class Table(_Table):
         if isinstance(data, BufferHandler):
             self._build_from_stream(
                 data,
+                columns,
                 kwargs,
             )
+
+        elif isinstance(data, ndarray):
+            self.data = data
 
         _Table.__init__(
             self,
@@ -783,11 +796,55 @@ class Table(_Table):
     def __iter__(self):
         pass
 
+    def __next__(self):
+        pass
+
+    def __getitem__(self, keys):
+        """_summary_"""
+
+        keys = list(keys)
+
+        if keys[0] != slice(None):
+            keys[0] = self._index[keys[0]]
+
+        if keys[1] != slice(None):
+            keys[1] = self._columns[keys[1]]
+
+        return self.data[keys[0], keys[1]]
+
+    def __setitem__(self, key, value):
+        self.data[key] = value
+
+    def __eq__(self):
+        pass
+
+    def __str__(self):
+        if len(self.columns) > 6:
+            return self._small_repr()
+        else:
+            return self._big_repr()
+
+    def _big_repr(self):
+        repr = ""
+        repr += ", ".join([f"{item:6s}" for item in self.columns]) + "\n"
+        m = zip(*[row[0:3] for row in self.data])
+        for item in m:
+            repr += ", ".join([f"{str(val):6s}" for val in item]) + "\n"
+        repr += f"{'...':6s}, ...\n"
+        return repr
+
+    def _small_repr(self):
+        repr = ""
+        return repr
+
     def _build_from_stream(
         self,
         data: BufferHandler,
+        columns: list,
         kwargs,
     ):
+        """_summary_"""
+
         dtypes = kwargs["dtypes"]
         ncol = kwargs["ncol"]
         nrow = kwargs["nrow"]
@@ -797,6 +854,10 @@ class Table(_Table):
 
         _f = []
         cols = list(range(ncol))
+
+        if kwargs["index_name"] is not None:
+            columns.remove(kwargs["index_name"])
+            kwargs["ncol"] -= 1
 
         if index_col >= 0 and index_col in cols:
             cols.remove(index_col)
@@ -812,53 +873,20 @@ class Table(_Table):
     ):
         pass
 
-    def next(self):
-        pass
-
-    def __getitem__(self, keys):
-        keys += (slice(None, None, None),)
-        keys = list(keys[0:2])
-        if keys[0] != slice(None, None, None):
-            keys[0] = self._index[keys[0]]
-        if keys[1] != slice(None, None, None):
-            keys[0] = self._columns[keys[1]]
-        return self.data[keys[0], keys[1]]
-
-    def __setitem__(self, key, value):
-        self.data[key] = value
-
-    def __eq__(self):
-        pass
-
-    def __str__(self):
-        if len(self.headers) > 6:
-            return self._small_repr()
-        else:
-            return self._big_repr()
-
-    def _big_repr(self):
-        repr = ""
-        repr += ", ".join([f"{item:6s}" for item in self.headers]) + "\n"
-        m = zip(*[row[0:3] for row in [*self.data.values()]])
-        for item in m:
-            repr += ", ".join([f"{str(val):6s}" for val in item]) + "\n"
-        repr += f"{'...':6s}, ...\n"
-        return repr
-
-    def _small_repr(self):
-        repr = ""
-        return repr
-
     def mean():
+        """_summary_"""
+
         pass
 
     def max():
+        """_summary_"""
+
         pass
 
     def upscale(
         self,
         delta: float,
-        inplace: bool = True,
+        inplace: bool = False,
     ):
         """_summary_
 
@@ -871,22 +899,43 @@ class Table(_Table):
 
         """
 
+        meta = self.meta.copy()
+
         _rnd = abs(floor(log10(delta)))
 
-        _x = tuple(
-            arange(
-                min(self[self.index_col]), max(self[self.index_col]) + delta, delta
-            ).round(_rnd)
+        _x = tuple(arange(min(self.index), max(self.index) + delta, delta).round(_rnd))
+        _x = list(set(_x + self.index))
+        _x.sort()
+
+        _f = []
+
+        for c in self.columns:
+            _f.append(interp(_x, self.index, self[:, c]).tolist())
+
+        data = column_stack(_f)
+
+        meta.update(
+            {
+                "ncol": self.meta["ncol"],
+                "nrow": len(data),
+            }
         )
 
-        _hdrs = self.headers.copy()
-        _hdrs.remove(self.index_col)
+        if inplace:
+            self.__init__(
+                data=data,
+                index=_x,
+                columns=self.columns,
+                **meta,
+            )
+            return None
 
-        for c in _hdrs:
-            self[c] = tuple(interp(_x, self[self.index_col], self[c]))
-
-        self[self.index_col] = _x
-        return None
+        return Table(
+            data=data,
+            index=_x,
+            columns=list(self.columns),
+            **meta,
+        )
 
 
 class TableLazy(_Table):
@@ -894,7 +943,7 @@ class TableLazy(_Table):
         self,
         data: BufferHandler,
         index: str or tuple = None,
-        columns: tuple = None,
+        columns: list = None,
         **kwargs,
     ) -> object:
         """_summary_
