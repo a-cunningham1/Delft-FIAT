@@ -1,6 +1,6 @@
-##################################################
-Running Delft-FIAT from the Command Line Interface
-##################################################
+======================
+Command line interface
+======================
 
 Delft-FIAT can be run from the Commend Line Interface (CLI) with one simple command::
 
