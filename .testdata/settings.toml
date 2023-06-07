@@ -11,10 +11,6 @@ spatial_reference = "DEM"
 [exposure]
 file = "exposure/spatial.csv"
 
-[exposure.raster]
-file = "exposure/spatial.nc"
-crs = "EPSG:4326"
-
 [exposure.vector]
 file1 = "exposure/spatial.gpkg"
 crs = "EPSG:4326"
