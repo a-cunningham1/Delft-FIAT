@@ -12,7 +12,6 @@ class BaseModel(metaclass=ABCMeta):
         """_summary_"""
 
         self._cfg = cfg
-        self._args = []
 
         self.srs = osr.SpatialReference()
         self.srs.SetFromUserInput(self._cfg.get("global.crs"))
@@ -36,17 +35,16 @@ class BaseModel(metaclass=ABCMeta):
         return f"<{self.__class__.__name__} object at {id(self):#018x}>"
 
     def _read_hazard_grid(self):
-        data = open_grid(self._cfg.get_path("hazard.grid_file"))
+        data = open_grid(self._cfg.get_path("hazard.file"))
         ## checks
 
         self._hazard_grid = data
 
     def _read_vulnerability_data(self):
-        data = open_csv(self._cfg.get_path("vulnerability.dbase_file"))
+        data = open_csv(self._cfg.get_path("vulnerability.file"), index="water depth")
         ## checks
 
         self._vulnerability_data = data
-        self._args.append(self._vulnerability_data)
 
     @abstractmethod
     def run():

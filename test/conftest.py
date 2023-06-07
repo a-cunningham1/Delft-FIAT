@@ -18,11 +18,11 @@ def cfg(settings_toml):
 
 @pytest.fixture
 def gm(cfg):
-    d = open_geom(cfg.get_path("exposure.geom_file"))
+    d = open_geom(cfg.get_path("exposure.vector.file1"))
     return d
 
 
 @pytest.fixture
 def gr(cfg):
-    d = open_grid(cfg.get_path("hazard.grid_file"))
+    d = open_grid(cfg.get_path("hazard.file"))
     return d

@@ -1,4 +1,7 @@
+from delft_fiat.cfg import ConfigReader
 from delft_fiat.models import GeomModel, GridModel
+
+from pathlib import Path
 
 
 class FIAT:
@@ -10,11 +13,14 @@ class FIAT:
         file : str
             _description_
         """
-
-        pass
+        file = Path(file)
+        if not Path(file).is_absolute():
+            file = Path(Path.cwd(), file)
+        self.cfg = ConfigReader(file)
 
     def run(self):
-        pass
+        model = GeomModel(self.cfg)
+        model.run()
 
 
 if __name__ == "__main__":

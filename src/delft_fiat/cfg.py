@@ -1,5 +1,5 @@
 from delft_fiat.check import check_config_data
-from delft_fiat.util import Path, flatten_dict, generic_path_check
+from delft_fiat.util import Path, flatten_dict, generic_folder_check, generic_path_check
 
 import os
 import tomli
@@ -19,9 +19,16 @@ class ConfigReader(dict):
         dict.__init__(self, flatten_dict(tomli.load(f), "", "."))
         f.close()
 
+        # Ensure the output directory is there
+        _p = Path(self["global.output_dir"])
+        if not _p.is_absolute():
+            _p = Path(self.path, _p)
+        generic_folder_check(_p)
+        self["global.output_dir"] = _p
+
         # Do some checking concerning the file paths in the settings file
         for key, item in self.items():
-            if key.endswith("file"):
+            if key.endswith("file") or key.rsplit(".", 1)[1].startswith("file"):
                 path = generic_path_check(
                     item,
                     self.path,

@@ -2,7 +2,6 @@ from delft_fiat.error import DriverNotFoundError
 from delft_fiat.util import (
     Path,
     deter_type,
-    replace_empty,
     _GeomDriverTable,
     _GridDriverTable,
     _dtypes_reversed,
@@ -16,9 +15,9 @@ import gc
 import os
 import weakref
 from abc import ABCMeta, abstractmethod
-from io import BufferedReader, FileIO, TextIOWrapper
+from io import BufferedReader, BufferedWriter, FileIO, TextIOWrapper
 from math import nan, floor, log10
-from numpy import arange, column_stack, interp, ndarray
+from numpy import arange, array, column_stack, interp, ndarray
 from osgeo import gdal, ogr
 from osgeo import osr
 
@@ -178,7 +177,31 @@ class BufferHandler(_BaseHandler, BufferedReader):
         _BaseHandler.__init__(self, file)
 
     def __repr__(self):
-        return f"<io.{self.__class__.__name__} file='{self.path}' encoding=''>"
+        return f"<{self.__class__.__name__} file='{self.path}' encoding=''>"
+
+
+class BufferTextHandler(BufferedWriter):
+    def __init__(
+        self,
+        file: str,
+        buffer_size: int = 100000,
+    ):
+        self._file_stream = FileIO(file, mode="wb")
+        self.path = file
+
+        BufferedWriter.__init__(
+            self,
+            self._file_stream,
+            buffer_size=buffer_size,
+        )
+
+    def __del__(self):
+        self.flush()
+        self.close()
+        self._file_stream.close()
+
+    def __repr__(self):
+        return f"<{self.__class__.__name__} file='{self.path}'>"
 
 
 class TextHandler(_BaseHandler, TextIOWrapper):
@@ -203,7 +226,7 @@ class TextHandler(_BaseHandler, TextIOWrapper):
         _BaseHandler.__init__()
 
     def __repr__(self):
-        return f"<io.{self.__class__.__name__} file='{self.path}'>"
+        return f"<{self.__class__.__name__} file='{self.path}'>"
 
 
 ## Parsing
@@ -786,6 +809,9 @@ class Table(_Table):
         elif isinstance(data, ndarray):
             self.data = data
 
+        elif isinstance(data, list):
+            self._build_from_list(data)
+
         _Table.__init__(
             self,
             index,
@@ -872,6 +898,14 @@ class Table(_Table):
         data: dict,
     ):
         pass
+
+    def _build_from_list(
+        self,
+        data: list,
+    ):
+        """_summary_"""
+
+        self.data = array(data, dtype=object)
 
     def mean():
         """_summary_"""
@@ -998,9 +1032,10 @@ class TableLazy(_Table):
             idx = self._index[oid]
         except Exception:
             return None
+
         self.data.seek(idx)
 
-        return replace_empty(_pat.split(self.data.readline().strip()))
+        return self.data.readline().strip()
 
     def _build_lazy(self):
         pass
@@ -1012,6 +1047,26 @@ class TableLazy(_Table):
         """_summary_"""
 
         return self.__getitem__(oid)
+
+    def search_extra_meta(
+        self,
+        columns: list,
+    ):
+        """_summary_"""
+
+        meta = {}
+        for req in columns:
+            req_s = req.strip(":").lower().replace(" ", "_")
+            self.__setattr__(
+                req_s,
+                dict(
+                    [
+                        (item.split(":")[1].strip(), self._columns[item])
+                        for item in self.columns
+                        if item.startswith(req)
+                    ]
+                ),
+            )
 
     def set_index(
         self,

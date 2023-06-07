@@ -12,6 +12,9 @@
 ##################################################
 import importlib.util
 import warnings
+from osgeo import osr
+
+osr.UseExceptions()
 
 from .version import __version__
 from .main import FIAT

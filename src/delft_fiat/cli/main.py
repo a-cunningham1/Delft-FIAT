@@ -54,8 +54,8 @@ def run(
     \b
     <cfg>  Configurations file (toml) containing the settings for the FIAT model
     """
-    model = FIAT(cfg)
-    model.run()
+    obj = FIAT(cfg)
+    obj.run()
 
 
 if __name__ == "__main__":

@@ -1,33 +1,82 @@
 from delft_fiat.gis import geom, overlay
-from delft_fiat.io import open_csv, open_geom
+from delft_fiat.io import BufferTextHandler, open_csv, open_geom
 from delft_fiat.models.base import BaseModel
 from delft_fiat.models.calc import get_inundation_depth, get_damage_factor
+from delft_fiat.util import _pat, replace_empty
 
 import os
 import time
-from concurrent.futures import ProcessPoolExecutor
-from osgeo import gdal, ogr
+from concurrent.futures import ProcessPoolExecutor, wait, as_completed
+from io import BufferedWriter
+from math import isnan
+from multiprocessing import Process
+from pathlib import Path
 
 
-def worker_coord(haz, idx, vul, exp):
-    pass
+def worker(
+    writer: BufferTextHandler,
+    haz: "GridSource",
+    idx: int,
+    vul: "Table",
+    exp: "TableLazy",
+    gm: "GeomSource",
+):
+    """_summary_
 
+    Parameters
+    ----------
+    writer : BufferTextHandler
+        _description_
+    haz : GridSource
+        _description_
+    idx : int
+        _description_
+    vul : Table
+        _description_
+    exp : TableLazy
+        _description_
+    gm : GeomSource
+        _description_
+    """
 
-def worker_geoms(haz, idx, vul, exp_data, exp):
-    for ft in exp:
-        ft_info = exp_data[ft.GetField(0)]
-        ft_info = [x(y) for x, y in zip(exp_data.dtypes, ft_info)]
+    header = (
+        ",".join(exp.columns).encode()
+        + b","
+        + ",".join(
+            [f"damage_{item}".lower() for item in exp.damage_function.keys()]
+        ).encode()
+        + b"\r\n"
+    )
+    writer.write(header)
+
+    for ft in gm:
+        row = b""
+
+        ft_info_raw = exp[ft.GetField(0)]
+        ft_info = replace_empty(_pat.split(ft_info_raw))
+        ft_info = [x(y) for x, y in zip(exp.dtypes, ft_info)]
+
         res = overlay.clip(haz[idx], haz.get_srs(), haz.get_geotransform(), ft)
         inun = get_inundation_depth(
             res,
             "DEM",
-            float(ft_info[exp_data.header_index["Ground Floor Height"]]),
+            ft_info[exp._columns["Ground Floor Height"]],
         )
-        get_damage_factor(
-            inun[0],
-            vul[ft_info[exp_data.header_index["Damage Function: struct"]]],
-        )
-        pass
+
+        row += ft_info_raw
+
+        for key, col in exp.damage_function.items():
+            if isnan(inun[0]) or ft_info[col] == "nan":
+                _d = ""
+            else:
+                _df = vul[round(inun[0], 2), ft_info[col]]
+                _d = _df * ft_info[exp.max_potential_damage[key]]
+
+            row += f",{_d}".encode()
+        row += b"\r\n"
+        writer.write(row)
+
+    writer.flush()
 
 
 class GeomModel(BaseModel):
@@ -44,43 +93,65 @@ class GeomModel(BaseModel):
 
         self._geoms = True
         self._read_exposure_data()
-        if self._geoms:
-            self._read_exposure_geoms()
+        self._read_exposure_geoms()
+        self._vulnerability_data.upscale(0.01, inplace=True)
 
     def __del__(self):
         BaseModel.__del__(self)
 
     def _read_exposure_data(self):
-        data = open_csv(self._cfg.get("exposure.dbase_file"), large=True)
+        data = open_csv(self._cfg.get("exposure.file"), index="Object ID", large=True)
         ##checks
         self._exposure_data = data
-        self._args.append(self._exposure_data)
+        self._exposure_data.search_extra_meta(
+            ("Damage Function:", "Max Potential Damage")
+        )
 
     def _read_exposure_geoms(self):
-        data = open_geom(self._cfg.get_path("exposure.geom_file"))
-        ##checks
-        if not (
-            self.srs.IsSame(data.get_srs())
-            or self.srs.ExportToWkt() == data.get_srs().ExportToWkt()
-        ):
-            data = geom.reproject(data, data.get_srs().ExportToWkt())
-        self._exposure_geoms = data
-        self._args.append(self._exposure_geoms)
+        _d = {}
+        _found = [item for item in list(self._cfg) if "exposure.vector.file" in item]
+        for file in _found:
+            data = open_geom(self._cfg.get_path(file))
+            ##checks
+            if not (
+                self.srs.IsSame(data.get_srs())
+                or self.srs.ExportToWkt() == data.get_srs().ExportToWkt()
+            ):
+                data = geom.reproject(data, data.get_srs().ExportToWkt())
+            _d[file.rsplit(".", 1)[1]] = data
+        self._exposure_geoms = _d
 
     def run(self):
         """_summary_"""
 
-        func = worker_geoms
-        if not self._geoms:
-            func = worker_coord
+        writer = BufferTextHandler(
+            Path(self._cfg["global.output_dir"], "output.csv"),
+            buffer_size=100000,
+        )
 
         if self._hazard_grid.count > 1:
-            pcount = min(os.cpu_count, self._hazard_grid.count)
+            pcount = min(os.cpu_count(), self._hazard_grid.count)
             with ProcessPoolExecutor(max_workers=pcount) as Pool:
                 for idx in range(self._hazard_grid.count):
-                    Pool.submit(
-                        func,
-                        *[self._hazard_grid, idx, *self._args],
+                    p = Pool.submit(
+                        worker,
+                        writer,
+                        self._hazard_grid,
+                        1,
+                        self._vulnerability_data,
+                        self._exposure_data,
+                        self._exposure_geoms["file1"],
                     )
+                for f in as_completed([p]):
+                    print(f.result())
+
         else:
-            func(self._hazard_grid, 1, *self._args)
+            worker(
+                writer,
+                self._hazard_grid,
+                1,
+                self._vulnerability_data,
+                self._exposure_data,
+                self._exposure_geoms["file1"],
+            )
+        del writer

@@ -5,7 +5,7 @@ import pytest
 
 def test_geom_model(tmpdir, cfg):
     model = GeomModel(cfg)
-    pass
+    model.run()
 
 
 def test_raster_model():
