@@ -1,6 +1,14 @@
 [global]
-output_dir = "run_default"
 crs = "EPSG:4326"
+
+[output]
+path = "output"
+
+[output.csv]
+name = "output.csv"
+
+[output.vector]
+name1 = "spatial.gpkg"
 
 [hazard]
 file = "hazard/event_map.nc"

@@ -167,8 +167,14 @@ def create_risk_map():
 def create_settings():
     doc = {
         "global": {
-            "output_dir": "run_default",
             "crs": "EPSG:4326",
+        },
+        "output": {
+            "path": "output",
+            "csv": {
+                "name": "output.csv",
+            },
+            "vector": {"name1": "spatial.gpkg"},
         },
         "hazard": {
             "file": "hazard/event_map.nc",
