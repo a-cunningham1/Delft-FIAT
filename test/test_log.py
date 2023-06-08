@@ -20,6 +20,7 @@ def test_log(tmpdir):
     log = Log("fiat", log_level=2)
     log.add_loggers(
         str(tmpdir),
+        name="fiat",
         cmd_stream=True,
     )
     child_log = spawn_child_logger("fiat.child")
