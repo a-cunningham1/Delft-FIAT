@@ -177,13 +177,13 @@ def create_settings():
             "spatial_reference": "DEM",
         },
         "exposure": {
-            "file": "exposure/spatial.csv",
-            "raster": {
-                "file": "exposure/spatial.nc",
-                "crs": "EPSG:4326",
-            },
+            # "raster": {
+            #     "file": "exposure/spatial.nc",
+            #     "crs": "EPSG:4326",
+            # },
             "vector": {
                 "file1": "exposure/spatial.gpkg",
+                "csv": "exposure/spatial.csv",
                 "crs": "EPSG:4326",
             },
         },

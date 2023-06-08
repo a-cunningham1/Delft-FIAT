@@ -100,7 +100,9 @@ class GeomModel(BaseModel):
         BaseModel.__del__(self)
 
     def _read_exposure_data(self):
-        data = open_csv(self._cfg.get("exposure.file"), index="Object ID", large=True)
+        data = open_csv(
+            self._cfg.get("exposure.vector.csv"), index="Object ID", large=True
+        )
         ##checks
         self._exposure_data = data
         self._exposure_data.search_extra_meta(

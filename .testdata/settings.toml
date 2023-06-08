@@ -8,11 +8,9 @@ crs = "EPSG:4326"
 risk = false
 spatial_reference = "DEM"
 
-[exposure]
-file = "exposure/spatial.csv"
-
 [exposure.vector]
 file1 = "exposure/spatial.gpkg"
+csv = "exposure/spatial.csv"
 crs = "EPSG:4326"
 
 [vulnerability]
