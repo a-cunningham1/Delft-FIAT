@@ -60,7 +60,8 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
-.testdata/run_default/
+.testdata/output/
+.testdata/*.log
 cover/
 
 # Scrapy stuff:
