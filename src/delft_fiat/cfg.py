@@ -20,11 +20,11 @@ class ConfigReader(dict):
         f.close()
 
         # Ensure the output directory is there
-        _p = Path(self["global.output_dir"])
+        _p = Path(self["output.path"])
         if not _p.is_absolute():
             _p = Path(self.path, _p)
         generic_folder_check(_p)
-        self["global.output_dir"] = _p
+        self["output.path"] = _p
 
         # Do some checking concerning the file paths in the settings file
         for key, item in self.items():

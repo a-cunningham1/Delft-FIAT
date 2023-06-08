@@ -259,7 +259,7 @@ class Log:
             _description_, by default 0
         """
 
-        self._streams.append(FileLogger(level=self.log_level, dst=dst, name=self.name))
+        self._streams.append(FileLogger(level=self.log_level, dst=dst, name=name))
         if cmd_stream:
             self._streams.append(StreamLogger(level=(self.log_level - cmd_level_diff)))
 

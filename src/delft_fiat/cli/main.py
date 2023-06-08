@@ -54,6 +54,12 @@ def run(
     \b
     <cfg>  Configurations file (toml) containing the settings for the FIAT model
     """
+    logger = Log("FIAT")
+    logger.add_loggers(
+        dst=cfg.parent,
+        name="fiat",
+    )
+    logger.info(f"Delft-Fiat version: {__version__}")
     obj = FIAT(cfg)
     obj.run()
 

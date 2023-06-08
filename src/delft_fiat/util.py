@@ -5,27 +5,12 @@ import regex
 import sys
 from collections.abc import MutableMapping
 from gc import get_referents
+from osgeo import gdal
 from pathlib import Path
 from types import ModuleType, FunctionType
 
 BLACKLIST = type, ModuleType, FunctionType
 
-_GeomDriverTable = {
-    "": "Memory",
-    ".csv": "CSV",
-    ".gdb": "FileGDB",
-    ".geojson": "GeoJSON",
-    ".gpkg": "GPKG",
-    ".nc": "netCDF",
-    ".shp": "ESRI Shapefile",
-}
-
-_GridDriverTable = {
-    "": "MEM",
-    ".nc": "netCDF",
-    ".tif": "GTiff",
-    ".vrt": "VRT",
-}
 
 _dtypes = {
     0: 3,
@@ -41,6 +26,118 @@ _dtypes_reversed = {
 
 _pat = regex.compile(rb'"[^"]*"(*SKIP)(*FAIL)|,')
 _pat_multi = regex.compile(rf'"[^"]*"(*SKIP)(*FAIL)|,|{os.linesep}'.encode())
+
+
+def _read_gridsource_info(
+    gr: gdal.Dataset,
+    format: str = "json",
+):
+    """_summary_
+    Thanks to:
+    https://stackoverflow.com/questions/72059815/how-to-retrieve-all-variable-names-within-a-netcdf-using-gdal
+    """
+
+    info = gdal.Info(gr, options=gdal.InfoOptions(format=format))
+    return info
+
+
+def _read_gridsrouce_layers(
+    gr: gdal.Dataset,
+):
+    """_summary_"""
+
+    sd = gr.GetSubDatasets()
+
+    out = {}
+
+    for item in sd:
+        path = item[0]
+        ds = path.split(":")[-1].strip()
+        out[ds] = path
+
+    return out
+
+
+def _read_gridsource_layers_from_info(
+    info: dict,
+):
+    """_summary_
+    Thanks to:
+    https://stackoverflow.com/questions/72059815/how-to-retrieve-all-variable-names-within-a-netcdf-using-gdal
+    """
+
+    _sub_data_keys = [x for x in info["metadata"]["SUBDATASETS"].keys() if "_NAME" in x]
+    _sub_data_vars = [info["metadata"]["SUBDATASETS"][x] for x in _sub_data_keys]
+
+    pass
+
+
+def _create_geom_driver_map():
+    """_summary_"""
+
+    geom_drivers = {}
+    _c = gdal.GetDriverCount()
+
+    for idx in range(_c):
+        dr = gdal.GetDriver(idx)
+        if dr.GetMetadataItem(gdal.DCAP_VECTOR):
+            if dr.GetMetadataItem(gdal.DCAP_CREATE) or dr.GetMetadataItem(
+                gdal.DCAP_CREATE_LAYER
+            ):
+                ext = dr.GetMetadataItem(gdal.DMD_EXTENSION) or dr.GetMetadataItem(
+                    gdal.DMD_EXTENSIONS
+                )
+                if ext is None:
+                    continue
+                if len(ext.split(" ")) > 1:
+                    exts = ext.split(" ")
+                    if dr.ShortName.lower() in exts:
+                        ext = dr.ShortName.lower()
+                    else:
+                        ext = ext.split(" ")[-1]
+                if len(ext) > 0:
+                    ext = "." + ext
+                    geom_drivers[ext] = dr.ShortName
+
+    return geom_drivers
+
+
+GEOM_DRIVER_MAP = _create_geom_driver_map()
+GEOM_DRIVER_MAP[""] = "Memory"
+
+
+def _create_grid_driver_map():
+    """_summary_"""
+
+    grid_drivers = {}
+    _c = gdal.GetDriverCount()
+
+    for idx in range(_c):
+        dr = gdal.GetDriver(idx)
+        if dr.GetMetadataItem(gdal.DCAP_RASTER):
+            if dr.GetMetadataItem(gdal.DCAP_CREATE) or dr.GetMetadataItem(
+                gdal.DCAP_CREATECOPY
+            ):
+                ext = dr.GetMetadataItem(gdal.DMD_EXTENSION) or dr.GetMetadataItem(
+                    gdal.DMD_EXTENSIONS
+                )
+                if ext is None:
+                    continue
+                if len(ext.split(" ")) > 1:
+                    exts = ext.split(" ")
+                    if dr.ShortName.lower() in exts:
+                        ext = dr.ShortName.lower()
+                    else:
+                        ext = ext.split(" ")[-1]
+                if len(ext) > 0:
+                    ext = "." + ext
+                    grid_drivers[ext] = dr.ShortName
+
+    return grid_drivers
+
+
+GRID_DRIVER_MAP = _create_grid_driver_map()
+GRID_DRIVER_MAP[""] = "MEM"
 
 
 def _text_chunk_gen(

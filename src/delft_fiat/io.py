@@ -1,9 +1,9 @@
 from delft_fiat.error import DriverNotFoundError
 from delft_fiat.util import (
+    GEOM_DRIVER_MAP,
+    GRID_DRIVER_MAP,
     Path,
     deter_type,
-    _GeomDriverTable,
-    _GridDriverTable,
     _dtypes_reversed,
     _pat,
     _pat_multi,
@@ -395,12 +395,12 @@ class GeomSource(_BaseIO, _BaseStruct):
         _BaseIO.__init__(self, file, mode)
 
         if not driver and not self._mode:
-            driver = _GeomDriverTable[self.path.suffix]
+            driver = GEOM_DRIVER_MAP[self.path.suffix]
 
-        if not driver in _GeomDriverTable.values():
+        if not driver in GEOM_DRIVER_MAP.values():
             raise DriverNotFoundError("")
 
-        if _GeomDriverTable[self.path.suffix] != driver:
+        if GEOM_DRIVER_MAP[self.path.suffix] != driver:
             raise OSError(
                 f"Path suffix ({self.path.suffix}) does not match driver ({driver})"
             )
@@ -588,7 +588,7 @@ class GridSource(_BaseIO, _BaseStruct):
 
         _BaseIO.__init__(self, file, mode)
 
-        if not self.path.suffix in _GridDriverTable:
+        if not self.path.suffix in GRID_DRIVER_MAP:
             raise DriverNotFoundError("")
 
         self._driver = gdal.GetDriverByName(driver)

@@ -126,8 +126,12 @@ class GeomModel(BaseModel):
     def run(self):
         """_summary_"""
 
+        out_csv = "output.csv"
+        if "output.csv.name" in self._cfg:
+            out_csv = self._cfg["output.csv.name"]
+
         writer = BufferTextHandler(
-            Path(self._cfg["global.output_dir"], "output.csv"),
+            Path(self._cfg["output.path"], out_csv),
             buffer_size=100000,
         )
 
