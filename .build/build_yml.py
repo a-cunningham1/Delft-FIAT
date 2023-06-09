@@ -31,7 +31,7 @@ if args.profile == "build":
     pip_deps.extend(toml["project"]["optional-dependencies"]["build"])
     deps.remove([item for item in deps if "gdal" in item.lower()][0])
     conda_deps[1] = "python==3.10.*"
-    pip_deps.extend(deps + ["-e .."])
+    pip_deps.extend(deps + ["-e ."])
 elif args.profile == "dev":
     conda_deps.extend(toml["project"]["optional-dependencies"]["all"])
     conda_deps.extend(toml["project"]["optional-dependencies"]["dev"])
@@ -58,6 +58,13 @@ for dep in conda_deps:
     if dep in deps_not_in_conda:
         pip_deps.append(dep)
         conda_deps_final.remove(dep)
+
+for dep in pip_deps:
+    if "@" in dep:
+        new_dep = dep.split("@")[1].strip()
+        idx = pip_deps.index(dep)
+        pip_deps.remove(dep)
+        pip_deps.insert(idx, new_dep)
 
 conda_deps_to_install_string = "\n  - ".join(conda_deps_final)
 pip_deps_to_install_string = "\n    - ".join(pip_deps)

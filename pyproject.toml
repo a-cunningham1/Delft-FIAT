@@ -77,12 +77,12 @@ all = [
     "setuptools>=61.0.0",
 ]
 build = [
-    "GDAL-3.6.2-cp310-cp310-win_amd64.whl",
+    "GDAL @ https://github.com/cgohlke/geospatial-wheels/releases/download/v2023.4.22/GDAL-3.6.4-cp310-cp310-win_amd64.whl",
     "pyinstaller",
 ]
 dev = [
     "pyside2",
-    "tomli_w",
+    "tomli-w",
 ]
 docs = [
     "m2r2",
