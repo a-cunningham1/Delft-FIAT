@@ -18,6 +18,7 @@ __pycache__/
 # Local documentation and temporary files (calculation etc.)
 docs/
 tmp/
+whl/
 
 # C extensions
 *.so
