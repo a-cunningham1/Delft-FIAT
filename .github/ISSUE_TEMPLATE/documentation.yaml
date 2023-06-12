@@ -1,6 +1,6 @@
 name: Documentation
 description: Missing or bad documentation.
-title: "DOCUMENTATION: "
+# title: "Docs: "
 labels: [documentation]
 
 body:
@@ -12,6 +12,15 @@ body:
             I have checked that the issue still exists on the latest versions of the docs
             on `master` [here](https://github.com/Deltares/Delft-FIAT)
           required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      description: What kind of documentation issue is this?
+      label: Kind of issue
+      options:
+        - Docs are wrong
+        - Docs are unclear
+        - Docs are missing
   - type: textarea
     id: location
     attributes:
@@ -35,4 +44,4 @@ body:
       description: >
         Please explain your suggested fix and why it's better than the existing documentation:
     validations:
-      required: true
+      required: false

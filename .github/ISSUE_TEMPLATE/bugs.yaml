@@ -1,6 +1,6 @@
 name: Bugs
 description: Broken elements within Delft-FIAT
-title: "BUG: "
+# title: "BUG: "
 labels: [bug]
 
 body:
@@ -13,10 +13,8 @@ body:
             I have checked that this issue has not already been reported.
           required: true
         - label: >
-            I have checked that this bug exists on the latest version of Delft-FIAT.   
-          required: true
-        - label: >
-            I have checked that this bug exists on the main branch of Delft-FIAT.            
+            I have checked that this bug exists on the latest version of Delft-FIAT.
+          required: true           
   - type: textarea
     id: example
     attributes:
@@ -26,29 +24,21 @@ body:
     validations:
       required: true
   - type: textarea
-    id: problem
+    id: current-behaviour
     attributes:
-      label: Issue Description
       description: >
-        Please provide a description of the issue shown in the reproducible example:
+        Please provide a description of the incorrect behaviour shown in the reproducible example
+      label: Current behaviour
     validations:
       required: true
   - type: textarea
-    id: version
+    id: expected-behaviour
     attributes:
-      label: Installed Versions
       description: >
-        Please provide the version of Delft-FIAT:
+        Please provide a description of what you think the behaviour should be
+      label: Desired behaviour
     validations:
       required: true
-  - type: textarea
-    id: resolve
-    attributes:
-      label: Resolve Description
-      description: >
-        At first glance: how could this be resolved?
-    validations:
-      required: false
   - type: textarea
     id: Additional
     attributes:

@@ -1,21 +1,18 @@
 name: Feature Request
 description: Propose an improvement for Delft-FIAT
-title: "Improvement: "
+# title: "Improvement: "
 labels: [enhancement]
 
 body:
-  - type: checkboxes
+  - type: dropdown
     id: checks
     attributes:
-      label: Feature Type
-      description: Please check what type of feature request you would like to propose.
+      description: What kind of feature request is this?
+      label: Feature type
       options:
-        - label: >
-            Adding new functionality
-        - label: >
-            Improving existing code
-        - label: >
-            Removing deprecated code/ clutter
+        - Adding new functionality
+        - Changing existing functionality
+        - Removing existing functionality
   - type: textarea
     id: description
     attributes:
