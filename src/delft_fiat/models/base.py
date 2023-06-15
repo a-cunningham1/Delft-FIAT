@@ -1,7 +1,10 @@
 from delft_fiat.io import open_csv, open_geom, open_grid
+from delft_fiat.log import spawn_logger
 
 from abc import ABCMeta, abstractmethod
 from osgeo import osr
+
+logger = spawn_logger("fiat.model")
 
 
 class BaseModel(metaclass=ABCMeta):
@@ -13,8 +16,10 @@ class BaseModel(metaclass=ABCMeta):
 
         self._cfg = cfg
 
+        _srs = self._cfg.get("global.crs")
         self.srs = osr.SpatialReference()
-        self.srs.SetFromUserInput(self._cfg.get("global.crs"))
+        self.srs.SetFromUserInput(_srs)
+        logger.info(f"Global srs set to: {_srs}")
 
         # Declarations
         self._exposure_data = None
@@ -35,14 +40,20 @@ class BaseModel(metaclass=ABCMeta):
         return f"<{self.__class__.__name__} object at {id(self):#018x}>"
 
     def _read_hazard_grid(self):
-        data = open_grid(self._cfg.get_path("hazard.file"))
+        path = self._cfg.get("hazard.file")
+        logger.info(f"Reading hazard data ('{path.name}')")
+        data = open_grid(path)
         ## checks
+        logger.info("Executing hazard checks...")
 
         self._hazard_grid = data
 
     def _read_vulnerability_data(self):
-        data = open_csv(self._cfg.get_path("vulnerability.file"), index="water depth")
+        path = self._cfg.get("vulnerability.file")
+        logger.info(f"Reading vulnerability curves ('{path.name}')")
+        data = open_csv(str(path), index="water depth")
         ## checks
+        logger.info("Executing vulnerability checks...")
 
         self._vulnerability_data = data
 

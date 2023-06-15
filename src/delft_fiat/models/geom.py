@@ -13,7 +13,7 @@ from math import isnan
 from multiprocessing import Process
 from pathlib import Path
 
-logger = spawn_logger("fiat.geom_model")
+logger = spawn_logger("fiat.model.geom")
 
 
 def worker(
@@ -94,7 +94,6 @@ class GeomModel(BaseModel):
     ):
         super().__init__(cfg)
 
-        logger.info("Reading geometry data")
         self._geoms = True
         self._read_exposure_data()
         self._read_exposure_geoms()
@@ -104,9 +103,9 @@ class GeomModel(BaseModel):
         BaseModel.__del__(self)
 
     def _read_exposure_data(self):
-        data = open_csv(
-            self._cfg.get("exposure.vector.csv"), index="Object ID", large=True
-        )
+        path = self._cfg.get("exposure.vector.csv")
+        logger.info(f"Reading exposure data ('{path.name}')")
+        data = open_csv(path, index="Object ID", large=True)
         ##checks
         self._exposure_data = data
         self._exposure_data.search_extra_meta(
@@ -117,7 +116,11 @@ class GeomModel(BaseModel):
         _d = {}
         _found = [item for item in list(self._cfg) if "exposure.vector.file" in item]
         for file in _found:
-            data = open_geom(self._cfg.get_path(file))
+            path = self._cfg.get(file)
+            logger.info(
+                f"Reading exposure geometry '{file.split('.')[-1]}' ('{path.name}')"
+            )
+            data = open_geom(str(path))
             ##checks
             if not (
                 self.srs.IsSame(data.get_srs())
