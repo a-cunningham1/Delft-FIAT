@@ -1,4 +1,4 @@
-from delft_fiat.log import Log
+from delft_fiat.log import setup_default_log
 from delft_fiat.main import FIAT
 from delft_fiat.version import __version__
 from delft_fiat.cli.util import Path, file_path_check
@@ -54,10 +54,10 @@ def run(
     \b
     <cfg>  Configurations file (toml) containing the settings for the FIAT model
     """
-    logger = Log("FIAT")
-    logger.add_loggers(
+    logger = setup_default_log(
+        "fiat",
+        log_level=2,
         dst=cfg.parent,
-        name="fiat",
     )
     logger.info(f"Delft-Fiat version: {__version__}")
     obj = FIAT(cfg)

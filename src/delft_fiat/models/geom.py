@@ -1,5 +1,6 @@
 from delft_fiat.gis import geom, overlay
 from delft_fiat.io import BufferTextHandler, open_csv, open_geom
+from delft_fiat.log import spawn_logger
 from delft_fiat.models.base import BaseModel
 from delft_fiat.models.calc import get_inundation_depth, get_damage_factor
 from delft_fiat.util import _pat, replace_empty
@@ -11,6 +12,8 @@ from io import BufferedWriter
 from math import isnan
 from multiprocessing import Process
 from pathlib import Path
+
+logger = spawn_logger("fiat.geom_model")
 
 
 def worker(
@@ -91,6 +94,7 @@ class GeomModel(BaseModel):
     ):
         super().__init__(cfg)
 
+        logger.info("Reading geometry data")
         self._geoms = True
         self._read_exposure_data()
         self._read_exposure_geoms()

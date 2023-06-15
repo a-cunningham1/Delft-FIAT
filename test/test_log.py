@@ -1,4 +1,4 @@
-from delft_fiat.log import StreamLogger, Log, spawn_child_logger
+from delft_fiat.log import CMDStream, Log, spawn_logger
 
 import io
 import pytest
@@ -7,7 +7,7 @@ from pathlib import Path
 
 def test_stream():
     stream = io.StringIO()
-    sl = StreamLogger(stream=stream)
+    sl = CMDStream(stream=stream)
 
     sl.emit("Hello!\n")
     sl.emit("Good day!\n")
@@ -18,12 +18,14 @@ def test_stream():
 
 def test_log(tmpdir):
     log = Log("fiat", log_level=2)
-    log.add_loggers(
-        str(tmpdir),
-        name="fiat",
-        cmd_stream=True,
+    log.add_cmd_stream(
+        level=2,
     )
-    child_log = spawn_child_logger("fiat.child")
+    log.add_file_stream(
+        str(tmpdir),
+        filename="fiat",
+    )
+    child_log = spawn_logger("fiat.child")
 
     assert id(log) != id(child_log)
 
