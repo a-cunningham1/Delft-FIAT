@@ -7,6 +7,7 @@ from delft_fiat.util import (
     _dtypes_reversed,
     _pat,
     _pat_multi,
+    _read_gridsrouce_layers,
     _text_chunk_gen,
 )
 
@@ -594,12 +595,18 @@ class GridSource(_BaseIO, _BaseStruct):
         self._driver = gdal.GetDriverByName(driver)
 
         self.src = None
+        self.sub_sets = None
         self.count = 0
         self._cur_index = 1
 
         if not self._mode:
             self.src = gdal.Open(str(self.path))
             self.count = self.src.RasterCount
+
+            if self.count == 0:
+                self.sub_sets = _read_gridsrouce_layers(
+                    self.src,
+                )
 
     def __iter__(self):
         self._cur_index = 1

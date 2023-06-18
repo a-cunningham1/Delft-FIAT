@@ -1,4 +1,4 @@
-from delft_fiat.log import Log
+from delft_fiat.log import spawn_logger
 from delft_fiat.util import generic_path_check
 
 import sys
@@ -6,6 +6,30 @@ from decimal import Decimal
 from osgeo import gdal
 from osgeo import osr
 from pathlib import Path
+
+logger = spawn_logger("fiat.checks")
+
+
+## Hazard
+def check_hazard_subsets(
+    sub: dict,
+    path: Path,
+):
+    """_summary_"""
+
+    if sub is not None:
+        keys = ", ".join(list(sub.keys()))
+        logger.error(
+            f"""'{path.name}': cant read this file as there are \
+                     multiple layers (bands) with different dimensions."""
+        )
+        logger.info(f"Chose one of the following layers: {keys}")
+        sys.exit()
+
+
+## Exposure
+
+## Vulnerability
 
 
 def check_config_data(

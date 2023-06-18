@@ -1,3 +1,4 @@
+from delft_fiat.check import check_hazard_subsets
 from delft_fiat.io import open_csv, open_geom, open_grid
 from delft_fiat.log import spawn_logger
 
@@ -45,7 +46,11 @@ class BaseModel(metaclass=ABCMeta):
         data = open_grid(path)
         ## checks
         logger.info("Executing hazard checks...")
-
+        check_hazard_subsets(
+            data.sub_sets,
+            path,
+        )
+        ## When all is done, add it
         self._hazard_grid = data
 
     def _read_vulnerability_data(self):
