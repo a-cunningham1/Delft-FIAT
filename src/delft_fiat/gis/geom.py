@@ -72,7 +72,6 @@ def reproject(
 
     mem_gs = open_geom(
         file="memset",
-        driver="Memory",
         mode="w",
     )
 
@@ -96,7 +95,7 @@ def reproject(
     out_srs = None
     transform = None
 
-    with open_geom(fname, gs._driver.GetName(), mode="w") as new_gs:
+    with open_geom(fname, mode="w") as new_gs:
         new_gs.create_layer_from_copy(mem_gs.layer)
 
     mem_gs.close()
