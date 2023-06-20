@@ -16,6 +16,10 @@ crs = "EPSG:4326"
 risk = false
 spatial_reference = "DEM"
 
+[exposure.raster]
+file = "exposure/spatial.nc"
+crs = "EPSG:4326"
+
 [exposure.vector]
 file1 = "exposure/spatial.gpkg"
 csv = "exposure/spatial.csv"

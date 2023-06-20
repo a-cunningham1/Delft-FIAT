@@ -26,6 +26,18 @@ def create_dbase_stucture():
             os.mkdir(Path(p, f))
 
 
+def create_exposure_dbase():
+    with open(Path(p, "exposure", "spatial.csv"), "w") as f:
+        f.write("Object ID,Extraction Method,Ground Floor Height,")
+        f.write("Damage Function: struct,Max Potential Damage: struct\n")
+        for n in range(4):
+            if (n + 1) % 2 != 0:
+                dmc = "struct_1"
+            else:
+                dmc = "struct_2"
+            f.write(f"{n+1},area,0,{dmc},{(n+1)*1000}\n")
+
+
 def create_exposure_geoms():
     geoms = (
         "POLYGON ((4.355 52.045, 4.355 52.035, 4.365 52.035, 4.365 52.045, 4.355 52.045))",
@@ -74,16 +86,42 @@ def create_exposure_geoms():
     dr = None
 
 
-def create_exposure_dbase():
-    with open(Path(p, "exposure", "spatial.csv"), "w") as f:
-        f.write("Object ID,Extraction Method,Ground Floor Height,")
-        f.write("Damage Function: struct,Max Potential Damage: struct\n")
-        for n in range(4):
-            if (n + 1) % 2 != 0:
-                dmc = "struct_1"
-            else:
-                dmc = "struct_2"
-            f.write(f"{n+1},area,0,{dmc},{(n+1)*1000}\n")
+def create_exposure_grid():
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(4326)
+    dr = gdal.GetDriverByName("netCDF")
+    src = dr.Create(
+        str(Path(p, "exposure", "spatial.nc")),
+        10,
+        10,
+        1,
+        gdal.GDT_Float32,
+    )
+    gtf = (
+        4.35,
+        0.01,
+        0.0,
+        52.05,
+        0.0,
+        -0.01,
+    )
+    src.SetSpatialRef(srs)
+    src.SetGeoTransform(gtf)
+
+    band = src.GetRasterBand(1)
+    data = zeros((10, 10))
+    oneD = tuple(range(10))
+    for x, y in product(oneD, oneD):
+        data[x, y] = 2000 + ((x + y) * 100)
+    band.WriteArray(data)
+
+    band.FlushCache()
+    src.FlushCache()
+
+    srs = None
+    band = None
+    src = None
+    dr = None
 
 
 def create_hazard_map():
@@ -183,10 +221,10 @@ def create_settings():
             "spatial_reference": "DEM",
         },
         "exposure": {
-            # "raster": {
-            #     "file": "exposure/spatial.nc",
-            #     "crs": "EPSG:4326",
-            # },
+            "raster": {
+                "file": "exposure/spatial.nc",
+                "crs": "EPSG:4326",
+            },
             "vector": {
                 "file1": "exposure/spatial.gpkg",
                 "csv": "exposure/spatial.csv",
@@ -231,6 +269,7 @@ if __name__ == "__main__":
     create_dbase_stucture()
     create_exposure_dbase()
     create_exposure_geoms()
+    create_exposure_grid()
     create_hazard_map()
     create_risk_map()
     create_settings()
