@@ -243,13 +243,10 @@ class GeomMemFileHandler:
             srs,
             layer_meta.GetGeomType(),
         )
-        for key, item in field_meta:
-            layer_meta.AddFieldDefn(
-                ogr.FieldDefn(key, GeomSource._type_map[item]),
-            )
         self._memory.set_layer_from_defn(
             layer_meta,
         )
+        self._memory.create_fields(field_meta)
 
         self._drive = open_geom(file, "w")
 
@@ -275,12 +272,23 @@ class GeomMemFileHandler:
     ):
         """_summary_"""
 
+        _local_ft = ogr.Feature(self._memory.layer.GetLayerDefn())
+        _local_ft.SetFID(ft.GetFID())
+        _local_ft.SetGeometry(ft.GetGeometryRef())
+        for num in range(ft.GetFieldCount()):
+            _local_ft.SetField(
+                num,
+                ft.GetField(num),
+            )
+
         for key, item in fmap.items():
-            ft.SetField(
+            _local_ft.SetField(
                 key,
                 item,
             )
-        self._memory.layer.CreateFeature(ft)
+
+        self._memory.layer.CreateFeature(_local_ft)
+        _local_ft = None
 
 
 class TextHandler(_BaseHandler, TextIOWrapper):
@@ -424,7 +432,11 @@ class CSVParser:
 
 ## Structs
 class GeomSource(_BaseIO, _BaseStruct):
-    _type_map = {int: ogr.OFTInteger64, float: ogr.OFTReal, str: ogr.OFTString}
+    _type_map = {
+        "int": ogr.OFTInteger64,
+        "float": ogr.OFTReal,
+        "str": ogr.OFTString,
+    }
 
     def __new__(
         cls,
@@ -434,7 +446,10 @@ class GeomSource(_BaseIO, _BaseStruct):
         """_summary_"""
 
         obj = object.__new__(cls)
-        obj.__init__(file, mode)
+        obj.__init__(
+            file,
+            mode,
+        )
 
         return obj
 
@@ -686,19 +701,20 @@ class GridSource(_BaseIO, _BaseStruct):
     _type_map = {
         "float": gdal.GFT_Real,
         "int": gdal.GDT_Int16,
-        "string": gdal.GFT_String,
+        "str": gdal.GFT_String,
     }
 
     def __new__(
         cls,
         file: str,
         subset: str = None,
+        var_as_band: bool = False,
         mode: str = "r",
     ):
         """_summary_"""
 
         obj = object.__new__(cls)
-        obj.__init__(file, subset, mode)
+        obj.__init__(file, subset, var_as_band, mode)
 
         return obj
 
@@ -706,6 +722,7 @@ class GridSource(_BaseIO, _BaseStruct):
         self,
         file: str,
         subset: str = None,
+        var_as_band: bool = False,
         mode: str = "r",
     ) -> object:
         """Essentially a GDAL Dataset Wrapper
@@ -726,6 +743,8 @@ class GridSource(_BaseIO, _BaseStruct):
             _description_
         """
 
+        open_options = []
+
         _ext = Path(file).suffix
 
         if not _ext in GRID_DRIVER_MAP:
@@ -735,7 +754,7 @@ class GridSource(_BaseIO, _BaseStruct):
 
         self.subset = subset
 
-        if subset is not None:
+        if subset is not None and not var_as_band:
             file = f"{driver.upper()}:" + f'"{file}"' + f":{subset}"
 
         _BaseIO.__init__(self, file, mode)
@@ -747,8 +766,13 @@ class GridSource(_BaseIO, _BaseStruct):
         self.count = 0
         self._cur_index = 1
 
+        if var_as_band:
+            open_options.append("VARIABLES_AS_BANDS=YES")
+
+        self._var_as_band = var_as_band
+
         if not self._mode:
-            self.src = gdal.Open(str(self.path))
+            self.src = gdal.OpenEx(str(self.path), open_options=open_options)
             self.count = self.src.RasterCount
 
             if self.count == 0:
@@ -778,6 +802,7 @@ class GridSource(_BaseIO, _BaseStruct):
         return self.__class__, (
             self.path,
             self.subset,
+            self._var_as_band,
             self._mode_str,
         )
 
@@ -1229,9 +1254,17 @@ class TableLazy(_Table):
                     ]
                 ),
             )
+
         self.__setattr__(
             "_extra_columns",
-            [f"damage_{item}".lower() for item in self.damage_function.keys()],
+            {item: f"Damage: {item}" for item in self.damage_function.keys()},
+        )
+
+        self.__setattr__(
+            "_extra_columns_meta",
+            dict(
+                zip(self._extra_columns.values(), ["float"] * len(self.damage_function))
+            ),
         )
 
     def set_index(
@@ -1262,6 +1295,55 @@ class TableLazy(_Table):
                 c += _nlines
             del sd
         self.data = dict(zip(new_index, self.data.values()))
+
+
+# class ExposureTable(TableLazy):
+#     def __init__(
+#         self,
+#         data: BufferHandler,
+#         index: str or tuple = None,
+#         columns: list = None,
+#         **kwargs,
+#     ):
+#         """_summary_
+
+#         Parameters
+#         ----------
+#         data : BufferHandler
+#             _description_
+#         index : strortuple, optional
+#             _description_, by default None
+#         columns : list, optional
+#             _description_, by default None
+#         """
+
+#         TableLazy.__init__(
+#             self,
+#             data,
+#             index,
+#             columns,
+#             **kwargs,
+#         )
+
+#         _dc_cols = ("Damage Function:", "Max Potential Damage")
+
+#         for req in _dc_cols:
+#             req_s = req.strip(":").lower().replace(" ", "_")
+#             self.__setattr__(
+#                 req_s,
+#                 dict(
+#                     [
+#                         (item.split(":")[1].strip(), self._columns[item])
+#                         for item in self.columns
+#                         if item.startswith(req)
+#                     ]
+#                 ),
+#             )
+
+#         self.__setattr__(
+#             "_extra_columns",
+#             {item: f"Damage: {item}" for item in self.damage_function.keys()},
+#         )
 
 
 ## Open
@@ -1301,14 +1383,23 @@ def open_geom(
 ):
     """_summary_"""
 
-    return GeomSource(file, mode)
+    return GeomSource(
+        file,
+        mode,
+    )
 
 
 def open_grid(
     file: str,
     subset: str = None,
+    var_as_band: bool = False,
     mode: str = "r",
 ):
     """_summary_"""
 
-    return GridSource(file, subset, mode)
+    return GridSource(
+        file,
+        subset,
+        var_as_band,
+        mode,
+    )

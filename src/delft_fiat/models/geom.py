@@ -18,6 +18,7 @@ logger = spawn_logger("fiat.model.geom")
 
 def worker(
     writer: BufferTextHandler,
+    geom_writer: GeomMemFileHandler,
     haz: "GridSource",
     idx: int,
     vul: "Table",
@@ -45,7 +46,7 @@ def worker(
     header = (
         ",".join(exp.columns).encode()
         + b","
-        + ",".join(exp._extra_columns).encode()
+        + ",".join(exp._extra_columns.values()).encode()
         + b"\r\n"
     )
     writer.write(header)
@@ -69,6 +70,7 @@ def worker(
 
         row += ft_info_raw
 
+        ft_new_info = {}
         for key, col in exp.damage_function.items():
             if isnan(inun[0]) or ft_info[col] == "nan":
                 _d = ""
@@ -76,7 +78,10 @@ def worker(
                 _df = vul[round(inun[0], 2), ft_info[col]]
                 _d = _df * ft_info[exp.max_potential_damage[key]]
 
+            ft_new_info[exp._extra_columns[key]] = _d
             row += f",{_d}".encode()
+
+        geom_writer.write_feature(ft, ft_new_info)
         row += b"\r\n"
         writer.write(row)
 
@@ -93,9 +98,10 @@ class GeomModel(BaseModel):
         self,
         cfg: "ConfigReader",
     ):
+        """_summary_"""
+
         super().__init__(cfg)
 
-        self._geoms = True
         self._read_exposure_data()
         self._read_exposure_geoms()
         self._vulnerability_data.upscale(0.01, inplace=True)
@@ -104,6 +110,8 @@ class GeomModel(BaseModel):
         BaseModel.__del__(self)
 
     def _read_exposure_data(self):
+        """_summary_"""
+
         path = self._cfg.get("exposure.vector.csv")
         logger.info(f"Reading exposure data ('{path.name}')")
         data = open_csv(path, index="Object ID", large=True)
@@ -114,6 +122,8 @@ class GeomModel(BaseModel):
         )
 
     def _read_exposure_geoms(self):
+        """_summary_"""
+
         _d = {}
         _found = [item for item in list(self._cfg) if "exposure.vector.file" in item]
         for file in _found:
@@ -143,6 +153,17 @@ class GeomModel(BaseModel):
             buffer_size=100000,
         )
 
+        out_geom = "spatial.gpkg"
+        if "output.geom.name1" in self._cfg:
+            out_geom = self._cfg["output.geom.name1"]
+
+        geom_writer = GeomMemFileHandler(
+            Path(self._cfg["output.path"], out_geom),
+            self.srs,
+            self._exposure_geoms["file1"].layer.GetLayerDefn(),
+            self._exposure_data._extra_columns_meta,
+        )
+
         if self._hazard_grid.count > 1:
             pcount = min(os.cpu_count(), self._hazard_grid.count)
             with ProcessPoolExecutor(max_workers=pcount) as Pool:
@@ -162,10 +183,14 @@ class GeomModel(BaseModel):
         else:
             worker(
                 writer,
+                geom_writer,
                 self._hazard_grid,
                 1,
                 self._vulnerability_data,
                 self._exposure_data,
                 self._exposure_geoms["file1"],
             )
+
+        geom_writer.dump2drive()
         del writer
+        del geom_writer

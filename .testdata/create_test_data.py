@@ -246,6 +246,54 @@ def create_settings():
         tomli_w.dump(doc, f)
 
 
+def create_settings_risk():
+    doc = {
+        "global": {
+            "crs": "EPSG:4326",
+        },
+        "output": {
+            "path": "output",
+            "csv": {
+                "name": "output.csv",
+            },
+            "vector": {"name1": "spatial.gpkg"},
+        },
+        "hazard": {
+            "file": "hazard/risk_map.nc",
+            "crs": "EPSG:4326",
+            "spatial_reference": "DEM",
+            "risk": True,
+            "multiband": {
+                "subset": "",
+                "var_as_band": True,
+            },
+        },
+        "exposure": {
+            "raster": {
+                "file": "exposure/spatial.nc",
+                "crs": "EPSG:4326",
+            },
+            "vector": {
+                "file1": "exposure/spatial.gpkg",
+                "csv": "exposure/spatial.csv",
+                "crs": "EPSG:4326",
+            },
+        },
+        "vulnerability": {
+            "file": "vulnerability/vulnerability_curves.csv",
+        },
+        "categorical_bins": {
+            "low": 0.25,
+            "medium-low": 0.5,
+            "medium-high": 0.75,
+            "high": 1,
+        },
+    }
+
+    with open(Path(p, "settings_risk.toml"), "wb") as f:
+        tomli_w.dump(doc, f)
+
+
 def create_vulnerability():
     def log_base(b, x):
         r = math.log(x) / math.log(b)
@@ -273,6 +321,7 @@ if __name__ == "__main__":
     create_hazard_map()
     create_risk_map()
     create_settings()
+    create_settings_risk()
     create_vulnerability()
     gc.collect()
     pass
