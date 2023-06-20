@@ -1,0 +1,39 @@
+[global]
+crs = "EPSG:4326"
+
+[output]
+path = "output"
+
+[output.csv]
+name = "output.csv"
+
+[output.vector]
+name1 = "spatial.gpkg"
+
+[hazard]
+file = "hazard/risk_map.nc"
+crs = "EPSG:4326"
+spatial_reference = "DEM"
+risk = true
+
+[hazard.multiband]
+subset = ""
+var_as_band = true
+
+[exposure.raster]
+file = "exposure/spatial.nc"
+crs = "EPSG:4326"
+
+[exposure.vector]
+file1 = "exposure/spatial.gpkg"
+csv = "exposure/spatial.csv"
+crs = "EPSG:4326"
+
+[vulnerability]
+file = "vulnerability/vulnerability_curves.csv"
+
+[categorical_bins]
+low = 0.25
+medium-low = 0.5
+medium-high = 0.75
+high = 1
