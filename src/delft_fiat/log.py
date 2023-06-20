@@ -164,7 +164,13 @@ class CMDStream(BaseStream):
 
 
 class FileStream(CMDStream):
-    def __init__(self, level: int, dst: str, name: str = None):
+    def __init__(
+        self,
+        level: int,
+        dst: str,
+        name: str = None,
+        mode: str = "w",
+    ):
         """Output text to a file
 
         Parameters
@@ -180,12 +186,15 @@ class FileStream(CMDStream):
         if name is None:
             name = "log_default"
         self._filename = os.path.join(dst, f"{name}.log")
-        CMDStream.__init__(self, level, self._open(), name)
+        CMDStream.__init__(self, level, self._open(mode), name)
 
-    def _open(self):
+    def _open(
+        self,
+        mode: str = "w",
+    ):
         """Open a txt file and return the handler"""
 
-        return open(self._filename, "w")
+        return open(self._filename, mode)
 
     def close(self):
         """Close and clean up"""
