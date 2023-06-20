@@ -163,7 +163,11 @@ class _BaseStruct(metaclass=ABCMeta):
 
 ## Handlers
 class BufferHandler(_BaseHandler, BufferedReader):
-    def __init__(self, file: str) -> "BufferHandler":
+    def __init__(
+        self,
+        file: str,
+        skip: int = 0,
+    ) -> "BufferHandler":
         """_summary_
 
         Parameters
@@ -178,7 +182,7 @@ class BufferHandler(_BaseHandler, BufferedReader):
         """
 
         BufferedReader.__init__(self, FileIO(file))
-        _BaseHandler.__init__(self, file)
+        _BaseHandler.__init__(self, file, skip)
 
     def __repr__(self):
         return f"<{self.__class__.__name__} file='{self.path}' encoding=''>"
