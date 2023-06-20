@@ -10,6 +10,9 @@ from pathlib import Path
 logger = spawn_logger("fiat.checks")
 
 
+## Config
+
+
 ## Hazard
 def check_hazard_subsets(
     sub: dict,

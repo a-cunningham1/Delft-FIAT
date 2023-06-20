@@ -47,7 +47,7 @@ class BaseModel(metaclass=ABCMeta):
         ## checks
         logger.info("Executing hazard checks...")
         check_hazard_subsets(
-            data.sub_sets,
+            data.subset_dict,
             path,
         )
         ## When all is done, add it

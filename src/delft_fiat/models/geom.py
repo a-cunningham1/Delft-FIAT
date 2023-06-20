@@ -1,5 +1,5 @@
 from delft_fiat.gis import geom, overlay
-from delft_fiat.io import BufferTextHandler, open_csv, open_geom
+from delft_fiat.io import BufferTextHandler, GeomMemFileHandler, open_csv, open_geom
 from delft_fiat.log import spawn_logger
 from delft_fiat.models.base import BaseModel
 from delft_fiat.models.calc import get_inundation_depth, get_damage_factor
@@ -45,9 +45,7 @@ def worker(
     header = (
         ",".join(exp.columns).encode()
         + b","
-        + ",".join(
-            [f"damage_{item}".lower() for item in exp.damage_function.keys()]
-        ).encode()
+        + ",".join(exp._extra_columns).encode()
         + b"\r\n"
     )
     writer.write(header)
@@ -59,7 +57,10 @@ def worker(
         ft_info = replace_empty(_pat.split(ft_info_raw))
         ft_info = [x(y) for x, y in zip(exp.dtypes, ft_info)]
 
-        res = overlay.clip(haz[idx], haz.get_srs(), haz.get_geotransform(), ft)
+        if ft_info[exp._columns["Extraction Method"]].lower() == "area":
+            res = overlay.clip(haz[idx], haz.get_srs(), haz.get_geotransform(), ft)
+        else:
+            res = overlay.pin(haz[idx], haz.get_geotransform(), geom.point_in_geom(ft))
         inun = get_inundation_depth(
             res,
             "DEM",
@@ -85,7 +86,7 @@ def worker(
 class GeomModel(BaseModel):
     _method = {
         "area": overlay.clip,
-        "average": overlay.pin,
+        "centroid": overlay.pin,
     }
 
     def __init__(
