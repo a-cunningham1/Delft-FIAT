@@ -1,3 +1,4 @@
+from typing import Any
 from delft_fiat.error import DriverNotFoundError
 from delft_fiat.util import (
     GEOM_DRIVER_MAP,
@@ -63,6 +64,7 @@ class _BaseIO(metaclass=ABCMeta):
 
         self._closed = False
         self._mode = _BaseIO._mode_map[mode]
+        self._mode_str = mode
 
     def __del__(self):
         if not self._closed:
@@ -113,12 +115,13 @@ class _BaseHandler(metaclass=ABCMeta):
     def __init__(
         self,
         file: str,
+        skip: int = 0,
     ) -> "_BaseHandler":
         """_summary_"""
 
         self.path = Path(file)
 
-        self.skip = 0
+        self.skip = skip
         self.size = self.read().count(os.linesep.encode())
 
         self.seek(self.skip)
@@ -180,15 +183,20 @@ class BufferHandler(_BaseHandler, BufferedReader):
     def __repr__(self):
         return f"<{self.__class__.__name__} file='{self.path}' encoding=''>"
 
+    def __reduce__(self):
+        return self.__class__, (self.path, self.skip)
+
 
 class BufferTextHandler(BufferedWriter):
     def __init__(
         self,
         file: str,
         buffer_size: int = 100000,
+        mode: str = "wb",
     ):
-        self._file_stream = FileIO(file, mode="wb")
+        self._file_stream = FileIO(file, mode=mode)
         self.path = file
+        self._b_size = buffer_size
 
         BufferedWriter.__init__(
             self,
@@ -203,6 +211,76 @@ class BufferTextHandler(BufferedWriter):
 
     def __repr__(self):
         return f"<{self.__class__.__name__} file='{self.path}'>"
+
+    def __reduce__(self):
+        return self.__class__, (self.path, self._b_size, self.mode)
+
+
+class GeomMemFileHandler:
+    def __init__(
+        self,
+        file: str or Path,
+        srs: osr.SpatialReference,
+        layer_meta: ogr.FeatureDefn,
+        field_meta: dict,
+    ):
+        """_summary_
+
+        Parameters
+        ----------
+        file : strorPath
+            _description_
+        srs : osr.SpatialReference
+            _description_
+        layer_meta : ogr.FeatureDefn
+            _description_
+        field_meta : dict
+            _description_
+        """
+
+        self._memory = open_geom("memset", "w")
+        self._memory.create_layer(
+            srs,
+            layer_meta.GetGeomType(),
+        )
+        for key, item in field_meta:
+            layer_meta.AddFieldDefn(
+                ogr.FieldDefn(key, GeomSource._type_map[item]),
+            )
+        self._memory.set_layer_from_defn(
+            layer_meta,
+        )
+
+        self._drive = open_geom(file, "w")
+
+    def __del__(self):
+        self._clear_cache()
+        self._memory = None
+        self._drive = None
+
+    def __reduce__(self) -> str | tuple[Any, ...]:
+        pass
+
+    def _clear_cache(self):
+        self._memory.src.DeleteLayer("memset")
+
+    def dump2drive(self):
+        self._drive.create_layer_from_copy(self._memory.layer)
+        self._drive.flush()
+
+    def write_feature(
+        self,
+        ft: ogr.Feature,
+        fmap: dict,
+    ):
+        """_summary_"""
+
+        for key, item in fmap.items():
+            ft.SetField(
+                key,
+                item,
+            )
+        self._memory.layer.CreateFeature(ft)
 
 
 class TextHandler(_BaseHandler, TextIOWrapper):
@@ -346,23 +424,23 @@ class CSVParser:
 
 ## Structs
 class GeomSource(_BaseIO, _BaseStruct):
+    _type_map = {int: ogr.OFTInteger64, float: ogr.OFTReal, str: ogr.OFTString}
+
     def __new__(
         cls,
         file: str,
-        driver: str = "",
         mode: str = "r",
     ):
         """_summary_"""
 
         obj = object.__new__(cls)
-        obj.__init__(file, driver, mode)
+        obj.__init__(file, mode)
 
         return obj
 
     def __init__(
         self,
         file: str,
-        driver: str = "",
         mode: str = "r",
     ) -> object:
         """Essentially an OGR DataSource Wrapper
@@ -395,16 +473,10 @@ class GeomSource(_BaseIO, _BaseStruct):
 
         _BaseIO.__init__(self, file, mode)
 
-        if not driver and not self._mode:
-            driver = GEOM_DRIVER_MAP[self.path.suffix]
+        if not self.path.suffix in GEOM_DRIVER_MAP:
+            raise DriverNotFoundError(f"")
 
-        if not driver in GEOM_DRIVER_MAP.values():
-            raise DriverNotFoundError("")
-
-        if GEOM_DRIVER_MAP[self.path.suffix] != driver:
-            raise OSError(
-                f"Path suffix ({self.path.suffix}) does not match driver ({driver})"
-            )
+        driver = GEOM_DRIVER_MAP[self.path.suffix]
 
         self._driver = ogr.GetDriverByName(driver)
 
@@ -438,6 +510,12 @@ class GeomSource(_BaseIO, _BaseStruct):
     def __getitem__(self, fid):
         return self.layer.GetFeature(fid)
 
+    def __reduce__(self):
+        return self.__class__, (
+            self.path,
+            self._mode_str,
+        )
+
     def close(self):
         _BaseIO.close(self)
 
@@ -446,6 +524,10 @@ class GeomSource(_BaseIO, _BaseStruct):
         self._driver = None
 
         gc.collect()
+
+    # @property
+    # def count(self):
+    #     return self.layer.GetFeatureCount()
 
     def flush(self):
         self.src.FlushCache()
@@ -482,6 +564,53 @@ class GeomSource(_BaseIO, _BaseStruct):
 
     @_BaseIO._check_mode
     @_BaseIO._check_state
+    def create_field(
+        self,
+        name: str,
+        type: object,
+    ):
+        """_summary_
+
+        Parameters
+        ----------
+        name : str
+            _description_
+        type : _type_
+            _description_
+        """
+
+        self.layer.CreateField(
+            ogr.FieldDefn(
+                name,
+                GeomSource._type_map[type],
+            )
+        )
+
+    @_BaseIO._check_mode
+    @_BaseIO._check_state
+    def create_fields(
+        self,
+        fmap: dict,
+    ):
+        """_summary_
+
+        Parameters
+        ----------
+        name : str
+            _description_
+        type : _type_
+            _description_
+        """
+
+        self.layer.CreateFields(
+            [
+                ogr.FieldDefn(key, GeomSource._type_map[item])
+                for key, item in fmap.items()
+            ]
+        )
+
+    @_BaseIO._check_mode
+    @_BaseIO._check_state
     def create_layer(
         self,
         srs: osr.SpatialReference,
@@ -499,7 +628,11 @@ class GeomSource(_BaseIO, _BaseStruct):
 
     @_BaseIO._check_mode
     @_BaseIO._check_state
-    def create_layer_from_copy(self, layer: ogr.Layer):
+    def create_layer_from_copy(
+        self,
+        layer: ogr.Layer,
+        overwrite: bool = True,
+    ):
         """_Summary_
 
         Parameters
@@ -508,7 +641,14 @@ class GeomSource(_BaseIO, _BaseStruct):
             _description_
         """
 
-        self.layer = self.src.CopyLayer(layer, self.path.stem, ["OVERWRITE=YES"])
+        _ow = {
+            True: "YES",
+            False: "NO",
+        }
+
+        self.layer = self.src.CopyLayer(
+            layer, self.path.stem, [f"OVERWRITE={_ow[overwrite]}"]
+        )
 
     def get_bbox(self):
         """_summary_"""
@@ -526,19 +666,18 @@ class GeomSource(_BaseIO, _BaseStruct):
 
     @_BaseIO._check_mode
     @_BaseIO._check_state
-    def set_field(
-        self,
-        name: str,
-        ogr_type,
-    ):
-        pass
-
-    @_BaseIO._check_mode
-    @_BaseIO._check_state
     def set_layer_from_defn(
         self,
         ref: ogr.FeatureDefn,
     ):
+        """_summary_
+
+        Parameters
+        ----------
+        ref : ogr.FeatureDefn
+            _description_
+        """
+
         for n in range(ref.GetFieldCount()):
             self.layer.CreateField(ref.GetFieldDefn(n))
 
@@ -553,20 +692,20 @@ class GridSource(_BaseIO, _BaseStruct):
     def __new__(
         cls,
         file: str,
-        driver: str = "",
+        subset: str = None,
         mode: str = "r",
     ):
         """_summary_"""
 
         obj = object.__new__(cls)
-        obj.__init__(file, driver, mode)
+        obj.__init__(file, subset, mode)
 
         return obj
 
     def __init__(
         self,
         file: str,
-        driver: str = "",
+        subset: str = None,
         mode: str = "r",
     ) -> object:
         """Essentially a GDAL Dataset Wrapper
@@ -587,15 +726,24 @@ class GridSource(_BaseIO, _BaseStruct):
             _description_
         """
 
-        _BaseIO.__init__(self, file, mode)
+        _ext = Path(file).suffix
 
-        if not self.path.suffix in GRID_DRIVER_MAP:
+        if not _ext in GRID_DRIVER_MAP:
             raise DriverNotFoundError("")
+
+        driver = GRID_DRIVER_MAP[_ext]
+
+        self.subset = subset
+
+        if subset is not None:
+            file = f"{driver.upper()}:" + f'"{file}"' + f":{subset}"
+
+        _BaseIO.__init__(self, file, mode)
 
         self._driver = gdal.GetDriverByName(driver)
 
         self.src = None
-        self.sub_sets = None
+        self.subset_dict = None
         self.count = 0
         self._cur_index = 1
 
@@ -604,7 +752,7 @@ class GridSource(_BaseIO, _BaseStruct):
             self.count = self.src.RasterCount
 
             if self.count == 0:
-                self.sub_sets = _read_gridsrouce_layers(
+                self.subset_dict = _read_gridsrouce_layers(
                     self.src,
                 )
 
@@ -625,6 +773,13 @@ class GridSource(_BaseIO, _BaseStruct):
         oid: int,
     ):
         return self.src.GetRasterBand(oid)
+
+    def __reduce__(self):
+        return self.__class__, (
+            self.path,
+            self.subset,
+            self._mode_str,
+        )
 
     def close(self):
         _BaseIO.close(self)
@@ -1074,6 +1229,10 @@ class TableLazy(_Table):
                     ]
                 ),
             )
+        self.__setattr__(
+            "_extra_columns",
+            [f"damage_{item}".lower() for item in self.damage_function.keys()],
+        )
 
     def set_index(
         self,
@@ -1138,19 +1297,18 @@ def open_csv(
 
 def open_geom(
     file: str,
-    driver: str = "",
     mode: str = "r",
 ):
     """_summary_"""
 
-    return GeomSource(file, driver, mode)
+    return GeomSource(file, mode)
 
 
 def open_grid(
     file: str,
-    driver: str = "",
+    subset: str = None,
     mode: str = "r",
 ):
     """_summary_"""
 
-    return GridSource(file, mode)
+    return GridSource(file, subset, mode)
