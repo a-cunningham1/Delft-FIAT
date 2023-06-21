@@ -212,7 +212,7 @@ def create_settings():
             "csv": {
                 "name": "output.csv",
             },
-            "vector": {"name1": "spatial.gpkg"},
+            "geom": {"name1": "spatial.gpkg"},
         },
         "hazard": {
             "file": "hazard/event_map.nc",
@@ -221,11 +221,11 @@ def create_settings():
             "spatial_reference": "DEM",
         },
         "exposure": {
-            "raster": {
+            "grid": {
                 "file": "exposure/spatial.nc",
                 "crs": "EPSG:4326",
             },
-            "vector": {
+            "geom": {
                 "file1": "exposure/spatial.gpkg",
                 "csv": "exposure/spatial.csv",
                 "crs": "EPSG:4326",
@@ -256,7 +256,7 @@ def create_settings_risk():
             "csv": {
                 "name": "output.csv",
             },
-            "vector": {"name1": "spatial.gpkg"},
+            "geom": {"name1": "spatial.gpkg"},
         },
         "hazard": {
             "file": "hazard/risk_map.nc",
@@ -269,11 +269,11 @@ def create_settings_risk():
             },
         },
         "exposure": {
-            "raster": {
+            "grid": {
                 "file": "exposure/spatial.nc",
                 "crs": "EPSG:4326",
             },
-            "vector": {
+            "geom": {
                 "file1": "exposure/spatial.gpkg",
                 "csv": "exposure/spatial.csv",
                 "crs": "EPSG:4326",
@@ -314,14 +314,14 @@ def create_vulnerability():
 
 
 if __name__ == "__main__":
-    create_dbase_stucture()
-    create_exposure_dbase()
-    create_exposure_geoms()
-    create_exposure_grid()
-    create_hazard_map()
-    create_risk_map()
+    # create_dbase_stucture()
+    # create_exposure_dbase()
+    # create_exposure_geoms()
+    # create_exposure_grid()
+    # create_hazard_map()
+    # create_risk_map()
     create_settings()
     create_settings_risk()
-    create_vulnerability()
+    # create_vulnerability()
     gc.collect()
     pass

@@ -7,7 +7,7 @@ path = "output"
 [output.csv]
 name = "output.csv"
 
-[output.vector]
+[output.geom]
 name1 = "spatial.gpkg"
 
 [hazard]
@@ -16,11 +16,11 @@ crs = "EPSG:4326"
 risk = false
 spatial_reference = "DEM"
 
-[exposure.raster]
+[exposure.grid]
 file = "exposure/spatial.nc"
 crs = "EPSG:4326"
 
-[exposure.vector]
+[exposure.geom]
 file1 = "exposure/spatial.gpkg"
 csv = "exposure/spatial.csv"
 crs = "EPSG:4326"
