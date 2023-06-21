@@ -29,7 +29,7 @@ def create_dbase_stucture():
 def create_exposure_dbase():
     with open(Path(p, "exposure", "spatial.csv"), "w") as f:
         f.write("Object ID,Extraction Method,Ground Floor Height,")
-        f.write("Damage Function: struct,Max Potential Damage: struct\n")
+        f.write("Damage Function: Structure,Max Potential Damage: Structure\n")
         for n in range(4):
             if (n + 1) % 2 != 0:
                 dmc = "struct_1"
@@ -314,14 +314,14 @@ def create_vulnerability():
 
 
 if __name__ == "__main__":
-    # create_dbase_stucture()
-    # create_exposure_dbase()
-    # create_exposure_geoms()
-    # create_exposure_grid()
-    # create_hazard_map()
-    # create_risk_map()
+    create_dbase_stucture()
+    create_exposure_dbase()
+    create_exposure_geoms()
+    create_exposure_grid()
+    create_hazard_map()
+    create_risk_map()
     create_settings()
     create_settings_risk()
-    # create_vulnerability()
+    create_vulnerability()
     gc.collect()
     pass
