@@ -28,7 +28,7 @@ class GridModel(BaseModel):
     def _read_exposure_grid(self):
         """_summary_"""
 
-        path = self._cfg.get("exposure.raster.file")
+        path = self._cfg.get("exposure.grid.file")
         data = open_grid(path)
         ## checks
 

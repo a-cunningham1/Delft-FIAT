@@ -53,6 +53,7 @@ def worker(
 
     for ft in gm:
         row = b""
+        ft_new_info = {}
 
         ft_info_raw = exp[ft.GetField(0)]
         ft_info = replace_empty(_pat.split(ft_info_raw))
@@ -62,21 +63,23 @@ def worker(
             res = overlay.clip(haz[idx], haz.get_srs(), haz.get_geotransform(), ft)
         else:
             res = overlay.pin(haz[idx], haz.get_geotransform(), geom.point_in_geom(ft))
-        inun = get_inundation_depth(
+        inun, redf = get_inundation_depth(
             res,
             "DEM",
             ft_info[exp._columns["Ground Floor Height"]],
         )
+        ft_new_info.update(
+            {"Inundation Depth": inun, "Reduction Factor": redf},
+        )
 
         row += ft_info_raw
 
-        ft_new_info = {}
         for key, col in exp.damage_function.items():
-            if isnan(inun[0]) or ft_info[col] == "nan":
+            if isnan(inun) or ft_info[col] == "nan":
                 _d = ""
             else:
-                _df = vul[round(inun[0], 2), ft_info[col]]
-                _d = _df * ft_info[exp.max_potential_damage[key]]
+                _df = vul[round(inun, 2), ft_info[col]]
+                _d = _df * ft_info[exp.max_potential_damage[key]] * redf
 
             ft_new_info[exp._extra_columns[key]] = _d
             row += f",{_d}".encode()
@@ -112,7 +115,7 @@ class GeomModel(BaseModel):
     def _read_exposure_data(self):
         """_summary_"""
 
-        path = self._cfg.get("exposure.vector.csv")
+        path = self._cfg.get("exposure.geom.csv")
         logger.info(f"Reading exposure data ('{path.name}')")
         data = open_csv(path, index="Object ID", large=True)
         ##checks
@@ -125,7 +128,7 @@ class GeomModel(BaseModel):
         """_summary_"""
 
         _d = {}
-        _found = [item for item in list(self._cfg) if "exposure.vector.file" in item]
+        _found = [item for item in list(self._cfg) if "exposure.geom.file" in item]
         for file in _found:
             path = self._cfg.get(file)
             logger.info(
