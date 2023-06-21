@@ -1264,12 +1264,16 @@ class TableLazy(_Table):
             {item: f"Damage: {item}" for item in self.damage_function.keys()},
         )
 
-        self.__setattr__(
-            "_extra_columns_meta",
-            dict(
-                zip(self._extra_columns.values(), ["float"] * len(self.damage_function))
-            ),
+        _e_c = {"Inundation Depth": "float", "Reduction Factor": "float"}
+        _e_c.update(
+            {
+                key: item
+                for key, item in zip(
+                    self._extra_columns.values(), ["float"] * len(self.damage_function)
+                )
+            }
         )
+        self.__setattr__("_extra_columns_meta", _e_c)
 
     def set_index(
         self,
