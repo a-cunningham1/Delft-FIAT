@@ -18,7 +18,7 @@ def cfg(settings_toml):
 
 @pytest.fixture
 def gm(cfg):
-    d = open_geom(cfg.get_path("exposure.vector.file1"))
+    d = open_geom(cfg.get_path("exposure.geom.file1"))
     return d
 
 
