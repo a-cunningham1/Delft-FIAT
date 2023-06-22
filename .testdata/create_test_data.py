@@ -165,9 +165,9 @@ def create_hazard_map():
 def create_risk_map():
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(4326)
-    dr = gdal.GetDriverByName("GTiff")
+    dr = gdal.GetDriverByName("netCDF")
     src = dr.Create(
-        str(Path(p, "hazard", "risk_map.tif")),
+        str(Path(p, "hazard", "risk_map.nc")),
         10,
         10,
         4,
