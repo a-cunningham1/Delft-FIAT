@@ -5,6 +5,7 @@ from delft_fiat.util import (
     GRID_DRIVER_MAP,
     Path,
     deter_type,
+    _dtypes_from_string,
     _dtypes_reversed,
     _pat,
     _pat_multi,
@@ -226,7 +227,6 @@ class GeomMemFileHandler:
         file: str or Path,
         srs: osr.SpatialReference,
         layer_meta: ogr.FeatureDefn,
-        field_meta: dict,
     ):
         """_summary_
 
@@ -250,7 +250,6 @@ class GeomMemFileHandler:
         self._memory.set_layer_from_defn(
             layer_meta,
         )
-        self._memory.create_fields(field_meta)
 
         self._drive = open_geom(file, "w")
 
@@ -268,6 +267,14 @@ class GeomMemFileHandler:
     def dump2drive(self):
         self._drive.create_layer_from_copy(self._memory.layer)
         self._drive.flush()
+
+    def set_fields(
+        self,
+        flds: dict,
+    ):
+        """_summary_"""
+
+        self._memory.create_fields(flds)
 
     def write_feature(
         self,
@@ -322,7 +329,12 @@ class TextHandler(_BaseHandler, TextIOWrapper):
 
 ## Parsing
 class CSVParser:
-    def __init__(self, handler: BufferHandler, header: bool):
+    def __init__(
+        self,
+        handler: BufferHandler,
+        header: bool,
+        index: str = None,
+    ):
         """_summary_"""
 
         self.data = handler
@@ -335,6 +347,58 @@ class CSVParser:
         self._ncol = 0
 
         self._parse_meta(header)
+        self._deter_dtypes_index(index=index)
+
+    def _deter_dtypes_index(
+        self,
+        index: str,
+    ):
+        """_summary_"""
+
+        _get_index = False
+        _get_dtypes = True
+
+        if index is not None:
+            try:
+                idcol = self.columns.index(index)
+            except Exception:
+                idcol = 0
+            self.meta["index_col"] = idcol
+            self.meta["index_name"] = self.columns[idcol]
+            _index = []
+            _get_index = True
+
+        if "dtypes" in self.meta:
+            _dtypes = self.meta["dtypes"]
+            if len(_dtypes) != self._ncol:
+                raise ValueError("")
+
+            _dtypes = [_dtypes_from_string[item] for item in _dtypes]
+
+            self.meta["dtypes"] = _dtypes
+            _dtypes = None
+            _get_dtypes = False
+
+        if _get_dtypes or _get_index:
+            if _get_dtypes:
+                _dtypes = [0] * self._ncol
+            with self.data as _h:
+                for _nlines, sd in _text_chunk_gen(_h):
+                    if _get_dtypes:
+                        for idx in range(self._ncol):
+                            _dtypes[idx] = max(
+                                deter_type(b"\n".join(sd[idx :: self._ncol]), _nlines),
+                                _dtypes[idx],
+                            )
+                    if _get_index:
+                        _index += sd[idcol :: self._ncol]
+
+                del sd
+                if _get_dtypes:
+                    self.meta["dtypes"] = [_dtypes_reversed[item] for item in _dtypes]
+                if _get_index:
+                    func = self.meta["dtypes"][idcol]
+                    self.index = [func(item.decode()) for item in _index]
 
     def _parse_meta(
         self,
@@ -376,47 +440,11 @@ class CSVParser:
         self.meta["ncol"] = self._ncol
         self.meta["nrow"] = self._nrow
 
-    def _deter_extra_meta(
-        self,
-        index: str = None,
-    ):
-        """_summary_"""
-
-        if index is not None:
-            try:
-                idcol = self.columns.index(index)
-            except Exception:
-                idcol = 0
-            self.meta["index_col"] = idcol
-            self.meta["index_name"] = self.columns[idcol]
-            _index = []
-
-        _dtypes = [0] * self._ncol
-        with self.data as _h:
-            for _nlines, sd in _text_chunk_gen(_h):
-                for idx in range(self._ncol):
-                    _dtypes[idx] = max(
-                        deter_type(b"\n".join(sd[idx :: self._ncol]), _nlines),
-                        _dtypes[idx],
-                    )
-                if index is not None:
-                    _index += sd[idcol :: self._ncol]
-
-            del sd
-            self.meta["dtypes"] = [_dtypes_reversed[item] for item in _dtypes]
-            if index is not None:
-                func = self.meta["dtypes"][idcol]
-                self.index = [func(item.decode()) for item in _index]
-
     def read(
         self,
-        index: str = None,
         large: bool = False,
     ):
         """_summary_"""
-
-        if index is not None or "dtypes" not in self.meta:
-            self._deter_extra_meta(index=index)
 
         if large:
             return TableLazy(
@@ -427,6 +455,16 @@ class CSVParser:
             )
 
         return Table(
+            data=self.data,
+            index=self.index,
+            columns=self.columns,
+            **self.meta,
+        )
+
+    def read_exp(self):
+        """_summary_"""
+
+        return ExposureTable(
             data=self.data,
             index=self.index,
             columns=self.columns,
@@ -857,6 +895,23 @@ class GridSource(_BaseIO, _BaseStruct):
         self.count = nb
 
     @_BaseIO._check_state
+    def get_band_name(self, n: int):
+        """_summary_"""
+
+        _desc = self[n].GetDescription()
+        _meta = self[n].GetMetadata()
+
+        if _desc:
+            return _desc
+
+        _var_meta = [item for item in _meta if "VARNAME" in item]
+
+        if _var_meta:
+            return _meta[_var_meta[0]]
+
+        return f"Band{n}"
+
+    @_BaseIO._check_state
     def get_bbox(self):
         """_summary_"""
 
@@ -917,6 +972,10 @@ class _Table(_BaseStruct, metaclass=ABCMeta):
         # Declarations
         self.dtypes = ()
         self.meta = kwargs
+        self.index_col = -1
+
+        if "index_col" in self.meta:
+            self.index_col = self.meta["index_col"]
 
         index_int = list(range(kwargs["nrow"]))
 
@@ -1239,42 +1298,6 @@ class TableLazy(_Table):
 
         return self.__getitem__(oid)
 
-    def search_extra_meta(
-        self,
-        columns: list,
-    ):
-        """_summary_"""
-
-        meta = {}
-        for req in columns:
-            req_s = req.strip(":").lower().replace(" ", "_")
-            self.__setattr__(
-                req_s,
-                dict(
-                    [
-                        (item.split(":")[1].strip(), self._columns[item])
-                        for item in self.columns
-                        if item.startswith(req)
-                    ]
-                ),
-            )
-
-        self.__setattr__(
-            "_extra_columns",
-            {item: f"Damage: {item}" for item in self.damage_function.keys()},
-        )
-
-        _e_c = {"Inundation Depth": "float", "Reduction Factor": "float"}
-        _e_c.update(
-            {
-                key: item
-                for key, item in zip(
-                    self._extra_columns.values(), ["float"] * len(self.damage_function)
-                )
-            }
-        )
-        self.__setattr__("_extra_columns_meta", _e_c)
-
     def set_index(
         self,
         key: str,
@@ -1305,56 +1328,93 @@ class TableLazy(_Table):
         self.data = dict(zip(new_index, self.data.values()))
 
 
-# class ExposureTable(TableLazy):
-#     def __init__(
-#         self,
-#         data: BufferHandler,
-#         index: str or tuple = None,
-#         columns: list = None,
-#         **kwargs,
-#     ):
-#         """_summary_
+class ExposureTable(TableLazy):
+    def __init__(
+        self,
+        data: BufferHandler,
+        index: str or tuple = None,
+        columns: list = None,
+        **kwargs,
+    ):
+        """A Table structure specifically catering to the exposure database
 
-#         Parameters
-#         ----------
-#         data : BufferHandler
-#             _description_
-#         index : strortuple, optional
-#             _description_, by default None
-#         columns : list, optional
-#             _description_, by default None
-#         """
+        Parameters
+        ----------
+        data : BufferHandler
+            _description_
+        index : strortuple, optional
+            _description_, by default None
+        columns : list, optional
+            _description_, by default None
+        """
 
-#         TableLazy.__init__(
-#             self,
-#             data,
-#             index,
-#             columns,
-#             **kwargs,
-#         )
+        TableLazy.__init__(
+            self,
+            data,
+            index,
+            columns,
+            **kwargs,
+        )
 
-#         _dc_cols = ("Damage Function:", "Max Potential Damage")
+        _dc_cols = ["Damage Function:", "Max Potential Damage"]
 
-#         for req in _dc_cols:
-#             req_s = req.strip(":").lower().replace(" ", "_")
-#             self.__setattr__(
-#                 req_s,
-#                 dict(
-#                     [
-#                         (item.split(":")[1].strip(), self._columns[item])
-#                         for item in self.columns
-#                         if item.startswith(req)
-#                     ]
-#                 ),
-#             )
+        for req in _dc_cols:
+            req_s = req.strip(":").lower().replace(" ", "_")
+            self.__setattr__(
+                req_s,
+                dict(
+                    [
+                        (item.split(":")[1].strip(), self._columns[item])
+                        for item in self.columns
+                        if item.startswith(req)
+                    ]
+                ),
+            )
 
-#         self.__setattr__(
-#             "_extra_columns",
-#             {item: f"Damage: {item}" for item in self.damage_function.keys()},
-#         )
+        self._blueprint_columns = (
+            ["Inundation Depth", "Reduction Factor"]
+            + [f"Damage: {item}" for item in self.damage_function.keys()]
+            + ["Total Damage"]
+        )
+
+        self._dat_len = len(self._blueprint_columns)
+
+    def create_specific_columns(self, name: str):
+        """_summary_"""
+
+        _out = []
+        for bp in self._blueprint_columns:
+            # _parts = bp.split(":")
+
+            # if len(_parts) == 1:
+            #     bp += f" {name}"
+            #     _out.append(bp)
+            #     continue
+
+            bp += f" ({name})"
+            _out.append(bp)
+
+        return _out
+
+    def create_specific_meta(
+        self,
+        name: str,
+    ):
+        """_summary_"""
+
+        _sc = self.create_specific_columns(name)
+
+        return dict(zip(_sc, ["float"] * self._dat_len))
+
+    def gen_dat_dtypes(self):
+        """_summary_"""
+
+        return ",".join(["float"] * self._dat_len).encode()
 
 
 ## Open
+
+
 def open_csv(
     file: str,
     sep: str = ",",
@@ -1377,12 +1437,33 @@ def open_csv(
 
     _handler = BufferHandler(file)
 
-    parser = CSVParser(_handler, header)
+    parser = CSVParser(
+        _handler,
+        header,
+        index,
+    )
 
     return parser.read(
-        index=index,
         large=large,
     )
+
+
+def open_exp(
+    file: str,
+    header: bool = True,
+    index: str = None,
+):
+    """_summary_"""
+
+    _handler = BufferHandler(file)
+
+    parser = CSVParser(
+        _handler,
+        header,
+        index,
+    )
+
+    return parser.read_exp()
 
 
 def open_geom(
