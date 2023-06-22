@@ -40,6 +40,10 @@ class BaseModel(metaclass=ABCMeta):
     def __repr__(self):
         return f"<{self.__class__.__name__} object at {id(self):#018x}>"
 
+    @abstractmethod
+    def _clean_up(self):
+        pass
+
     def _read_hazard_grid(self):
         path = self._cfg.get("hazard.file")
         logger.info(f"Reading hazard data ('{path.name}')")
