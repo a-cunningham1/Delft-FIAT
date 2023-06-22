@@ -1,5 +1,7 @@
+import ctypes
 import math
 import os
+import platform
 import re
 import regex
 import sys
@@ -10,6 +12,8 @@ from pathlib import Path
 from types import ModuleType, FunctionType
 
 BLACKLIST = type, ModuleType, FunctionType
+FILE_ATTRIBUTE_HIDDEN = 0x02
+NEWLINE_CHAR = os.linesep
 
 
 _dtypes = {
@@ -24,8 +28,14 @@ _dtypes_reversed = {
     3: str,
 }
 
+_dtypes_from_string = {
+    "float": float,
+    "int": int,
+    "str": str,
+}
+
 _pat = regex.compile(rb'"[^"]*"(*SKIP)(*FAIL)|,')
-_pat_multi = regex.compile(rf'"[^"]*"(*SKIP)(*FAIL)|,|{os.linesep}'.encode())
+_pat_multi = regex.compile(rf'"[^"]*"(*SKIP)(*FAIL)|,|{NEWLINE_CHAR}'.encode())
 
 
 def _read_gridsource_info(
@@ -152,12 +162,12 @@ def _text_chunk_gen(
         t = _res + t
         try:
             t, _res = t.rsplit(
-                os.linesep.encode(),
+                NEWLINE_CHAR.encode(),
                 1,
             )
         except Exception:
             _res = b""
-        _nlines = t.count(os.linesep.encode())
+        _nlines = t.count(NEWLINE_CHAR.encode())
         sd = _pat_multi.split(t)
         del t
         yield _nlines, sd
@@ -254,19 +264,45 @@ def object_size(obj):
 
 
 def generic_folder_check(
-    path: str,
+    path: Path | str,
 ):
     """_summary_
 
     Parameters
     ----------
-    path : str
+    path : Path | str
         _description_
     """
 
     path = Path(path)
     if not path.exists():
-        os.makedirs(path)
+        path.mkdir(parents=True)
+
+
+def create_hidden_folder(
+    path: Path | str,
+):
+    """_summary_
+
+    Parameters
+    ----------
+    path : Path | str
+        _description_
+    """
+
+    path = Path(path)
+    if not path.stem.startswith("."):
+        path = Path(path.parent, f".{path.stem}")
+    generic_folder_check(path)
+
+    if platform.system().lower() == "windows":
+        r = ctypes.windll.kernel32.SetFileAttributesW(
+            str(path),
+            FILE_ATTRIBUTE_HIDDEN,
+        )
+
+        if not r:
+            raise OSError("")
 
 
 def generic_path_check(
