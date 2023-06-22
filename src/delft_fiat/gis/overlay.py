@@ -1,4 +1,4 @@
-from delft_fiat.gis.util import world2Pixel, Pixel2world
+from delft_fiat.gis.util import world2pixel, pixel2world
 
 from osgeo import gdal, ogr
 
@@ -29,9 +29,9 @@ def clip(
     geom = ft.GetGeometryRef()
 
     minX, maxX, minY, maxY = geom.GetEnvelope()
-    ulX, ulY = world2Pixel(gtf, minX, maxY)
-    lrX, lrY = world2Pixel(gtf, maxX, minY)
-    c = Pixel2world(gtf, ulX, ulY)
+    ulX, ulY = world2pixel(gtf, minX, maxY)
+    lrX, lrY = world2pixel(gtf, maxX, minY)
+    c = pixel2world(gtf, ulX, ulY)
     new_gtf = (c[0], gtf[1], 0.0, c[1], 0.0, gtf[-1])
     pxWidth = int(lrX - ulX) + 1
     pxHeight = int(lrY - ulY) + 1
@@ -94,7 +94,7 @@ def pin(
         _description_
     """
 
-    X, Y = world2Pixel(gtf, *point)
+    X, Y = world2pixel(gtf, *point)
 
     value = band.ReadAsArray(X, Y, 1, 1)
 
