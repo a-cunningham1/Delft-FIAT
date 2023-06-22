@@ -1,5 +1,11 @@
 from delft_fiat.check import check_config_data
-from delft_fiat.util import Path, flatten_dict, generic_folder_check, generic_path_check
+from delft_fiat.util import (
+    Path,
+    create_hidden_folder,
+    flatten_dict,
+    generic_folder_check,
+    generic_path_check,
+)
 
 import os
 import tomli
@@ -25,6 +31,11 @@ class ConfigReader(dict):
             _p = Path(self.path, _p)
         generic_folder_check(_p)
         self["output.path"] = _p
+
+        # Create the hidden temporary folder
+        _ph = Path(_p, ".tmp")
+        create_hidden_folder(_ph)
+        self["output.path.tmp"] = _ph
 
         # Do some checking concerning the file paths in the settings file
         for key, item in self.items():
