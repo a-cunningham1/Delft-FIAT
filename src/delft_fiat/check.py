@@ -13,6 +13,35 @@ logger = spawn_logger("fiat.checks")
 ## Config
 
 
+## GIS
+def check_srs(
+    global_srs: osr.SpatialReference,
+    source_srs: osr.SpatialReference,
+    fname: str,
+    cfg_srs: str = None,
+):
+    """_summary_"""
+
+    if source_srs is None and cfg_srs is None:
+        logger.error(
+            f"Coordinate reference system is unknown for '{fname}', cannot safely continue"
+        )
+        logger.dead("Exiting...")
+        sys.exit()
+
+    if source_srs is None:
+        source_srs = osr.SpatialReference()
+        source_srs.SetFromUserInput(cfg_srs)
+
+    if not (
+        global_srs.IsSame(source_srs)
+        or global_srs.ExportToWkt() == source_srs.ExportToWkt()
+    ):
+        return False
+
+    return True
+
+
 ## Hazard
 def check_hazard_subsets(
     sub: dict,
