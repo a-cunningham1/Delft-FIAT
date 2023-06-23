@@ -1,4 +1,9 @@
-from delft_fiat.check import check_hazard_subsets
+from delft_fiat.check import (
+    check_hazard_subsets,
+    check_srs,
+)
+from delft_fiat.gis import grid
+from delft_fiat.gis.crs import get_srs_repr
 from delft_fiat.io import open_csv, open_geom, open_grid
 from delft_fiat.log import spawn_logger
 
@@ -54,6 +59,12 @@ class BaseModel(metaclass=ABCMeta):
             data.subset_dict,
             path,
         )
+        if not check_srs(self.srs, data.get_srs(), path.name):
+            logger.warning(
+                f"Spatial reference of '{path.name}' does not match the global spatial reference"
+            )
+            logger.info(f"Reprojecting '{path.name}' to {get_srs_repr(self.srs)}")
+            data = grid.reproject(data, self.srs.ExportToWkt())
         ## When all is done, add it
         self._hazard_grid = data
 

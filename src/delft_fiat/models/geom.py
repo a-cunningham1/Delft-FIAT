@@ -1,4 +1,6 @@
+from delft_fiat.check import check_srs
 from delft_fiat.gis import geom, overlay
+from delft_fiat.gis.crs import get_srs_repr
 from delft_fiat.io import (
     BufferTextHandler,
     GeomMemFileHandler,
@@ -8,80 +10,16 @@ from delft_fiat.io import (
 )
 from delft_fiat.log import spawn_logger
 from delft_fiat.models.base import BaseModel
-from delft_fiat.models.calc import get_inundation_depth, get_damage_factor
-from delft_fiat.util import _pat, NEWLINE_CHAR, replace_empty
+from delft_fiat.models.util import geom_worker
+from delft_fiat.util import NEWLINE_CHAR
 
 import os
 import time
 from concurrent.futures import ProcessPoolExecutor, wait, as_completed
-from io import BufferedWriter
-from math import isnan
 from multiprocessing import Process
 from pathlib import Path
 
 logger = spawn_logger("fiat.model.geom")
-
-
-def worker(
-    path: Path,
-    haz: "GridSource",
-    idx: int,
-    exp: "TableLazy",
-    exp_geom: "GeomSource",
-    vul: "Table",
-):
-    """_summary_"""
-
-    _band_name = haz.get_band_name(idx)
-
-    writer = BufferTextHandler(
-        Path(path, f"{_band_name}.dat"),
-        buffer_size=100000,
-    )
-    header = (
-        f"{exp.meta['index_name']},".encode()
-        + ",".join(exp.create_specific_columns(_band_name)).encode()
-        + NEWLINE_CHAR.encode()
-    )
-    writer.write(header)
-
-    for ft in exp_geom:
-        row = b""
-
-        ft_info_raw = exp[ft.GetField(0)]
-        ft_info = replace_empty(_pat.split(ft_info_raw))
-        ft_info = [x(y) for x, y in zip(exp.dtypes, ft_info)]
-        row += f"{ft_info[exp.index_col]}".encode()
-
-        if ft_info[exp._columns["Extraction Method"]].lower() == "area":
-            res = overlay.clip(haz[idx], haz.get_srs(), haz.get_geotransform(), ft)
-        else:
-            res = overlay.pin(haz[idx], haz.get_geotransform(), geom.point_in_geom(ft))
-        inun, redf = get_inundation_depth(
-            res,
-            "DEM",
-            ft_info[exp._columns["Ground Floor Height"]],
-        )
-        row += f",{inun},{redf}".encode()
-
-        _td = 0
-        for key, col in exp.damage_function.items():
-            if isnan(inun) or ft_info[col] == "nan":
-                _d = ""
-            else:
-                _df = vul[round(inun, 2), ft_info[col]]
-                _d = _df * ft_info[exp.max_potential_damage[key]] * redf
-                _td += _d
-
-            row += f",{_d}".encode()
-
-        row += f",{_td}".encode()
-
-        row += NEWLINE_CHAR.encode()
-        writer.write(row)
-
-    writer.flush()
-    writer = None
 
 
 class GeomModel(BaseModel):
@@ -130,11 +68,13 @@ class GeomModel(BaseModel):
             )
             data = open_geom(str(path))
             ##checks
-            if not (
-                self.srs.IsSame(data.get_srs())
-                or self.srs.ExportToWkt() == data.get_srs().ExportToWkt()
-            ):
-                data = geom.reproject(data, data.get_srs().ExportToWkt())
+
+            if not check_srs(self.srs, data.get_srs(), path.name):
+                logger.warning(
+                    f"Spatial reference of {path.name} does not match the global spatial reference"
+                )
+                logger.info(f"Reprojecting {path.name} to {get_srs_repr(self.srs)}")
+                data = geom.reproject(data, self.srs.ExportToWkt())
             _d[file.rsplit(".", 1)[1]] = data
         self._exposure_geoms = _d
 
@@ -216,7 +156,7 @@ class GeomModel(BaseModel):
             with ProcessPoolExecutor(max_workers=pcount) as Pool:
                 for idx in range(self._hazard_grid.count):
                     p = Pool.submit(
-                        worker,
+                        geom_worker,
                         self._hazard_grid,
                         idx,
                         self._vulnerability_data,
@@ -228,7 +168,7 @@ class GeomModel(BaseModel):
 
         else:
             p = Process(
-                target=worker,
+                target=geom_worker,
                 args=(
                     self._cfg.get("output.path.tmp"),
                     self._hazard_grid,
