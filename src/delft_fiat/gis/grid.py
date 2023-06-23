@@ -37,12 +37,18 @@ def reproject(
     out_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
 
     dst_src = gdal.Warp(str(fname_int), gs.src, dstSRS=out_srs)
-    tr_src = gdal.Translate(str(fname), dst_src)
 
     out_srs = None
+
+    if gs.path.suffix == ".tif":
+        gs.close()
+        dst_src = None
+        return open_grid(fname_int)
+
+    gs.close()
+    tr_src = gdal.Translate(str(fname), dst_src)
     tr_src = None
     dst_src = None
-    gs.close()
     gc.collect()
 
     os.remove(fname_int)
