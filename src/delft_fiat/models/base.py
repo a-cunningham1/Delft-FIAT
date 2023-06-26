@@ -22,6 +22,7 @@ class BaseModel(metaclass=ABCMeta):
         """_summary_"""
 
         self._cfg = cfg
+        logger.info(f"Using settings from '{self._cfg.filepath}'")
 
         # Declarations
         self.srs = None
