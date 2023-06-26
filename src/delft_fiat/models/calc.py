@@ -123,7 +123,7 @@ def get_inundation_depth(
 
     # Remove the negative hazard values to 0.
     raw_l = len(haz)
-    haz = [n for n in haz if n > 0]
+    haz = [n for n in haz if n > 0.0001]
 
     if not haz:
         return math.nan, math.nan
