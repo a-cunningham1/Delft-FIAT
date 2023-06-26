@@ -2,7 +2,7 @@
 crs = "EPSG:4326"
 
 [output]
-path = "output"
+path = "output/event"
 
 [output.csv]
 name = "output.csv"

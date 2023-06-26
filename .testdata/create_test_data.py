@@ -208,7 +208,7 @@ def create_settings():
             "crs": "EPSG:4326",
         },
         "output": {
-            "path": "output",
+            "path": "output/event",
             "csv": {
                 "name": "output.csv",
             },
@@ -252,7 +252,7 @@ def create_settings_risk():
             "crs": "EPSG:4326",
         },
         "output": {
-            "path": "output",
+            "path": "output/risk",
             "csv": {
                 "name": "output.csv",
             },
