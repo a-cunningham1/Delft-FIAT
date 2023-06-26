@@ -17,8 +17,8 @@ class ConfigReader(dict):
         file: str,
     ):
         # Set the root directory
-        self._filepath = Path(file)
-        self.path = self._filepath.parent
+        self.filepath = Path(file)
+        self.path = self.filepath.parent
 
         # Load the config as a simple flat dictionary
         f = open(file, "rb")
@@ -52,7 +52,7 @@ class ConfigReader(dict):
                     self[key] = item.lower()
 
     def __repr__(self):
-        return f"<ConfigReader object file='{self._filepath}'>"
+        return f"<ConfigReader object file='{self.filepath}'>"
 
     def get_model_type(
         self,
@@ -71,3 +71,14 @@ class ConfigReader(dict):
         """_Summary_"""
 
         return str(self[key])
+
+    def generate_kwargs(
+        self,
+        base: str,
+    ):
+        """_summary_"""
+
+        keys = [item for item in list(self) if base in item]
+        kw = {key.split(".")[-1]: self[key] for key in keys}
+
+        return kw
