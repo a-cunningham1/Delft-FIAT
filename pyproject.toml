@@ -85,6 +85,7 @@ dev = [
 ]
 docs = [
     "m2r2",
+    "numpydoc",
     "pydata-sphinx-theme",
     "sphinx",
     "sphinx_design",
