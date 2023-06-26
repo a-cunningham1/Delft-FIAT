@@ -270,16 +270,18 @@ class GeomMemFileHandler:
 
     def set_fields(
         self,
-        flds: dict,
+        flds: zip,
     ):
         """_summary_"""
 
-        self._memory.create_fields(flds)
+        self._memory.create_fields(
+            dict(flds),
+        )
 
     def write_feature(
         self,
         ft: ogr.Feature,
-        fmap: dict,
+        fmap: zip,
     ):
         """_summary_"""
 
@@ -292,7 +294,7 @@ class GeomMemFileHandler:
                 ft.GetField(num),
             )
 
-        for key, item in fmap.items():
+        for key, item in fmap:
             _local_ft.SetField(
                 key,
                 item,
@@ -1383,6 +1385,8 @@ class ExposureTable(TableLazy):
         """_summary_"""
 
         _out = []
+        if name:
+            name = f"({name})"
         for bp in self._blueprint_columns:
             # _parts = bp.split(":")
 
@@ -1391,8 +1395,8 @@ class ExposureTable(TableLazy):
             #     _out.append(bp)
             #     continue
 
-            bp += f" ({name})"
-            _out.append(bp)
+            bp += f" {name}"
+            _out.append(bp.strip())
 
         return _out
 
@@ -1413,8 +1417,6 @@ class ExposureTable(TableLazy):
 
 
 ## Open
-
-
 def open_csv(
     file: str,
     sep: str = ",",
