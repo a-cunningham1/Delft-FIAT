@@ -134,7 +134,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
                     ft,
                     fmap=zip(
                         item["cols"],
-                        [num.decode() for num in _data.split(b",")],
+                        [float(num.decode()) for num in _data.split(b",")],
                     ),
                 )
             row += NEWLINE_CHAR.encode()

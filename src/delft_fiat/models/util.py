@@ -54,7 +54,7 @@ def geom_worker(
         _td = 0
         for key, col in exp.damage_function.items():
             if isnan(inun) or ft_info[col] == "nan":
-                _d = ""
+                _d = "nan"
             else:
                 _df = vul[round(inun, 2), ft_info[col]]
                 _d = _df * ft_info[exp.max_potential_damage[key]] * redf
