@@ -2,7 +2,6 @@ from delft_fiat.log import spawn_logger
 from delft_fiat.util import generic_path_check
 
 import sys
-from decimal import Decimal
 from osgeo import gdal
 from osgeo import osr
 from pathlib import Path
@@ -11,6 +10,17 @@ logger = spawn_logger("fiat.checks")
 
 
 ## Config
+def check_global_crs(
+    srs: osr.SpatialReference,
+    fname: str,
+    fname_haz: str,
+):
+    """_summary_"""
+
+    if srs is None:
+        logger.error("Could not infer the srs from '{}', nor from '{}'")
+        logger.dead("Exiting...")
+        sys.exit()
 
 
 ## GIS
