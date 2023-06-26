@@ -50,7 +50,8 @@ class BaseModel(metaclass=ABCMeta):
     def _read_hazard_grid(self):
         path = self._cfg.get("hazard.file")
         logger.info(f"Reading hazard data ('{path.name}')")
-        data = open_grid(path)
+        kw = self._cfg.generate_kwargs("hazard.multiband")
+        data = open_grid(path, **kw)
         ## checks
         logger.info("Executing hazard checks...")
         check_hazard_subsets(

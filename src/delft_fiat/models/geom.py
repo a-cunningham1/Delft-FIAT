@@ -154,19 +154,22 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
 
         if self._hazard_grid.count > 1:
             pcount = min(os.cpu_count(), self._hazard_grid.count)
+            futures = []
             with ProcessPoolExecutor(max_workers=pcount) as Pool:
                 for idx in range(self._hazard_grid.count):
-                    p = Pool.submit(
+                    fs = Pool.submit(
                         geom_worker,
+                        self._cfg.get("output.path.tmp"),
                         self._hazard_grid,
-                        idx,
-                        self._vulnerability_data,
+                        idx+1,
                         self._exposure_data,
                         self._exposure_geoms["file1"],
+                        self._vulnerability_data,
                     )
-                for f in as_completed([p]):
-                    print(f.result())
-
+                    futures.append(fs)
+            wait(futures)
+                # for p in p_s:
+                #     p.join()
         else:
             p = Process(
                 target=geom_worker,

@@ -32,6 +32,9 @@ def geom_worker(
     )
     writer.write(header)
 
+    vul_min = min(vul.index)
+    vul_max = max(vul.index)
+
     for ft in exp_geom:
         row = b""
 
@@ -56,6 +59,7 @@ def geom_worker(
             if isnan(inun) or ft_info[col] == "nan":
                 _d = "nan"
             else:
+                inun = max(min(vul_max, inun), vul_min)
                 _df = vul[round(inun, 2), ft_info[col]]
                 _d = _df * ft_info[exp.max_potential_damage[key]] * redf
                 _d = round(_d, 2)

@@ -62,10 +62,10 @@ def check_hazard_subsets(
     if sub is not None:
         keys = ", ".join(list(sub.keys()))
         logger.error(
-            f"""'{path.name}': cant read this file as there are \
-                     multiple layers (bands) with different dimensions."""
+            f"""'{path.name}': cannot read this file as there are \
+multiple datasets (subsets)"""
         )
-        logger.info(f"Chose one of the following layers: {keys}")
+        logger.info(f"Chose one of the following subsets: {keys}")
         sys.exit()
 
 

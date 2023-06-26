@@ -501,7 +501,7 @@ class GeomSource(_BaseIO, _BaseStruct):
         self,
         file: str,
         mode: str = "r",
-    ) -> object:
+    ):
         """Essentially an OGR DataSource Wrapper
 
         Parameters
@@ -768,7 +768,7 @@ class GridSource(_BaseIO, _BaseStruct):
         subset: str = None,
         var_as_band: bool = False,
         mode: str = "r",
-    ) -> object:
+    ):
         """Essentially a GDAL Dataset Wrapper
 
         Parameters
@@ -796,6 +796,8 @@ class GridSource(_BaseIO, _BaseStruct):
 
         driver = GRID_DRIVER_MAP[_ext]
 
+        if not subset:
+            subset = None
         self.subset = subset
 
         if subset is not None and not var_as_band:
