@@ -7,7 +7,20 @@
 
 from delft_fiat.version import __version__
 
+import os
+import shutil
 import sphinx_autosummary_accessors
+
+
+def remove_dir_content(path: str) -> None:
+    for root, dirs, files in os.walk(path):
+        for f in files:
+            os.unlink(os.path.join(root, f))
+        for d in dirs:
+            shutil.rmtree(os.path.join(root, d))
+    if os.path.isdir(path):
+        shutil.rmtree(path)
+
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -22,11 +35,15 @@ version = __version__
 
 extensions = [
     "m2r2",
-    "sphinx.ext.autodoc",
-    "sphinx.ext.duration",
+    "numpydoc",
     "sphinx_design",
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.duration",
+    "sphinx_autosummary_accessors",
 ]
 
+autosummary_generate = True
 templates_path = ["../_templates", sphinx_autosummary_accessors.templates_path]
 master_doc = "index"
 language = "en"
@@ -36,6 +53,12 @@ todo_include_todos = False
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
+
+# napoleon_numpy_docstring = True
+# napoleon_google_docstring = False
+# napoleon_preprocess_types = True
+
+numpydoc_attributes_as_param_list = False
 
 html_theme = "pydata_sphinx_theme"
 html_logo = "../../res/FIAT.png"
