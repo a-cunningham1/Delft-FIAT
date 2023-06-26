@@ -71,9 +71,10 @@ class GeomModel(BaseModel):
 
             if not check_srs(self.srs, data.get_srs(), path.name):
                 logger.warning(
-                    f"Spatial reference of {path.name} does not match the global spatial reference"
+                    f"Spatial reference of '{path.name}' ('{get_srs_repr(data.get_srs())}') \
+does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
                 )
-                logger.info(f"Reprojecting {path.name} to {get_srs_repr(self.srs)}")
+                logger.info(f"Reprojecting '{path.name}' to '{get_srs_repr(self.srs)}'")
                 data = geom.reproject(data, self.srs.ExportToWkt())
             _d[file.rsplit(".", 1)[1]] = data
         self._exposure_geoms = _d
@@ -111,9 +112,11 @@ class GeomModel(BaseModel):
 
         for p in _paths:
             _d = open_csv(p, index=_exp.meta["index_name"], large=True)
-            header += ",".join(_d.columns[1:]).encode()
-            geom_writer.set_fields(_exp.create_specific_meta(p.stem))
-            _files[p.stem] = _d
+            _cols = ",".join(_d.columns[1:]).encode()
+            header += _cols
+            _cols = [item.decode() for item in _cols.split(b",")]
+            geom_writer.set_fields(zip(_cols, ["float"] * len(_cols)))
+            _files[p.stem] = {"data": _d, "cols": _cols}
             _d = None
 
         header += NEWLINE_CHAR.encode()
@@ -124,16 +127,14 @@ class GeomModel(BaseModel):
 
             oid = ft.GetField(0)
             row += _exp[oid].strip() + b","
-            for key, item in _files.items():
-                _data = item[oid].strip().split(b",", 1)[1]
+            for _, item in _files.items():
+                _data = item["data"][oid].strip().split(b",", 1)[1]
                 row += _data
                 geom_writer.write_feature(
                     ft,
-                    fmap=dict(
-                        zip(
-                            _exp.create_specific_columns(p.stem),
-                            [num.decode() for num in _data.split(b",")],
-                        )
+                    fmap=zip(
+                        item["cols"],
+                        [num.decode() for num in _data.split(b",")],
                     ),
                 )
             row += NEWLINE_CHAR.encode()
