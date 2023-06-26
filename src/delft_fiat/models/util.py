@@ -17,10 +17,12 @@ def geom_worker(
 ):
     """_summary_"""
 
-    _band_name = haz.get_band_name(idx)
+    _band_name = ""
+    if haz.count != 1:
+        _band_name = haz.get_band_name(idx)
 
     writer = BufferTextHandler(
-        Path(path, f"{_band_name}.dat"),
+        Path(path, f"{idx:03d}.dat"),
         buffer_size=100000,
     )
     header = (
@@ -47,7 +49,7 @@ def geom_worker(
             "DEM",
             ft_info[exp._columns["Ground Floor Height"]],
         )
-        row += f",{inun},{redf}".encode()
+        row += f",{round(inun, 2)},{round(redf, 2)}".encode()
 
         _td = 0
         for key, col in exp.damage_function.items():
@@ -56,11 +58,12 @@ def geom_worker(
             else:
                 _df = vul[round(inun, 2), ft_info[col]]
                 _d = _df * ft_info[exp.max_potential_damage[key]] * redf
+                _d = round(_d, 2)
                 _td += _d
 
             row += f",{_d}".encode()
 
-        row += f",{_td}".encode()
+        row += f",{round(_td, 2)}".encode()
 
         row += NEWLINE_CHAR.encode()
         writer.write(row)
