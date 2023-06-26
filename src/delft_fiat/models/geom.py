@@ -161,15 +161,15 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
                         geom_worker,
                         self._cfg.get("output.path.tmp"),
                         self._hazard_grid,
-                        idx+1,
+                        idx + 1,
                         self._exposure_data,
                         self._exposure_geoms["file1"],
                         self._vulnerability_data,
                     )
                     futures.append(fs)
             wait(futures)
-                # for p in p_s:
-                #     p.join()
+            # for p in p_s:
+            #     p.join()
         else:
             p = Process(
                 target=geom_worker,
