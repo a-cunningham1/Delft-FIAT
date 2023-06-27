@@ -11,9 +11,9 @@ def geom_worker(
     path: Path,
     haz: "GridSource",
     idx: int,
-    exp: "TableLazy",
-    exp_geom: "GeomSource",
     vul: "Table",
+    exp: "TableLazy",
+    exp_geom: dict,
 ):
     """_summary_"""
 
@@ -35,42 +35,45 @@ def geom_worker(
     vul_min = min(vul.index)
     vul_max = max(vul.index)
 
-    for ft in exp_geom:
-        row = b""
+    for _, gm in exp_geom.items():
+        for ft in gm:
+            row = b""
 
-        ft_info_raw = exp[ft.GetField(0)]
-        ft_info = replace_empty(_pat.split(ft_info_raw))
-        ft_info = [x(y) for x, y in zip(exp.dtypes, ft_info)]
-        row += f"{ft_info[exp.index_col]}".encode()
+            ft_info_raw = exp[ft.GetField(0)]
+            ft_info = replace_empty(_pat.split(ft_info_raw))
+            ft_info = [x(y) for x, y in zip(exp.dtypes, ft_info)]
+            row += f"{ft_info[exp.index_col]}".encode()
 
-        if ft_info[exp._columns["Extraction Method"]].lower() == "area":
-            res = overlay.clip(haz[idx], haz.get_srs(), haz.get_geotransform(), ft)
-        else:
-            res = overlay.pin(haz[idx], haz.get_geotransform(), geom.point_in_geom(ft))
-        inun, redf = get_inundation_depth(
-            res,
-            "DEM",
-            ft_info[exp._columns["Ground Floor Height"]],
-        )
-        row += f",{round(inun, 2)},{round(redf, 2)}".encode()
-
-        _td = 0
-        for key, col in exp.damage_function.items():
-            if isnan(inun) or ft_info[col] == "nan":
-                _d = "nan"
+            if ft_info[exp._columns["Extraction Method"]].lower() == "area":
+                res = overlay.clip(haz[idx], haz.get_srs(), haz.get_geotransform(), ft)
             else:
-                inun = max(min(vul_max, inun), vul_min)
-                _df = vul[round(inun, 2), ft_info[col]]
-                _d = _df * ft_info[exp.max_potential_damage[key]] * redf
-                _d = round(_d, 2)
-                _td += _d
+                res = overlay.pin(
+                    haz[idx], haz.get_geotransform(), geom.point_in_geom(ft)
+                )
+            inun, redf = get_inundation_depth(
+                res,
+                "DEM",
+                ft_info[exp._columns["Ground Floor Height"]],
+            )
+            row += f",{round(inun, 2)},{round(redf, 2)}".encode()
 
-            row += f",{_d}".encode()
+            _td = 0
+            for key, col in exp.damage_function.items():
+                if isnan(inun) or ft_info[col] == "nan":
+                    _d = "nan"
+                else:
+                    inun = max(min(vul_max, inun), vul_min)
+                    _df = vul[round(inun, 2), ft_info[col]]
+                    _d = _df * ft_info[exp.max_potential_damage[key]] * redf
+                    _d = round(_d, 2)
+                    _td += _d
 
-        row += f",{round(_td, 2)}".encode()
+                row += f",{_d}".encode()
 
-        row += NEWLINE_CHAR.encode()
-        writer.write(row)
+            row += f",{round(_td, 2)}".encode()
+
+            row += NEWLINE_CHAR.encode()
+            writer.write(row)
 
     writer.flush()
     writer = None

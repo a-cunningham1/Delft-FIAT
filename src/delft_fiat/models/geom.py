@@ -53,6 +53,7 @@ class GeomModel(BaseModel):
         logger.info(f"Reading exposure data ('{path.name}')")
         data = open_exp(path, index="Object ID")
         ##checks
+        logger.info("Executing exposure data checks...")
 
         self._exposure_data = data
 
@@ -68,6 +69,7 @@ class GeomModel(BaseModel):
             )
             data = open_geom(str(path))
             ##checks
+            logger.info("Executing exposure geometry checks...")
 
             if not check_srs(self.srs, data.get_srs(), path.name):
                 logger.warning(
@@ -85,7 +87,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
         """_summary_"""
 
         _exp = self._exposure_data
-        _gm = self._exposure_geoms["file1"]
+        _gm = self._exposure_geoms
         _files = {}
         header = b""
 
@@ -98,61 +100,67 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
             buffer_size=100000,
         )
         header += ",".join(_exp.columns).encode() + b","
-        out_geom = "spatial.gpkg"
-        if "output.geom.name1" in self._cfg:
-            out_geom = self._cfg["output.geom.name1"]
-
-        geom_writer = GeomMemFileHandler(
-            Path(self._cfg["output.path"], out_geom),
-            self.srs,
-            self._exposure_geoms["file1"].layer.GetLayerDefn(),
-        )
 
         _paths = Path(self._cfg.get("output.path.tmp")).glob("*.dat")
 
+        _all_cols = []
         for p in _paths:
             _d = open_csv(p, index=_exp.meta["index_name"], large=True)
             _cols = ",".join(_d.columns[1:]).encode()
             header += _cols
             _cols = [item.decode() for item in _cols.split(b",")]
-            geom_writer.create_fields(zip(_cols, ["float"] * len(_cols)))
+            _all_cols += _cols
             _files[p.stem] = {"data": _d, "cols": _cols}
             _d = None
 
         header += NEWLINE_CHAR.encode()
         writer.write(header)
 
-        for ft in _gm:
-            row = b""
+        for key, gm in _gm.items():
+            _add = key[-1]
+            out_geom = f"spatial{_add}.gpkg"
+            if f"output.geom.name{_add}" in self._cfg:
+                out_geom = self._cfg[f"output.geom.name{_add}"]
 
-            oid = ft.GetField(0)
-            row += _exp[oid].strip() + b","
-            attrs = {}
+            geom_writer = GeomMemFileHandler(
+                Path(self._cfg["output.path"], out_geom),
+                self.srs,
+                gm.layer.GetLayerDefn(),
+            )
 
-            for _, item in _files.items():
-                _data = item["data"][oid].strip().split(b",", 1)[1]
-                row += _data
-                attrs.update(
-                    dict(
-                        zip(
-                            item["cols"],
-                            [float(num.decode()) for num in _data.split(b",")],
+            geom_writer.create_fields(zip(_all_cols, ["float"] * len(_all_cols)))
+
+            for ft in gm:
+                row = b""
+
+                oid = ft.GetField(0)
+                row += _exp[oid].strip() + b","
+                attrs = {}
+
+                for _, item in _files.items():
+                    _data = item["data"][oid].strip().split(b",", 1)[1]
+                    row += _data
+                    attrs.update(
+                        dict(
+                            zip(
+                                item["cols"],
+                                [float(num.decode()) for num in _data.split(b",")],
+                            ),
                         ),
-                    ),
+                    )
+
+                row += NEWLINE_CHAR.encode()
+                writer.write(row)
+                geom_writer.add_feature(
+                    ft,
+                    attrs,
                 )
 
-            row += NEWLINE_CHAR.encode()
-            writer.write(row)
-            geom_writer.add_feature(
-                ft,
-                attrs,
-            )
+            geom_writer.dump2drive()
+            geom_writer = None
 
         writer.flush()
         writer = None
-
-        geom_writer.dump2drive()
-        geom_writer = None
 
     def run(
         self,
@@ -169,9 +177,9 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
                         self._cfg.get("output.path.tmp"),
                         self._hazard_grid,
                         idx + 1,
-                        self._exposure_data,
-                        self._exposure_geoms["file1"],
                         self._vulnerability_data,
+                        self._exposure_data,
+                        self._exposure_geoms,
                     )
                     futures.append(fs)
             wait(futures)
@@ -184,9 +192,9 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
                     self._cfg.get("output.path.tmp"),
                     self._hazard_grid,
                     1,
-                    self._exposure_data,
-                    self._exposure_geoms["file1"],
                     self._vulnerability_data,
+                    self._exposure_data,
+                    self._exposure_geoms,
                 ),
             )
             p.start()
