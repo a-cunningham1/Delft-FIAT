@@ -79,7 +79,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
             _d[file.rsplit(".", 1)[1]] = data
         self._exposure_geoms = _d
 
-    def patch_up(
+    def _patch_up(
         self,
     ):
         """_summary_"""
@@ -115,7 +115,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
             _cols = ",".join(_d.columns[1:]).encode()
             header += _cols
             _cols = [item.decode() for item in _cols.split(b",")]
-            geom_writer.set_fields(zip(_cols, ["float"] * len(_cols)))
+            geom_writer.create_fields(zip(_cols, ["float"] * len(_cols)))
             _files[p.stem] = {"data": _d, "cols": _cols}
             _d = None
 
@@ -127,19 +127,26 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
 
             oid = ft.GetField(0)
             row += _exp[oid].strip() + b","
+            attrs = {}
+
             for _, item in _files.items():
                 _data = item["data"][oid].strip().split(b",", 1)[1]
                 row += _data
-                geom_writer.write_feature(
-                    ft,
-                    fmap=zip(
-                        item["cols"],
-                        [float(num.decode()) for num in _data.split(b",")],
+                attrs.update(
+                    dict(
+                        zip(
+                            item["cols"],
+                            [float(num.decode()) for num in _data.split(b",")],
+                        ),
                     ),
                 )
-            row += NEWLINE_CHAR.encode()
 
+            row += NEWLINE_CHAR.encode()
             writer.write(row)
+            geom_writer.add_feature(
+                ft,
+                attrs,
+            )
 
         writer.flush()
         writer = None
@@ -184,4 +191,4 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
             )
             p.start()
             p.join()
-        self.patch_up()
+        self._patch_up()

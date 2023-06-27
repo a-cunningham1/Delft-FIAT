@@ -264,24 +264,10 @@ class GeomMemFileHandler:
     def _clear_cache(self):
         self._memory.src.DeleteLayer("memset")
 
-    def dump2drive(self):
-        self._drive.create_layer_from_copy(self._memory.layer)
-        self._drive.flush()
-
-    def set_fields(
-        self,
-        flds: zip,
-    ):
-        """_summary_"""
-
-        self._memory.create_fields(
-            dict(flds),
-        )
-
-    def write_feature(
+    def add_feature(
         self,
         ft: ogr.Feature,
-        fmap: zip,
+        fmap: dict,
     ):
         """_summary_"""
 
@@ -294,7 +280,7 @@ class GeomMemFileHandler:
                 ft.GetField(num),
             )
 
-        for key, item in fmap:
+        for key, item in fmap.items():
             _local_ft.SetField(
                 key,
                 item,
@@ -302,6 +288,37 @@ class GeomMemFileHandler:
 
         self._memory.layer.CreateFeature(_local_ft)
         _local_ft = None
+
+    def create_fields(
+        self,
+        flds: zip,
+    ):
+        """_summary_"""
+
+        self._memory.create_fields(
+            dict(flds),
+        )
+
+    def dump2drive(self):
+        self._drive.create_layer_from_copy(self._memory.layer)
+        self._drive.flush()
+
+    # def set_fields(
+    #     self,
+    #     fid: int,
+    #     fmap: dict,
+    # ):
+    #     """_summary_"""
+
+    #     _local_ft = self._memory[fid]
+    #     for key, item in fmap.items():
+    #         _local_ft.SetField(
+    #             key,
+    #             item,
+    #         )
+
+    #     self._memory.layer.UpdateFeature(_local_ft)
+    #     _local_ft = None
 
 
 class TextHandler(_BaseHandler, TextIOWrapper):
