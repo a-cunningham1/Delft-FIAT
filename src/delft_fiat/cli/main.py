@@ -5,6 +5,7 @@ from delft_fiat.version import __version__
 from delft_fiat.cli.util import Path, file_path_check
 
 import click
+from multiprocessing import freeze_support
 
 
 @click.group(
@@ -68,4 +69,5 @@ def run(
 
 
 if __name__ == "__main__":
+    freeze_support()
     main()
