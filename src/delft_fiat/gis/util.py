@@ -1,4 +1,4 @@
-def world2Pixel(geoMatrix, x, y):
+def world2pixel(geoMatrix, x, y):
     """Uses a gdal geomatrix (gdal.GetGeoTransform()) to calculate
     the pixel location of a geospatial coordinate
 
@@ -17,7 +17,7 @@ def world2Pixel(geoMatrix, x, y):
     return (pixel, line)
 
 
-def Pixel2world(geoMatrix, x, y):
+def pixel2world(geoMatrix, x, y):
     """_Summary_"""
 
     ulX = geoMatrix[0]

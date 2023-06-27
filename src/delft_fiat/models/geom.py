@@ -1,94 +1,25 @@
+from delft_fiat.check import check_srs
 from delft_fiat.gis import geom, overlay
-from delft_fiat.io import BufferTextHandler, GeomMemFileHandler, open_csv, open_geom
+from delft_fiat.gis.crs import get_srs_repr
+from delft_fiat.io import (
+    BufferTextHandler,
+    GeomMemFileHandler,
+    open_csv,
+    open_exp,
+    open_geom,
+)
 from delft_fiat.log import spawn_logger
 from delft_fiat.models.base import BaseModel
-from delft_fiat.models.calc import get_inundation_depth, get_damage_factor
-from delft_fiat.util import _pat, replace_empty
+from delft_fiat.models.util import geom_worker
+from delft_fiat.util import NEWLINE_CHAR
 
 import os
 import time
 from concurrent.futures import ProcessPoolExecutor, wait, as_completed
-from io import BufferedWriter
-from math import isnan
 from multiprocessing import Process
 from pathlib import Path
 
 logger = spawn_logger("fiat.model.geom")
-
-
-def worker(
-    writer: BufferTextHandler,
-    geom_writer: GeomMemFileHandler,
-    haz: "GridSource",
-    idx: int,
-    vul: "Table",
-    exp: "TableLazy",
-    gm: "GeomSource",
-):
-    """_summary_
-
-    Parameters
-    ----------
-    writer : BufferTextHandler
-        _description_
-    haz : GridSource
-        _description_
-    idx : int
-        _description_
-    vul : Table
-        _description_
-    exp : TableLazy
-        _description_
-    gm : GeomSource
-        _description_
-    """
-
-    header = (
-        ",".join(exp.columns).encode()
-        + b","
-        + ",".join(exp._extra_columns.values()).encode()
-        + b"\r\n"
-    )
-    writer.write(header)
-
-    for ft in gm:
-        row = b""
-        ft_new_info = {}
-
-        ft_info_raw = exp[ft.GetField(0)]
-        ft_info = replace_empty(_pat.split(ft_info_raw))
-        ft_info = [x(y) for x, y in zip(exp.dtypes, ft_info)]
-
-        if ft_info[exp._columns["Extraction Method"]].lower() == "area":
-            res = overlay.clip(haz[idx], haz.get_srs(), haz.get_geotransform(), ft)
-        else:
-            res = overlay.pin(haz[idx], haz.get_geotransform(), geom.point_in_geom(ft))
-        inun, redf = get_inundation_depth(
-            res,
-            "DEM",
-            ft_info[exp._columns["Ground Floor Height"]],
-        )
-        ft_new_info.update(
-            {"Inundation Depth": inun, "Reduction Factor": redf},
-        )
-
-        row += ft_info_raw
-
-        for key, col in exp.damage_function.items():
-            if isnan(inun) or ft_info[col] == "nan":
-                _d = ""
-            else:
-                _df = vul[round(inun, 2), ft_info[col]]
-                _d = _df * ft_info[exp.max_potential_damage[key]] * redf
-
-            ft_new_info[exp._extra_columns[key]] = _d
-            row += f",{_d}".encode()
-
-        geom_writer.write_feature(ft, ft_new_info)
-        row += b"\r\n"
-        writer.write(row)
-
-    writer.flush()
 
 
 class GeomModel(BaseModel):
@@ -112,17 +43,19 @@ class GeomModel(BaseModel):
     def __del__(self):
         BaseModel.__del__(self)
 
+    def _clean_up(self):
+        pass
+
     def _read_exposure_data(self):
         """_summary_"""
 
         path = self._cfg.get("exposure.geom.csv")
         logger.info(f"Reading exposure data ('{path.name}')")
-        data = open_csv(path, index="Object ID", large=True)
+        data = open_exp(path, index="Object ID")
         ##checks
+        logger.info("Executing exposure data checks...")
+
         self._exposure_data = data
-        self._exposure_data.search_extra_meta(
-            ("Damage Function:", "Max Potential Damage")
-        )
 
     def _read_exposure_geoms(self):
         """_summary_"""
@@ -136,16 +69,27 @@ class GeomModel(BaseModel):
             )
             data = open_geom(str(path))
             ##checks
-            if not (
-                self.srs.IsSame(data.get_srs())
-                or self.srs.ExportToWkt() == data.get_srs().ExportToWkt()
-            ):
-                data = geom.reproject(data, data.get_srs().ExportToWkt())
+            logger.info("Executing exposure geometry checks...")
+
+            if not check_srs(self.srs, data.get_srs(), path.name):
+                logger.warning(
+                    f"Spatial reference of '{path.name}' ('{get_srs_repr(data.get_srs())}') \
+does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
+                )
+                logger.info(f"Reprojecting '{path.name}' to '{get_srs_repr(self.srs)}'")
+                data = geom.reproject(data, self.srs.ExportToWkt())
             _d[file.rsplit(".", 1)[1]] = data
         self._exposure_geoms = _d
 
-    def run(self):
+    def _patch_up(
+        self,
+    ):
         """_summary_"""
+
+        _exp = self._exposure_data
+        _gm = self._exposure_geoms
+        _files = {}
+        header = b""
 
         out_csv = "output.csv"
         if "output.csv.name" in self._cfg:
@@ -155,45 +99,104 @@ class GeomModel(BaseModel):
             Path(self._cfg["output.path"], out_csv),
             buffer_size=100000,
         )
+        header += ",".join(_exp.columns).encode() + b","
 
-        out_geom = "spatial.gpkg"
-        if "output.geom.name1" in self._cfg:
-            out_geom = self._cfg["output.geom.name1"]
+        _paths = Path(self._cfg.get("output.path.tmp")).glob("*.dat")
 
-        geom_writer = GeomMemFileHandler(
-            Path(self._cfg["output.path"], out_geom),
-            self.srs,
-            self._exposure_geoms["file1"].layer.GetLayerDefn(),
-            self._exposure_data._extra_columns_meta,
-        )
+        _all_cols = []
+        for p in _paths:
+            _d = open_csv(p, index=_exp.meta["index_name"], large=True)
+            _cols = ",".join(_d.columns[1:]).encode()
+            header += _cols
+            _cols = [item.decode() for item in _cols.split(b",")]
+            _all_cols += _cols
+            _files[p.stem] = {"data": _d, "cols": _cols}
+            _d = None
+
+        header += NEWLINE_CHAR.encode()
+        writer.write(header)
+
+        for key, gm in _gm.items():
+            _add = key[-1]
+            out_geom = f"spatial{_add}.gpkg"
+            if f"output.geom.name{_add}" in self._cfg:
+                out_geom = self._cfg[f"output.geom.name{_add}"]
+
+            geom_writer = GeomMemFileHandler(
+                Path(self._cfg["output.path"], out_geom),
+                self.srs,
+                gm.layer.GetLayerDefn(),
+            )
+
+            geom_writer.create_fields(zip(_all_cols, ["float"] * len(_all_cols)))
+
+            for ft in gm:
+                row = b""
+
+                oid = ft.GetField(0)
+                row += _exp[oid].strip() + b","
+                attrs = {}
+
+                for _, item in _files.items():
+                    _data = item["data"][oid].strip().split(b",", 1)[1]
+                    row += _data
+                    attrs.update(
+                        dict(
+                            zip(
+                                item["cols"],
+                                [float(num.decode()) for num in _data.split(b",")],
+                            ),
+                        ),
+                    )
+
+                row += NEWLINE_CHAR.encode()
+                writer.write(row)
+                geom_writer.add_feature(
+                    ft,
+                    attrs,
+                )
+
+            geom_writer.dump2drive()
+            geom_writer = None
+
+        writer.flush()
+        writer = None
+
+    def run(
+        self,
+    ):
+        """_summary_"""
 
         if self._hazard_grid.count > 1:
             pcount = min(os.cpu_count(), self._hazard_grid.count)
+            futures = []
             with ProcessPoolExecutor(max_workers=pcount) as Pool:
                 for idx in range(self._hazard_grid.count):
-                    p = Pool.submit(
-                        worker,
-                        writer,
+                    fs = Pool.submit(
+                        geom_worker,
+                        self._cfg.get("output.path.tmp"),
                         self._hazard_grid,
-                        1,
+                        idx + 1,
                         self._vulnerability_data,
                         self._exposure_data,
-                        self._exposure_geoms["file1"],
+                        self._exposure_geoms,
                     )
-                for f in as_completed([p]):
-                    print(f.result())
-
+                    futures.append(fs)
+            wait(futures)
+            # for p in p_s:
+            #     p.join()
         else:
-            worker(
-                writer,
-                geom_writer,
-                self._hazard_grid,
-                1,
-                self._vulnerability_data,
-                self._exposure_data,
-                self._exposure_geoms["file1"],
+            p = Process(
+                target=geom_worker,
+                args=(
+                    self._cfg.get("output.path.tmp"),
+                    self._hazard_grid,
+                    1,
+                    self._vulnerability_data,
+                    self._exposure_data,
+                    self._exposure_geoms,
+                ),
             )
-
-        geom_writer.dump2drive()
-        del writer
-        del geom_writer
+            p.start()
+            p.join()
+        self._patch_up()

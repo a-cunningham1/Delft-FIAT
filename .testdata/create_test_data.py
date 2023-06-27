@@ -165,9 +165,9 @@ def create_hazard_map():
 def create_risk_map():
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(4326)
-    dr = gdal.GetDriverByName("GTiff")
+    dr = gdal.GetDriverByName("netCDF")
     src = dr.Create(
-        str(Path(p, "hazard", "risk_map.tif")),
+        str(Path(p, "hazard", "risk_map.nc")),
         10,
         10,
         4,
@@ -208,7 +208,7 @@ def create_settings():
             "crs": "EPSG:4326",
         },
         "output": {
-            "path": "output",
+            "path": "output/event",
             "csv": {
                 "name": "output.csv",
             },
@@ -252,7 +252,7 @@ def create_settings_risk():
             "crs": "EPSG:4326",
         },
         "output": {
-            "path": "output",
+            "path": "output/risk",
             "csv": {
                 "name": "output.csv",
             },

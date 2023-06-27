@@ -1,6 +1,20 @@
 from osgeo import osr
 
 
+def get_srs_repr(
+    srs: osr.SpatialReference,
+):
+    """_summary_"""
+
+    _auth_c = srs.GetAuthorityCode(None)
+    _auth_n = srs.GetAuthorityName(None)
+
+    if _auth_c is None or _auth_n is None:
+        return srs.ExportToProj4()
+
+    return f"{_auth_n}:{_auth_c}"
+
+
 class CRS:
     def __init__(
         self,

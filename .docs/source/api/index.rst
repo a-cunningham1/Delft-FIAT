@@ -1,12 +1,27 @@
+.. currentmodule:: delft_fiat
+
 .. _api_reference:
 
 =============
 API Reference
 =============
 
-.. toctree::
-   :caption: Table of Contents
-   :maxdepth: 1
-   :hidden:
+Models
+-------
 
-   gis.rst
+.. autosummary::
+   :toctree: ../_generated
+
+   delft_fiat.models.GeomModel
+   delft_fiat.models.GridModel
+
+GIS
+---
+
+.. autosummary::
+   :toctree: ../_generated
+
+   delft_fiat.io.GeomSource
+   delft_fiat.io.GridSource
+   delft_fiat.gis.geom.reproject
+   delft_fiat.gis.grid.reproject

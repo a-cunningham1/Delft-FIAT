@@ -6,13 +6,25 @@ Data overview
 
 There are four key types of input data required: exposure data (vector and raster), vulnerability data (damage functions), hazard maps, and a settings file. It is recommended to organize the files in the following folder structure.
 
-.. image:: ../../_static/overview_folders.png
+.. |folder_icon| image:: ../../_static/icons8-folder.svg
+   :height: 25ex
+
+.. |file_icon| image:: ../../_static/icons8-file.svg
+   :height: 25ex
+
+* |folder_icon| exposure
+
+* |folder_icon| hazard
+
+* |folder_icon| vulnerability
+
+* |file_icon| settings.toml
 
 
 Settings
 ========
 
-The settings file (*.toml) contains information about the data that should be used for the risk assessment. Delft-FIAT can be run (REFER TO RUN SECTION OF THE DOCUMENTATION) by simply pointing to a settings.toml file. A filled-in example with explanation about the parameters is given below::
+The settings file (\*.toml) contains information about the data that should be used for the risk assessment. Delft-FIAT can be run (REFER TO RUN SECTION OF THE DOCUMENTATION) by simply pointing to a settings.toml file. A filled-in example with explanation about the parameters is given below::
 
   [global]
   output_dir = 'output' # Directory to save the results in. The directory is relative to the settings.toml file or absolute.

@@ -29,20 +29,28 @@ def reproject(
     if not Path(str(out)).is_dir():
         out = gs.path.parent
 
-    fname_int = Path(out, f"{gs.path.stem}_repr.tif")
-    fname = Path(out, f"{gs.path.stem}_repr{gs.path.suffix}")
+    fname_int = Path(out, f"{gs.path.stem}_repr_fiat.tif")
+    fname = Path(out, f"{gs.path.stem}_repr_fiat{gs.path.suffix}")
 
     out_srs = osr.SpatialReference()
     out_srs.SetFromUserInput(crs)
     out_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
 
-    dst_src = gdal.Warp(str(fname_int), gs.src, dstSRS=out_srs)
-    tr_src = gdal.Translate(str(fname), dst_src)
+    dst_src = gdal.Warp(
+        str(fname_int), gs.src, dstSRS=out_srs, resampleAlg=gdal.GRA_NearestNeighbour
+    )
 
     out_srs = None
+
+    if gs.path.suffix == ".tif":
+        gs.close()
+        dst_src = None
+        return open_grid(fname_int)
+
+    gs.close()
+    tr_src = gdal.Translate(str(fname), dst_src)
     tr_src = None
     dst_src = None
-    gs.close()
     gc.collect()
 
     os.remove(fname_int)

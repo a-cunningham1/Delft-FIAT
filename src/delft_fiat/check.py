@@ -2,7 +2,6 @@ from delft_fiat.log import spawn_logger
 from delft_fiat.util import generic_path_check
 
 import sys
-from decimal import Decimal
 from osgeo import gdal
 from osgeo import osr
 from pathlib import Path
@@ -11,6 +10,46 @@ logger = spawn_logger("fiat.checks")
 
 
 ## Config
+def check_global_crs(
+    srs: osr.SpatialReference,
+    fname: str,
+    fname_haz: str,
+):
+    """_summary_"""
+
+    if srs is None:
+        logger.error("Could not infer the srs from '{}', nor from '{}'")
+        logger.dead("Exiting...")
+        sys.exit()
+
+
+## GIS
+def check_srs(
+    global_srs: osr.SpatialReference,
+    source_srs: osr.SpatialReference,
+    fname: str,
+    cfg_srs: str = None,
+):
+    """_summary_"""
+
+    if source_srs is None and cfg_srs is None:
+        logger.error(
+            f"Coordinate reference system is unknown for '{fname}', cannot safely continue"
+        )
+        logger.dead("Exiting...")
+        sys.exit()
+
+    if source_srs is None:
+        source_srs = osr.SpatialReference()
+        source_srs.SetFromUserInput(cfg_srs)
+
+    if not (
+        global_srs.IsSame(source_srs)
+        or global_srs.ExportToWkt() == source_srs.ExportToWkt()
+    ):
+        return False
+
+    return True
 
 
 ## Hazard
@@ -23,10 +62,10 @@ def check_hazard_subsets(
     if sub is not None:
         keys = ", ".join(list(sub.keys()))
         logger.error(
-            f"""'{path.name}': cant read this file as there are \
-                     multiple layers (bands) with different dimensions."""
+            f"""'{path.name}': cannot read this file as there are \
+multiple datasets (subsets)"""
         )
-        logger.info(f"Chose one of the following layers: {keys}")
+        logger.info(f"Chose one of the following subsets: {keys}")
         sys.exit()
 
 

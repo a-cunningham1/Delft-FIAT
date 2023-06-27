@@ -38,8 +38,9 @@ def reproject(
     gs: "GeomSource",
     crs: str,
     out: str = None,
-) -> object:
-    """_summary_
+):
+    """
+    _summary_
 
     Parameters
     ----------
@@ -49,17 +50,12 @@ def reproject(
         _description_
     out : str
         _description_
-
-    Returns
-    -------
-    object
-        _description_
     """
 
     if not Path(str(out)).is_dir():
         out = gs.path.parent
 
-    fname = Path(out, f"{gs.path.stem}_repr{gs.path.suffix}")
+    fname = Path(out, f"{gs.path.stem}_repr_fiat{gs.path.suffix}")
 
     out_srs = osr.SpatialReference()
     out_srs.SetFromUserInput(crs)

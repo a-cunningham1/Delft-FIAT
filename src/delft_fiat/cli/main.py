@@ -1,9 +1,11 @@
+from delft_fiat.cfg import ConfigReader
 from delft_fiat.log import setup_default_log
 from delft_fiat.main import FIAT
 from delft_fiat.version import __version__
 from delft_fiat.cli.util import Path, file_path_check
 
 import click
+from multiprocessing import freeze_support
 
 
 @click.group(
@@ -54,10 +56,12 @@ def run(
     \b
     <cfg>  Configurations file (toml) containing the settings for the FIAT model
     """
+
+    cfg = ConfigReader(cfg)
     logger = setup_default_log(
         "fiat",
         log_level=2,
-        dst=cfg.parent,
+        dst=cfg.get("output.path"),
     )
     logger.info(f"Delft-Fiat version: {__version__}")
     obj = FIAT(cfg)
@@ -65,4 +69,5 @@ def run(
 
 
 if __name__ == "__main__":
+    freeze_support()
     main()

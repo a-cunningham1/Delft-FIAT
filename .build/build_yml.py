@@ -30,7 +30,7 @@ if args.profile == "build":
     pip_deps.extend(toml["project"]["optional-dependencies"]["all"])
     pip_deps.extend(toml["project"]["optional-dependencies"]["build"])
     deps.remove([item for item in deps if "gdal" in item.lower()][0])
-    conda_deps[1] = "python==3.10.*"
+    conda_deps[1] = "python==3.11.*"
     pip_deps.extend(deps + ["-e ."])
 elif args.profile == "dev":
     conda_deps.extend(toml["project"]["optional-dependencies"]["all"])
