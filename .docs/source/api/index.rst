@@ -21,5 +21,7 @@ GIS
 .. autosummary::
    :toctree: ../_generated
 
+   delft_fiat.io.GeomSource
+   delft_fiat.io.GridSource
    delft_fiat.gis.geom.reproject
    delft_fiat.gis.grid.reproject
