@@ -10,6 +10,7 @@ def reproject(
     gs: "GridSource",
     crs: str,
     out: str = None,
+    resample: int = 0,
 ) -> object:
     """_summary_
 
@@ -37,7 +38,10 @@ def reproject(
     out_srs.SetAxisMappingStrategy(osr.OAMS_TRADITIONAL_GIS_ORDER)
 
     dst_src = gdal.Warp(
-        str(fname_int), gs.src, dstSRS=out_srs, resampleAlg=gdal.GRA_NearestNeighbour
+        str(fname_int),
+        gs.src,
+        dstSRS=out_srs,
+        resampleAlg=resample,
     )
 
     out_srs = None
