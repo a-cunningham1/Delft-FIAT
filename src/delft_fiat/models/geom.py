@@ -114,12 +114,13 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
         for p in _paths:
             _d = open_csv(p, index=_exp.meta["index_name"], large=True)
             _cols = ",".join(_d.columns[1:]).encode()
-            header += _cols
+            header += _cols + b","
             _cols = [item.decode() for item in _cols.split(b",")]
             _all_cols += _cols
             _files[p.stem] = {"data": _d, "cols": _cols}
             _d = None
 
+        header.strip(b",")
         header += NEWLINE_CHAR.encode()
         writer.write(header)
 
@@ -146,7 +147,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
 
                 for _, item in _files.items():
                     _data = item["data"][oid].strip().split(b",", 1)[1]
-                    row += _data
+                    row += _data + b","
                     attrs.update(
                         dict(
                             zip(
@@ -156,6 +157,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
                         ),
                     )
 
+                row.strip(b",")
                 row += NEWLINE_CHAR.encode()
                 writer.write(row)
                 geom_writer.add_feature(
