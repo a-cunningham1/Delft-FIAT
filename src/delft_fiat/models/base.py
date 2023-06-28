@@ -7,6 +7,7 @@ from delft_fiat.gis import grid
 from delft_fiat.gis.crs import get_srs_repr
 from delft_fiat.io import open_csv, open_geom, open_grid
 from delft_fiat.log import spawn_logger
+from delft_fiat.util import deter_dec
 
 from abc import ABCMeta, abstractmethod
 from osgeo import osr
@@ -31,11 +32,18 @@ class BaseModel(metaclass=ABCMeta):
         self._exposure_grid = None
         self._hazard_grid = None
         self._vulnerability_data = None
+        self._vul_step_size = 0.01
+        self._rounding = 2
+        self._cfg["vulnerability.round"] = self._rounding
         self._outhandler = None
+        self._keep_temp = False
 
         self._set_model_srs()
         self._read_hazard_grid()
         self._read_vulnerability_data()
+
+        if "global.keep_temp_files" in self._cfg:
+            self._keep_temp = self._cfg.get("global.keep_temp_files")
 
     @abstractmethod
     def __del__(self):
@@ -49,6 +57,8 @@ class BaseModel(metaclass=ABCMeta):
         pass
 
     def _read_hazard_grid(self):
+        """_summary_"""
+
         path = self._cfg.get("hazard.file")
         logger.info(f"Reading hazard data ('{path.name}')")
         kw = self._cfg.generate_kwargs("hazard.multiband")
@@ -65,17 +75,36 @@ class BaseModel(metaclass=ABCMeta):
 does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
             )
             logger.info(f"Reprojecting '{path.name}' to '{get_srs_repr(self.srs)}'")
-            data = grid.reproject(data, self.srs.ExportToWkt())
+            _resalg = 0
+            if "hazard.resampling_method" in self._cfg:
+                _resalg = self._cfg.get("hazard.resampling_method")
+            data = grid.reproject(data, self.srs.ExportToWkt(), _resalg)
         ## When all is done, add it
         self._hazard_grid = data
 
     def _read_vulnerability_data(self):
         path = self._cfg.get("vulnerability.file")
         logger.info(f"Reading vulnerability curves ('{path.name}')")
-        data = open_csv(str(path), index="water depth")
+
+        index = "water depth"
+        if "vulnerability.index" in self._cfg:
+            index = self._cfg.get("vulnerability.index")
+        data = open_csv(str(path), index=index)
         ## checks
         logger.info("Executing vulnerability checks...")
 
+        ## upscale the data (can be done after the checks)
+        if "vulnerability.step_size" in self._cfg:
+            self._vul_step_size = self._cfg.get("vulnerability.step_size")
+            self._rounding = deter_dec(self._vul_step_size)
+            self._cfg["vulnerability.round"] = self._rounding
+
+        logger.info(
+            f"Upscaling vulnerability curves, \
+using a step size of: {self._vul_step_size}"
+        )
+        data.upscale(self._vul_step_size, inplace=True)
+        ## When all is done, add it
         self._vulnerability_data = data
 
     def _set_model_srs(self):
