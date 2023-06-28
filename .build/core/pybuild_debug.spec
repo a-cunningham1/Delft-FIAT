@@ -14,6 +14,7 @@ generic_folder_check("../../bin/core")
 
 cwd = Path.cwd()
 env_path =  os.path.dirname(sys.executable)
+mode = "Debug"
 
 bin = Path(env_path, 'Library', 'bin')
 dlls = Path(env_path, 'DLLs')
@@ -81,12 +82,12 @@ coll = COLLECT(
     strip=False,
     upx=False,
     upx_exclude=[],
-    name=app_name,
+    name=mode,
 )
 
 # Post build event
 sys.stdout.write("1E10 INFO: Moving libraries to seperatate lib folder...\n")
-app_path = Path(DISTPATH, app_name)
+app_path = Path(DISTPATH, mode)
 lib_path = Path(app_path, "lib")
 if not lib_path.is_dir():
     os.makedirs(lib_path)
