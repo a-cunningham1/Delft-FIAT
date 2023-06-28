@@ -206,6 +206,7 @@ def create_settings():
     doc = {
         "global": {
             "crs": "EPSG:4326",
+            "keep_temp_files": True,
         },
         "output": {
             "path": "output/event",
@@ -218,7 +219,7 @@ def create_settings():
             "file": "hazard/event_map.nc",
             "crs": "EPSG:4326",
             "risk": False,
-            "spatial_reference": "DEM",
+            "elevation_reference": "DEM",
         },
         "exposure": {
             "grid": {
@@ -250,6 +251,7 @@ def create_settings_risk():
     doc = {
         "global": {
             "crs": "EPSG:4326",
+            "keep_temp_files": True,
         },
         "output": {
             "path": "output/risk",
@@ -261,7 +263,7 @@ def create_settings_risk():
         "hazard": {
             "file": "hazard/risk_map.nc",
             "crs": "EPSG:4326",
-            "spatial_reference": "DEM",
+            "elevation_reference": "DEM",
             "risk": True,
             "multiband": {
                 "subset": "",
