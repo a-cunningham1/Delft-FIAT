@@ -38,13 +38,17 @@ class GeomModel(BaseModel):
 
         self._read_exposure_data()
         self._read_exposure_geoms()
-        self._vulnerability_data.upscale(0.01, inplace=True)
 
     def __del__(self):
         BaseModel.__del__(self)
 
     def _clean_up(self):
-        pass
+        """_summary_"""
+
+        _p = self._cfg.get("output.path.tmp")
+        for _f in _p.glob("*"):
+            os.unlink(_f)
+        os.rmdir(_p)
 
     def _read_exposure_data(self):
         """_summary_"""
@@ -55,6 +59,7 @@ class GeomModel(BaseModel):
         ##checks
         logger.info("Executing exposure data checks...")
 
+        ## When all is done, add it
         self._exposure_data = data
 
     def _read_exposure_geoms(self):
@@ -78,7 +83,9 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
                 )
                 logger.info(f"Reprojecting '{path.name}' to '{get_srs_repr(self.srs)}'")
                 data = geom.reproject(data, self.srs.ExportToWkt())
+            ## Add to the dict
             _d[file.rsplit(".", 1)[1]] = data
+        ## When all is done, add it
         self._exposure_geoms = _d
 
     def _patch_up(
@@ -174,7 +181,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
                 for idx in range(self._hazard_grid.count):
                     fs = Pool.submit(
                         geom_worker,
-                        self._cfg.get("output.path.tmp"),
+                        self._cfg,
                         self._hazard_grid,
                         idx + 1,
                         self._vulnerability_data,
@@ -189,7 +196,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
             p = Process(
                 target=geom_worker,
                 args=(
-                    self._cfg.get("output.path.tmp"),
+                    self._cfg,
                     self._hazard_grid,
                     1,
                     self._vulnerability_data,
@@ -200,3 +207,6 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
             p.start()
             p.join()
         self._patch_up()
+
+        if not self._keep_temp:
+            self._clean_up()
