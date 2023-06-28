@@ -8,7 +8,7 @@ from pathlib import Path
 
 
 def geom_worker(
-    path: Path,
+    cfg: "ConfigReader",
     haz: "GridSource",
     idx: int,
     vul: "Table",
@@ -18,11 +18,17 @@ def geom_worker(
     """_summary_"""
 
     _band_name = ""
+    _ref = cfg.get("hazard.elevation_reference")
+    _rnd = cfg.get("vulnerability.round")
+    _weighted = False
+    _ups = 1
+    if "global.weight_upscale" in cfg:
+        _ups = cfg.get("global.weight_upscale")
     if haz.count != 1:
         _band_name = haz.get_band_name(idx)
 
     writer = BufferTextHandler(
-        Path(path, f"{idx:03d}.dat"),
+        Path(cfg.get("output.path.tmp"), f"{idx:03d}.dat"),
         buffer_size=100000,
     )
     header = (
@@ -52,7 +58,7 @@ def geom_worker(
                 )
             inun, redf = get_inundation_depth(
                 res,
-                "DEM",
+                _ref,
                 ft_info[exp._columns["Ground Floor Height"]],
             )
             row += f",{round(inun, 2)},{round(redf, 2)}".encode()
@@ -63,7 +69,7 @@ def geom_worker(
                     _d = "nan"
                 else:
                     inun = max(min(vul_max, inun), vul_min)
-                    _df = vul[round(inun, 2), ft_info[col]]
+                    _df = vul[round(inun, _rnd), ft_info[col]]
                     _d = _df * ft_info[exp.max_potential_damage[key]] * redf
                     _d = round(_d, 2)
                     _td += _d
@@ -77,3 +83,11 @@ def geom_worker(
 
     writer.flush()
     writer = None
+
+
+def grid_worker(
+    cfg: "ConfigReader",
+):
+    """_summary_"""
+
+    pass
