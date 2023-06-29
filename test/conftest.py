@@ -28,14 +28,8 @@ def cfg_risk(settings_toml_risk):
 
 
 @pytest.fixture
-def gm_event(cfg_event):
+def gm(cfg_event):
     d = open_geom(cfg_event.get_path("exposure.geom.file1"))
-    return d
-
-
-@pytest.fixture
-def gm_risk(cfg_risk):
-    d = open_geom(cfg_risk.get_path("exposure.geom.file1"))
     return d
 
 

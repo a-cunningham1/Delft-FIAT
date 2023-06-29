@@ -2,6 +2,7 @@ from delft_fiat.util import mean
 
 import math
 import numpy as np
+from typing import List, Union
 
 _inun_calc = {
     "mean": mean,
@@ -149,5 +150,26 @@ def get_inundation_depth(
     return haz, redf
 
 
-def risk_calculator():
-    pass
+def risk_calculator(return_periods: List[Union[int, float]], damages: List[float]) -> float:
+    """Calculates the EAD (risk) from a list of return periods and list of 
+    corresponding damages.
+
+    Parameters
+    ----------
+    return_periods : List[Union[int, float]]
+        List of return periods.
+    damages : List[float]
+        List of corresponding damages (in the same order of the return periods).
+
+    Returns
+    -------
+    float
+        The Expected Annual Damage (EAD), or risk, as a log-linear integration over the 
+        return periods.
+    """
+    # Calculate the return period coefficients (the factors to multiply the damages with)
+    return_period_coefficients = calculate_coefficients(return_periods)
+
+    # Calculate the EAD
+    ead = np.sum(np.array(damages) * np.array(return_period_coefficients))
+    return ead
