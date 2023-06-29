@@ -1,6 +1,7 @@
 from delft_fiat.util import mean
 
 import math
+import numpy as np
 
 _inun_calc = {
     "mean": mean,
