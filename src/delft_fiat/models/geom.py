@@ -10,6 +10,7 @@ from delft_fiat.io import (
 )
 from delft_fiat.log import spawn_logger
 from delft_fiat.models.base import BaseModel
+from delft_fiat.models.calc import calc_risk
 from delft_fiat.models.util import geom_worker
 from delft_fiat.util import NEWLINE_CHAR
 
@@ -59,6 +60,16 @@ class GeomModel(BaseModel):
         ##checks
         logger.info("Executing exposure data checks...")
 
+        ## Information for output
+        _ex = None
+        if self._cfg["hazard.risk"]:
+            _ex = ["Risk (EAD)"]
+        cols = data.create_all_columns(
+            self._cfg.get("hazard.band_names"),
+            _ex,
+        )
+        self._cfg["output.new_columns"] = cols
+
         ## When all is done, add it
         self._exposure_data = data
 
@@ -95,6 +106,9 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
 
         _exp = self._exposure_data
         _gm = self._exposure_geoms
+        _risk = self._cfg.get("hazard.risk")
+        _rp_coef = self._cfg.get("hazard.rp_coefficients")
+        _new_cols = self._cfg["output.new_columns"]
         _files = {}
         header = b""
 
@@ -106,23 +120,17 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
             Path(self._cfg["output.path"], out_csv),
             buffer_size=100000,
         )
-        header += ",".join(_exp.columns).encode()
+        header += ",".join(_exp.columns).encode() + b","
+        header += ",".join(_new_cols).encode()
+        header += NEWLINE_CHAR.encode()
+        writer.write(header)
 
         _paths = Path(self._cfg.get("output.path.tmp")).glob("*.dat")
 
-        _all_cols = []
         for p in _paths:
-            header += b","
             _d = open_csv(p, index=_exp.meta["index_name"], large=True)
-            _cols = ",".join(_d.columns[1:]).encode()
-            header += _cols
-            _cols = [item.decode() for item in _cols.split(b",")]
-            _all_cols += _cols
-            _files[p.stem] = {"data": _d, "cols": _cols}
+            _files[p.stem] = _d
             _d = None
-
-        header += NEWLINE_CHAR.encode()
-        writer.write(header)
 
         for key, gm in _gm.items():
             _add = key[-1]
@@ -136,33 +144,34 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
                 gm.layer.GetLayerDefn(),
             )
 
-            geom_writer.create_fields(zip(_all_cols, ["float"] * len(_all_cols)))
+            geom_writer.create_fields(zip(_new_cols, ["float"] * len(_new_cols)))
 
             for ft in gm:
                 row = b""
 
                 oid = ft.GetField(0)
                 row += _exp[oid].strip()
-                attrs = {}
+                vals = []
 
-                for _, item in _files.items():
+                for item in _files.values():
                     row += b","
-                    _data = item["data"][oid].strip().split(b",", 1)[1]
+                    _data = item[oid].strip().split(b",", 1)[1]
                     row += _data
-                    attrs.update(
-                        dict(
-                            zip(
-                                item["cols"],
-                                [float(num.decode()) for num in _data.split(b",")],
-                            ),
-                        ),
-                    )
+                    _val = [float(num.decode()) for num in _data.split(b",")]
+                    vals += _val
 
+                if _risk:
+                    ead = round(
+                        calc_risk(_rp_coef, vals[-1 :: -_exp._dat_len]),
+                        self._rounding,
+                    )
+                    row += f",{ead}".encode()
+                    vals.append(ead)
                 row += NEWLINE_CHAR.encode()
                 writer.write(row)
                 geom_writer.add_feature(
                     ft,
-                    attrs,
+                    dict(zip(_new_cols, vals)),
                 )
 
             geom_writer.dump2drive()

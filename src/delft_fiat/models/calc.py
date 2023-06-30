@@ -8,52 +8,78 @@ _inun_calc = {
 }
 
 
-def calculate_coefficients(T):
-    """Calculates coefficients used to compute the EAD as a linear function of the known damages
-    Args:
-        T (list of ints): return periods T1 … Tn for which damages are known
-    Returns:
-        alpha [list of floats]: coefficients a1, …, an (used to compute the AED as a linear function of the known damages)
-    In which D(f) is the damage, D, as a function of the frequency of exceedance, f. In order to compute this EAD,
-    function D(f) needs to be known for the entire range of frequencies. Instead, D(f) is only given for the n
-    frequencies as mentioned in the table above. So, in order to compute the integral above, some assumptions need
-    to be made for function D(h):
-    (i)	   For f > f1 the damage is assumed to be equal to 0
-    (ii)   For f<fn, the damage is assumed to be equal to Dn
-    (iii)  For all other frequencies, the damage is estimated from log-linear interpolation between the known damages and frequencies
+## Calculates coefficients used to compute the EAD as a linear function of the known damages
+#    Args:
+#        T (list of ints): return periods T1 … Tn for which damages are known
+#    Returns:
+#        alpha [list of floats]: coefficients a1, …, an (used to compute the AED as a linear function of the known damages)
+#    In which D(f) is the damage, D, as a function of the frequency of exceedance, f. In order to compute this EAD,
+#    function D(f) needs to be known for the entire range of frequencies. Instead, D(f) is only given for the n
+#    frequencies as mentioned in the table above. So, in order to compute the integral above, some assumptions need
+#    to be made for function D(h):
+#    (i)	   For f > f1 the damage is assumed to be equal to 0
+#    (ii)   For f<fn, the damage is assumed to be equal to Dn
+#    (iii)  For all other frequencies, the damage is estimated from log-linear interpolation between the known damages and frequencies
+
+
+def calc_rp_coef(
+    rp: list | tuple,
+):
+    """_summary_
+
+    Parameters
+    ----------
+    rp : list | tuple
+        _description_
+
+    Returns
+    -------
+    _type_
+        _description_
     """
+
     # Step 1: Compute frequencies associated with T-values.
-    f = [1 / i for i in T]
-    lf = [np.log(1 / i) for i in T]
+    rp_l = len(rp)
+
+    f = [1 / n for n in rp]
+    lf = [math.log(1 / n) for n in rp]
+
+    if rp_l == 1:
+        return f
 
     # Step 2:
-    c = [(1 / (lf[i] - lf[i + 1])) for i in range(len(T[:-1]))]
+    c = [(1 / (lf[idx] - lf[idx + 1])) for idx in range(rp_l - 1)]
 
     # Step 3:
-    G = [(f[i] * lf[i] - f[i]) for i in range(len(T))]
+    G = [(f[idx] * lf[idx] - f[idx]) for idx in range(rp_l)]
 
     # Step 4:
     a = [
-        ((1 + c[i] * lf[i + 1]) * (f[i] - f[i + 1]) + c[i] * (G[i + 1] - G[i]))
-        for i in range(len(T[:-1]))
+        (
+            (1 + c[idx] * lf[idx + 1]) * (f[idx] - f[idx + 1])
+            + c[idx] * (G[idx + 1] - G[idx])
+        )
+        for idx in range(rp_l - 1)
     ]
     b = [
-        (c[i] * (G[i] - G[i + 1] + lf[i + 1] * (f[i + 1] - f[i])))
-        for i in range(len(T[:-1]))
+        (c[idx] * (G[idx] - G[idx + 1] + lf[idx + 1] * (f[idx + 1] - f[idx])))
+        for idx in range(rp_l - 1)
     ]
 
     # Step 5:
-    if len(T) == 1:
-        alpha = f
-    else:
-        alpha = [
-            b[0] if i == 0 else f[i] + a[i - 1] if i == len(T) - 1 else a[i - 1] + b[i]
-            for i in range(len(T))
-        ]
+    alpha = [
+        b[0]
+        if idx == 0
+        else f[idx] + a[idx - 1]
+        if idx == len(rp) - 1
+        else a[idx - 1] + b[idx]
+        for idx in range(len(rp))
+    ]
+
     return alpha
 
 
-def get_damage_factor(
+def calc_dm_f(
     haz: float,
     idx: tuple,
     values: tuple,
@@ -87,13 +113,7 @@ def get_damage_factor(
     return values[idx.index(round(haz, sig))]
 
 
-def damage_calculator():
-    _func = {}
-
-    pass
-
-
-def get_inundation_depth(
+def calc_haz(
     haz: list,
     ref: str,
     gfh: float,
@@ -148,5 +168,27 @@ def get_inundation_depth(
     return haz, redf
 
 
-def risk_calculator():
-    pass
+def calc_risk(
+    rp_coef: list,
+    dms: list,
+) -> float:
+    """Calculates the EAD (risk) from a list of return periods and list of
+    corresponding damages.
+
+    Parameters
+    ----------
+    rp_coef : list
+        List of return period coefficients.
+    dms : list
+        List of corresponding damages (in the same order of the return periods coefficients).
+
+    Returns
+    -------
+    float
+        The Expected Annual Damage (EAD), or risk, as a log-linear integration over the
+        return periods.
+    """
+
+    # Calculate the EAD
+    ead = sum([x * y for x, y in zip(rp_coef, dms)])
+    return ead

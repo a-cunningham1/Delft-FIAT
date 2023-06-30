@@ -1,16 +1,15 @@
 from delft_fiat.gis import overlay, geom, grid
-from delft_fiat.io import open_geom, open_grid
 
 import pytest
 from numpy import mean
 
 
-def test_clip_grid_geom(gm, gr):
+def test_clip_grid_geom(gm, gr_event):
     for ft in gm:
         hazard = overlay.clip(
-            gr[1],
-            gr.get_srs(),
-            gr.get_geotransform(),
+            gr_event[1],
+            gr_event.get_srs(),
+            gr_event.get_geotransform(),
             ft,
         )
 
@@ -18,20 +17,20 @@ def test_clip_grid_geom(gm, gr):
     assert int(round(mean(hazard) * 100, 0)) == 166
 
 
-def test_pin(gm, gr):
+def test_pin(gm, gr_event):
     for ft in gm:
         XY = geom.point_in_geom(ft)
 
         hazard = overlay.pin(
-            gr[1],
-            gr.get_geotransform(),
+            gr_event[1],
+            gr_event.get_geotransform(),
             XY,
         )
 
     assert int(round(hazard[0] * 100, 0)) == 160
 
 
-def test_reproject(tmpdir, gm, gr):
+def test_reproject(tmpdir, gm, gr_event):
     dst_crs = "EPSG:3857"
 
     new_gm = geom.reproject(
@@ -41,7 +40,7 @@ def test_reproject(tmpdir, gm, gr):
     )
 
     new_gr = grid.reproject(
-        gr,
+        gr_event,
         dst_crs,
         str(tmpdir),
     )

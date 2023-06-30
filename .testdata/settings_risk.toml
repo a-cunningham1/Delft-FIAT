@@ -16,6 +16,12 @@ file = "hazard/risk_map.nc"
 crs = "EPSG:4326"
 elevation_reference = "DEM"
 risk = true
+return_periods = [
+    2,
+    5,
+    10,
+    25,
+]
 
 [hazard.multiband]
 subset = ""

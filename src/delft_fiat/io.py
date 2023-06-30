@@ -916,6 +916,22 @@ class GridSource(_BaseIO, _BaseStruct):
         self.count = nb
 
     @_BaseIO._check_state
+    def deter_band_names(
+        self,
+    ):
+        """_summary_"""
+
+        _names = []
+        for n in range(self.count):
+            name = self.get_band_name(n + 1)
+            if not name:
+                _names.append(f"Band{n+1}")
+                continue
+            _names.append(name)
+
+        return _names
+
+    @_BaseIO._check_state
     def get_band_name(self, n: int):
         """_summary_"""
 
@@ -930,7 +946,18 @@ class GridSource(_BaseIO, _BaseStruct):
         if _var_meta:
             return _meta[_var_meta[0]]
 
-        return f"Band{n}"
+        return ""
+
+    def get_band_names(
+        self,
+    ):
+        """_summary_"""
+
+        _names = []
+        for n in range(self.count):
+            _names.append(self.get_band_name(n + 1))
+
+        return _names
 
     @_BaseIO._check_state
     def get_bbox(self):
@@ -1419,15 +1446,21 @@ class ExposureTable(TableLazy):
 
         return _out
 
-    def create_specific_meta(
+    def create_all_columns(
         self,
-        name: str,
+        names: list,
+        extra: list = None,
     ):
         """_summary_"""
 
-        _sc = self.create_specific_columns(name)
+        cols = []
+        for n in names:
+            cols += self.create_specific_columns(n)
 
-        return dict(zip(_sc, ["float"] * self._dat_len))
+        if extra is not None:
+            cols += extra
+
+        return cols
 
     def gen_dat_dtypes(self):
         """_summary_"""

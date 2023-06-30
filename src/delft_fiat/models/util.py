@@ -1,6 +1,6 @@
 from delft_fiat.io import BufferTextHandler
 from delft_fiat.gis import geom, overlay
-from delft_fiat.models.calc import get_inundation_depth
+from delft_fiat.models.calc import calc_haz
 from delft_fiat.util import NEWLINE_CHAR, _pat, replace_empty
 
 from math import isnan
@@ -17,15 +17,13 @@ def geom_worker(
 ):
     """_summary_"""
 
-    _band_name = ""
+    _band_name = cfg["hazard.band_names"][idx - 1]
     _ref = cfg.get("hazard.elevation_reference")
     _rnd = cfg.get("vulnerability.round")
     _weighted = False
     _ups = 1
     if "global.weight_upscale" in cfg:
         _ups = cfg.get("global.weight_upscale")
-    if haz.count != 1:
-        _band_name = haz.get_band_name(idx)
 
     writer = BufferTextHandler(
         Path(cfg.get("output.path.tmp"), f"{idx:03d}.dat"),
@@ -56,7 +54,7 @@ def geom_worker(
                 res = overlay.pin(
                     haz[idx], haz.get_geotransform(), geom.point_in_geom(ft)
                 )
-            inun, redf = get_inundation_depth(
+            inun, redf = calc_haz(
                 res,
                 _ref,
                 ft_info[exp._columns["Ground Floor Height"]],
