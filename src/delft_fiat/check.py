@@ -1,5 +1,5 @@
 from delft_fiat.log import spawn_logger
-from delft_fiat.util import generic_path_check
+from delft_fiat.util import NEWLINE_CHAR, deter_type, generic_path_check
 
 import sys
 from osgeo import gdal
@@ -53,6 +53,49 @@ def check_srs(
 
 
 ## Hazard
+def check_hazard_band_names(
+    bnames: list,
+    risk: bool,
+    rp: list,
+    count: int,
+):
+    """_summary_"""
+
+    if risk:
+        return [f"{n}Y" for n in rp]
+
+    if count == 1:
+        return [""]
+
+
+def check_hazard_rp_iden(
+    bnames: list,
+    rp_cfg: list,
+    path: Path,
+):
+    """_summary_"""
+    l = len(bnames)
+
+    bn_str = "\n".join(bnames).encode()
+    if deter_type(bn_str, l - 1) != 3:
+        return [float(n) for n in bnames]
+
+    if len(rp_cfg) == len(bnames):
+        rp_str = "\n".join([str(n) for n in rp_cfg]).encode()
+        if deter_type(rp_str, l - 1) != 3:
+            return rp_cfg
+
+    logger.error(
+        f"'{path.name}': cannot determine the return periods for the risk calculation"
+    )
+    logger.error(
+        f"Names of the bands are: {bnames}, \
+return periods in settings toml are: {rp_cfg}"
+    )
+    logger.info("Specify either one them correctly")
+    sys.exit()
+
+
 def check_hazard_subsets(
     sub: dict,
     path: Path,
@@ -70,6 +113,7 @@ multiple datasets (subsets)"""
 
 
 ## Exposure
+
 
 ## Vulnerability
 
