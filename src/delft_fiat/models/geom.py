@@ -180,6 +180,11 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
         writer.flush()
         writer = None
 
+        # Clean up the opened temporary files
+        for _d in _files.keys():
+            _files[_d] = None
+        _files = None
+
     def run(
         self,
     ):
