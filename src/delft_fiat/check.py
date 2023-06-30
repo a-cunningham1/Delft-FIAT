@@ -66,6 +66,8 @@ def check_hazard_band_names(
 
     if count == 1:
         return [""]
+    
+    return bnames
 
 
 def check_hazard_rp_iden(
