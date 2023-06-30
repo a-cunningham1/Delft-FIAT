@@ -41,5 +41,5 @@ def gr_event(cfg_event):
 
 @pytest.fixture
 def gr_risk(cfg_risk):
-    d = open_grid(cfg_risk.get_path("hazard.file"))
+    d = open_grid(cfg_risk.get_path("hazard.file"), var_as_band=True)
     return d
