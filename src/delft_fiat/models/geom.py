@@ -185,11 +185,17 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
     ):
         """_summary_"""
 
+        _nms = self._cfg.get("hazard.band_names")
+        logger.info("Starting the calculations")
         if self._hazard_grid.count > 1:
             pcount = min(os.cpu_count(), self._hazard_grid.count)
             futures = []
             with ProcessPoolExecutor(max_workers=pcount) as Pool:
+                _s = time.time()
                 for idx in range(self._hazard_grid.count):
+                    logger.info(
+                        f"Submitting a job for the calculations in regards to band: '{_nms[idx]}'"
+                    )
                     fs = Pool.submit(
                         geom_worker,
                         self._cfg,
@@ -204,6 +210,8 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
             # for p in p_s:
             #     p.join()
         else:
+            logger.info(f"Submitting a job for the calculations in a seperate process")
+            _s = time.time()
             p = Process(
                 target=geom_worker,
                 args=(
@@ -217,7 +225,15 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
             )
             p.start()
             p.join()
+        _e = time.time() - _s
+        logger.info(f"Calculations time: {round(_e, 2)} seconds")
+
+        logger.info("Producing model output from temporary files")
         self._patch_up()
+        logger.info(f"Output generated in: '{self._cfg['output.path']}'")
 
         if not self._keep_temp:
+            logger.info("Deleting temporary files...")
             self._clean_up()
+
+        logger.info("All done!")
