@@ -265,9 +265,7 @@ def create_settings_risk():
             "crs": "EPSG:4326",
             "elevation_reference": "DEM",
             "risk": True,
-            "return_periods": [
-                2, 5, 10, 25
-            ],
+            "return_periods": [2, 5, 10, 25],
             "multiband": {
                 "subset": "",
                 "var_as_band": True,
