@@ -5,14 +5,35 @@ from delft_fiat.version import __version__
 from delft_fiat.cli.util import Path, file_path_check
 
 import click
+import sys
 from multiprocessing import freeze_support
+
+fiat_start_str = """
+###############################################################
+
+        #########    ##          ##      ##############
+        ##           ##         ####         ######
+        ##           ##         ####           ##
+        ##           ##        ##  ##          ##
+        ######       ##        ##  ##          ##
+        ##           ##       ########         ##
+        ##           ##      ##      ##        ##
+        ##           ##     ##        ##       ##
+        ##           ##    ##          ##      ##
+
+###############################################################
+
+                Fast Impact Assessment Tool
+                \u00A9 Deltares 
+
+"""
 
 
 @click.group(
     options_metavar="<options>",
     subcommand_metavar="<commands>",
 )
-@click.version_option(__version__, message=f"Delft-FIAT v{__version__}")
+@click.version_option(__version__, message=f"Delft-FIAT {__version__}")
 @click.pass_context
 def main(ctx):
     if ctx.obj is None:
@@ -27,6 +48,7 @@ _cfg = click.argument(
 )
 
 _verbose = click.option("-v", "--verbose", count=True, help="Increase verbosity")
+_quiet = click.option("-q", "--quiet", count=True, help="Decrease verbosity")
 
 
 @main.command(
@@ -45,11 +67,13 @@ def info(
     options_metavar="<options>",
 )
 @_cfg
+@_quiet
 @_verbose
 @click.pass_context
 def run(
     ctx,
     cfg,
+    quiet,
     verbose,
 ):
     """
@@ -60,9 +84,10 @@ def run(
     cfg = ConfigReader(cfg)
     logger = setup_default_log(
         "fiat",
-        log_level=2,
+        log_level=2 + quiet - verbose,
         dst=cfg.get("output.path"),
     )
+    sys.stdout.write(fiat_start_str)
     logger.info(f"Delft-Fiat version: {__version__}")
     obj = FIAT(cfg)
     obj.run()
