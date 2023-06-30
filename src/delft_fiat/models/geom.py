@@ -211,6 +211,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
                         self._exposure_geoms,
                     )
                     futures.append(fs)
+            logger.info("Busy...")
             wait(futures)
             # for p in p_s:
             #     p.join()
@@ -229,6 +230,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
                 ),
             )
             p.start()
+            logger.info("Busy...")
             p.join()
         _e = time.time() - _s
         logger.info(f"Calculations time: {round(_e, 2)} seconds")
