@@ -1,7 +1,6 @@
 from delft_fiat.io import BufferTextHandler, open_grid
 from delft_fiat.log import spawn_logger
 from delft_fiat.models.base import BaseModel
-from delft_fiat.models.calc import get_inundation_depth, get_damage_factor
 from delft_fiat.util import _pat, replace_empty
 
 from concurrent.futures import ProcessPoolExecutor

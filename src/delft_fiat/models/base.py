@@ -1,12 +1,15 @@
 from delft_fiat.check import (
     check_global_crs,
+    check_hazard_band_names,
+    check_hazard_rp_iden,
     check_hazard_subsets,
     check_srs,
 )
 from delft_fiat.gis import grid
 from delft_fiat.gis.crs import get_srs_repr
-from delft_fiat.io import open_csv, open_geom, open_grid
+from delft_fiat.io import open_csv, open_grid
 from delft_fiat.log import spawn_logger
+from delft_fiat.models.calc import calc_rp_coef
 from delft_fiat.util import deter_dec
 
 from abc import ABCMeta, abstractmethod
@@ -37,6 +40,7 @@ class BaseModel(metaclass=ABCMeta):
         self._cfg["vulnerability.round"] = self._rounding
         self._outhandler = None
         self._keep_temp = False
+        self._out_meta = {}
 
         self._set_model_srs()
         self._read_hazard_grid()
@@ -65,10 +69,14 @@ class BaseModel(metaclass=ABCMeta):
         data = open_grid(path, **kw)
         ## checks
         logger.info("Executing hazard checks...")
+
+        # check for subsets
         check_hazard_subsets(
             data.subset_dict,
             path,
         )
+
+        # check the srs
         if not check_srs(self.srs, data.get_srs(), path.name):
             logger.warning(
                 f"Spatial reference of '{path.name}' ('{get_srs_repr(data.get_srs())}') \
@@ -79,6 +87,28 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
             if "hazard.resampling_method" in self._cfg:
                 _resalg = self._cfg.get("hazard.resampling_method")
             data = grid.reproject(data, self.srs.ExportToWkt(), _resalg)
+
+        # check risk return periods
+        if self._cfg["hazard.risk"]:
+            rp = check_hazard_rp_iden(
+                data.get_band_names(),
+                self._cfg.get("hazard.return_periods"),
+                path,
+            )
+            self._cfg["hazard.return_periods"] = rp
+            # Directly calculate the coefficients
+            rp_coef = calc_rp_coef(rp)
+            self._cfg["hazard.rp_coefficients"] = rp_coef
+
+        ## Information for output
+        ns = check_hazard_band_names(
+            data.deter_band_names(),
+            self._cfg.get("hazard.risk"),
+            self._cfg.get("hazard.return_periods"),
+            data.count,
+        )
+        self._cfg["hazard.band_names"] = ns
+
         ## When all is done, add it
         self._hazard_grid = data
 
