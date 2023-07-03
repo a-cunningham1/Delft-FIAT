@@ -29,6 +29,7 @@ class ConfigReader(dict):
         check_config_entries(
             self.keys(),
             self.filepath,
+            self.path,
         )
 
         # Ensure the output directory is there

@@ -1,4 +1,4 @@
-from delft_fiat.log import spawn_logger
+from delft_fiat.log import spawn_logger, setup_default_log
 from delft_fiat.util import NEWLINE_CHAR, deter_type, generic_path_check
 
 import sys
@@ -13,6 +13,7 @@ logger = spawn_logger("fiat.checks")
 def check_config_entries(
     keys: tuple,
     path: Path,
+    parent: Path,
 ):
     """_summary_"""
 
@@ -26,9 +27,14 @@ def check_config_entries(
 
     _check = [item in keys for item in _man_cols]
     if not all(_check):
+        error_log = setup_default_log(
+            "error",
+            log_level=2,
+            dst=str(parent),
+        )
         _missing = [item for item, b in zip(_man_cols, _check) if not b]
-        logger.error(f"Missing mandatory entries in '{path.name}'")
-        logger.info(f"Please fill in the following missing entries: {_missing}")
+        error_log.error(f"Missing mandatory entries in '{path.name}'")
+        error_log.info(f"Please fill in the following missing entries: {_missing}")
         sys.exit()
 
 
