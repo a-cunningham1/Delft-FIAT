@@ -38,6 +38,7 @@ crs = "EPSG:4326"
 
 [vulnerability]
 file = "vulnerability/vulnerability_curves.csv"
+step_size = 0.01
 
 [categorical_bins]
 low = 0.25

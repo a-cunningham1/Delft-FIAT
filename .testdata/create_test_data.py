@@ -30,7 +30,7 @@ def create_exposure_dbase():
     with open(Path(p, "exposure", "spatial.csv"), "w") as f:
         f.write("Object ID,Extraction Method,Ground Floor Height,")
         f.write("Damage Function: Structure,Max Potential Damage: Structure\n")
-        for n in range(4):
+        for n in range(5):
             if (n + 1) % 2 != 0:
                 dmc = "struct_1"
             else:
@@ -76,6 +76,50 @@ def create_exposure_geoms():
         ft.SetGeometry(geom)
 
         layer.CreateFeature(ft)
+
+    srs = None
+    field = None
+    geom = None
+    ft = None
+    layer = None
+    src = None
+    dr = None
+
+
+def create_exposure_geoms_2():
+    geoms = (
+        "POLYGON ((4.375 52.025, 4.385 52.025, 4.385 52.015, 4.375 52.015, 4.375 52.025))",
+    )
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(4326)
+    dr = ogr.GetDriverByName("GPKG")
+    src = dr.CreateDataSource(str(Path(p, "exposure", "spatial2.gpkg")))
+    layer = src.CreateLayer(
+        "spatial",
+        srs,
+        3,
+    )
+
+    field = ogr.FieldDefn(
+        "Object_ID",
+        ogr.OFTInteger,
+    )
+    layer.CreateField(field)
+
+    field = ogr.FieldDefn(
+        "ObjectName",
+        ogr.OFTString,
+    )
+    field.SetWidth(50)
+    layer.CreateField(field)
+
+    geom = ogr.CreateGeometryFromWkt(geoms[0])
+    ft = ogr.Feature(layer.GetLayerDefn())
+    ft.SetField("Object_ID", 5)
+    ft.SetField("ObjectName", f"fp_{5}")
+    ft.SetGeometry(geom)
+
+    layer.CreateFeature(ft)
 
     srs = None
     field = None
@@ -234,6 +278,7 @@ def create_settings():
         },
         "vulnerability": {
             "file": "vulnerability/vulnerability_curves.csv",
+            "step_size": 0.01,
         },
         "categorical_bins": {
             "low": 0.25,
@@ -244,6 +289,13 @@ def create_settings():
     }
 
     with open(Path(p, "settings.toml"), "wb") as f:
+        tomli_w.dump(doc, f)
+
+    doc["output"]["path"] = "output/event_2g"
+    doc["output"]["geom"]["name2"] = "spatial2.gpkg"
+    doc["exposure"]["geom"]["file2"] = "exposure/spatial2.gpkg"
+
+    with open(Path(p, "settings_2g.toml"), "wb") as f:
         tomli_w.dump(doc, f)
 
 
@@ -284,6 +336,7 @@ def create_settings_risk():
         },
         "vulnerability": {
             "file": "vulnerability/vulnerability_curves.csv",
+            "step_size": 0.01,
         },
         "categorical_bins": {
             "low": 0.25,
@@ -294,6 +347,13 @@ def create_settings_risk():
     }
 
     with open(Path(p, "settings_risk.toml"), "wb") as f:
+        tomli_w.dump(doc, f)
+
+    doc["output"]["path"] = "output/risk_2g"
+    doc["output"]["geom"]["name2"] = "spatial2.gpkg"
+    doc["exposure"]["geom"]["file2"] = "exposure/spatial2.gpkg"
+
+    with open(Path(p, "settings_risk_2g.toml"), "wb") as f:
         tomli_w.dump(doc, f)
 
 
@@ -320,6 +380,7 @@ if __name__ == "__main__":
     create_dbase_stucture()
     create_exposure_dbase()
     create_exposure_geoms()
+    create_exposure_geoms_2()
     create_exposure_grid()
     create_hazard_map()
     create_risk_map()

@@ -3,19 +3,30 @@ crs = "EPSG:4326"
 keep_temp_files = true
 
 [output]
-path = "output/event"
+path = "output/risk_2g"
 
 [output.csv]
 name = "output.csv"
 
 [output.geom]
 name1 = "spatial.gpkg"
+name2 = "spatial2.gpkg"
 
 [hazard]
-file = "hazard/event_map.nc"
+file = "hazard/risk_map.nc"
 crs = "EPSG:4326"
-risk = false
 elevation_reference = "DEM"
+risk = true
+return_periods = [
+    2,
+    5,
+    10,
+    25,
+]
+
+[hazard.multiband]
+subset = ""
+var_as_band = true
 
 [exposure.grid]
 file = "exposure/spatial.nc"
@@ -25,6 +36,7 @@ crs = "EPSG:4326"
 file1 = "exposure/spatial.gpkg"
 csv = "exposure/spatial.csv"
 crs = "EPSG:4326"
+file2 = "exposure/spatial2.gpkg"
 
 [vulnerability]
 file = "vulnerability/vulnerability_curves.csv"

@@ -3,13 +3,14 @@ crs = "EPSG:4326"
 keep_temp_files = true
 
 [output]
-path = "output/event"
+path = "output/event_2g"
 
 [output.csv]
 name = "output.csv"
 
 [output.geom]
 name1 = "spatial.gpkg"
+name2 = "spatial2.gpkg"
 
 [hazard]
 file = "hazard/event_map.nc"
@@ -25,6 +26,7 @@ crs = "EPSG:4326"
 file1 = "exposure/spatial.gpkg"
 csv = "exposure/spatial.csv"
 crs = "EPSG:4326"
+file2 = "exposure/spatial2.gpkg"
 
 [vulnerability]
 file = "vulnerability/vulnerability_curves.csv"
