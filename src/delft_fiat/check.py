@@ -10,6 +10,28 @@ logger = spawn_logger("fiat.checks")
 
 
 ## Config
+def check_config_entries(
+    keys: tuple,
+    path: Path,
+):
+    """_summary_"""
+
+    _man_cols = [
+        "output.path",
+        "hazard.file",
+        "hazard.risk",
+        "hazard.elevation_reference",
+        "vulnerability.file",
+    ]
+
+    _check = [item in keys for item in _man_cols]
+    if not all(_check):
+        _missing = [item for item, b in zip(_man_cols, _check) if not b]
+        logger.error(f"Missing mandatory entries in '{path.name}'")
+        logger.info(f"Please fill in the following missing entries: {_missing}")
+        sys.exit()
+
+
 def check_global_crs(
     srs: osr.SpatialReference,
     fname: str,
