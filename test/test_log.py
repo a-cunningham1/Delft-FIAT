@@ -17,15 +17,15 @@ def test_stream():
 
 
 def test_log(tmpdir):
-    log = Log("fiat", log_level=2)
+    log = Log("test_log", log_level=2)
     log.add_cmd_stream(
         level=2,
     )
     log.add_file_stream(
         str(tmpdir),
-        filename="fiat",
+        filename="test_log",
     )
-    child_log = spawn_logger("fiat.child")
+    child_log = spawn_logger("test_log.child")
 
     assert id(log) != id(child_log)
 
@@ -39,6 +39,6 @@ def test_log(tmpdir):
     del child_log
     del log
 
-    fh = open(Path(str(tmpdir), "fiat.log"), mode="r")
+    fh = open(Path(str(tmpdir), "test_log.log"), mode="r")
 
     assert sum(1 for _ in fh) == 5
