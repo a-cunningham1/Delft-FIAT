@@ -1,4 +1,4 @@
-from delft_fiat.check import check_config_data
+from delft_fiat.check import check_config_entries
 from delft_fiat.util import (
     Path,
     create_hidden_folder,
@@ -25,17 +25,17 @@ class ConfigReader(dict):
         dict.__init__(self, flatten_dict(tomli.load(f), "", "."))
         f.close()
 
+        # Initial check for mandatory entries of the settings toml
+        check_config_entries(
+            self.keys(),
+            self.filepath,
+        )
+
         # Ensure the output directory is there
-        _p = Path(self["output.path"])
-        if not _p.is_absolute():
-            _p = Path(self.path, _p)
-        generic_folder_check(_p)
-        self["output.path"] = _p
+        self._create_output_dir(self["output.path"])
 
         # Create the hidden temporary folder
-        _ph = Path(_p, ".tmp")
-        create_hidden_folder(_ph)
-        self["output.path.tmp"] = _ph
+        self._create_temp_dir()
 
         # Do some checking concerning the file paths in the settings file
         for key, item in self.items():
@@ -53,6 +53,27 @@ class ConfigReader(dict):
 
     def __repr__(self):
         return f"<ConfigReader object file='{self.filepath}'>"
+
+    def _create_output_dir(
+        self,
+        path: Path | str,
+    ):
+        """_summary_"""
+
+        _p = Path(path)
+        if not _p.is_absolute():
+            _p = Path(self.path, _p)
+        generic_folder_check(_p)
+        self["output.path"] = _p
+
+    def _create_temp_dir(
+        self,
+    ):
+        """_summary_"""
+
+        _ph = Path(self["output.path"], ".tmp")
+        create_hidden_folder(_ph)
+        self["output.path.tmp"] = _ph
 
     def get_model_type(
         self,
@@ -82,3 +103,22 @@ class ConfigReader(dict):
         kw = {key.split(".")[-1]: self[key] for key in keys}
 
         return kw
+
+    def set_output_dir(
+        self,
+        path: Path | str,
+    ):
+        """_summary_"""
+
+        _p = Path(path)
+        if not _p.is_absolute():
+            _p = Path(self.path, _p)
+
+        if not any(self["output.path.tmp"].iterdir()):
+            os.rmdir(self["output.path.tmp"])
+
+        if not any(self["output.path"].iterdir()):
+            os.rmdir(self["output.path"])
+
+        self._create_output_dir(_p)
+        self._create_temp_dir()
