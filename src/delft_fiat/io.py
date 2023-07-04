@@ -62,6 +62,7 @@ class _BaseIO(metaclass=ABCMeta):
             raise ValueError("")
 
         self.path = Path(file)
+        self._path = Path(file)
 
         self._closed = False
         self._mode = _BaseIO._mode_map[mode]
@@ -811,6 +812,8 @@ class GridSource(_BaseIO, _BaseStruct):
         if not _ext in GRID_DRIVER_MAP:
             raise DriverNotFoundError("")
 
+        _BaseIO.__init__(self, file, mode)
+
         driver = GRID_DRIVER_MAP[_ext]
 
         if not subset:
@@ -818,9 +821,7 @@ class GridSource(_BaseIO, _BaseStruct):
         self.subset = subset
 
         if subset is not None and not var_as_band:
-            file = f"{driver.upper()}:" + f'"{file}"' + f":{subset}"
-
-        _BaseIO.__init__(self, file, mode)
+            self._path = f"{driver.upper()}:" + f'"{file}"' + f":{subset}"
 
         self._driver = gdal.GetDriverByName(driver)
 
@@ -835,7 +836,7 @@ class GridSource(_BaseIO, _BaseStruct):
         self._var_as_band = var_as_band
 
         if not self._mode:
-            self.src = gdal.OpenEx(str(self.path), open_options=open_options)
+            self.src = gdal.OpenEx(str(self._path), open_options=open_options)
             self.count = self.src.RasterCount
 
             if self.count == 0:
