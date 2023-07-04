@@ -154,6 +154,9 @@ class _BaseHandler(metaclass=ABCMeta):
 class _BaseStruct(metaclass=ABCMeta):
     """A struct container"""
 
+    def __init__(self):
+        self._kwargs = {}
+
     @abstractmethod
     def __del__(self):
         pass
@@ -161,6 +164,16 @@ class _BaseStruct(metaclass=ABCMeta):
     def __repr__(self):
         _mem_loc = f"{id(self):#018x}".upper()
         return f"<{self.__class__.__name__} object at {_mem_loc}>"
+
+    def update_kwargs(
+        self,
+        **kwargs,
+    ):
+        """_summary_"""
+
+        self._kwargs.update(
+            **kwargs,
+        )
 
 
 ## Handlers
@@ -812,6 +825,12 @@ class GridSource(_BaseIO, _BaseStruct):
         if not _ext in GRID_DRIVER_MAP:
             raise DriverNotFoundError("")
 
+        _BaseStruct.__init__(self)
+        self.update_kwargs(
+            subset=subset,
+            var_as_band=var_as_band,
+        )
+
         _BaseIO.__init__(self, file, mode)
 
         driver = GRID_DRIVER_MAP[_ext]
@@ -886,7 +905,12 @@ class GridSource(_BaseIO, _BaseStruct):
 
         if not self._closed:
             return self
-        return GridSource.__new__(GridSource, self.path)
+        return GridSource.__new__(
+            GridSource,
+            self.path,
+            self.subset,
+            self._var_as_band,
+        )
 
     @_BaseIO._check_mode
     @_BaseIO._check_state
