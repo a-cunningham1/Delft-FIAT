@@ -27,6 +27,8 @@ from osgeo import osr
 _IOS = weakref.WeakValueDictionary()
 _IOS_COUNT = 1
 
+gdal.AllRegister()
+
 
 def _add_ios_ref(wref):
     global _IOS_COUNT
@@ -818,12 +820,7 @@ class GridSource(_BaseIO, _BaseStruct):
             _description_
         """
 
-        open_options = []
-
-        _ext = Path(file).suffix
-
-        if not _ext in GRID_DRIVER_MAP:
-            raise DriverNotFoundError("")
+        _open_options = []
 
         _BaseStruct.__init__(self)
         self.update_kwargs(
@@ -833,7 +830,10 @@ class GridSource(_BaseIO, _BaseStruct):
 
         _BaseIO.__init__(self, file, mode)
 
-        driver = GRID_DRIVER_MAP[_ext]
+        if not self.path.suffix in GRID_DRIVER_MAP:
+            raise DriverNotFoundError("")
+
+        driver = GRID_DRIVER_MAP[self.path.suffix]
 
         if not subset:
             subset = None
@@ -842,6 +842,10 @@ class GridSource(_BaseIO, _BaseStruct):
         if subset is not None and not var_as_band:
             self._path = f"{driver.upper()}:" + f'"{file}"' + f":{subset}"
 
+        if var_as_band:
+            _open_options.append("VARIABLES_AS_BANDS=YES")
+        self._var_as_band = var_as_band
+
         self._driver = gdal.GetDriverByName(driver)
 
         self.src = None
@@ -849,13 +853,8 @@ class GridSource(_BaseIO, _BaseStruct):
         self.count = 0
         self._cur_index = 1
 
-        if var_as_band:
-            open_options.append("VARIABLES_AS_BANDS=YES")
-
-        self._var_as_band = var_as_band
-
         if not self._mode:
-            self.src = gdal.OpenEx(str(self._path), open_options=open_options)
+            self.src = gdal.OpenEx(str(self._path), open_options=_open_options)
             self.count = self.src.RasterCount
 
             if self.count == 0:

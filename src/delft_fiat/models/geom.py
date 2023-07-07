@@ -1,4 +1,4 @@
-from delft_fiat.check import check_srs
+from delft_fiat.check import check_internal_srs, check_vs_srs
 from delft_fiat.gis import geom, overlay
 from delft_fiat.gis.crs import get_srs_repr
 from delft_fiat.io import (
@@ -84,19 +84,26 @@ class GeomModel(BaseModel):
                 f"Reading exposure geometry '{file.split('.')[-1]}' ('{path.name}')"
             )
             data = open_geom(str(path))
-            ##checks
+            ## checks
             logger.info("Executing exposure geometry checks...")
 
-            if not check_srs(self.srs, data.get_srs(), path.name):
+            # check the internal srs of the file
+            _int_srs = check_internal_srs(
+                data.get_srs(),
+                path.name,
+            )
+
+            # check if file srs is the same as the model srs
+            if not check_vs_srs(self.srs, data.get_srs()):
                 logger.warning(
                     f"Spatial reference of '{path.name}' ('{get_srs_repr(data.get_srs())}') \
 does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
                 )
                 logger.info(f"Reprojecting '{path.name}' to '{get_srs_repr(self.srs)}'")
                 data = geom.reproject(data, self.srs.ExportToWkt())
-            ## Add to the dict
+            # Add to the dict
             _d[file.rsplit(".", 1)[1]] = data
-        ## When all is done, add it
+        # When all is done, add it
         self._exposure_geoms = _d
 
     def _patch_up(

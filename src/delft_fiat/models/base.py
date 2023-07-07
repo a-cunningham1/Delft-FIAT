@@ -3,7 +3,8 @@ from delft_fiat.check import (
     check_hazard_band_names,
     check_hazard_rp_iden,
     check_hazard_subsets,
-    check_srs,
+    check_internal_srs,
+    check_vs_srs,
 )
 from delft_fiat.gis import grid
 from delft_fiat.gis.crs import get_srs_repr
@@ -76,8 +77,20 @@ class BaseModel(metaclass=ABCMeta):
             path,
         )
 
-        # check the srs
-        if not check_srs(self.srs, data.get_srs(), path.name):
+        # check the internal srs of the file
+        _int_srs = check_internal_srs(
+            data.get_srs(),
+            path.name,
+        )
+        if _int_srs is not None:
+            logger.info(
+                f"Setting spatial reference of '{path.name}' \
+from '{self._cfg.filepath.name}' ('{get_srs_repr(_int_srs)}')"
+            )
+            raise ValueError("")
+
+        # check if file srs is the same as the model srs
+        if not check_vs_srs(self.srs, data.get_srs()):
             logger.warning(
                 f"Spatial reference of '{path.name}' ('{get_srs_repr(data.get_srs())}') \
 does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
@@ -100,7 +113,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
             rp_coef = calc_rp_coef(rp)
             self._cfg["hazard.rp_coefficients"] = rp_coef
 
-        ## Information for output
+        # Information for output
         ns = check_hazard_band_names(
             data.deter_band_names(),
             self._cfg.get("hazard.risk"),
@@ -109,7 +122,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
         )
         self._cfg["hazard.band_names"] = ns
 
-        ## When all is done, add it
+        # When all is done, add it
         self._hazard_grid = data
 
     def _read_vulnerability_data(self):
@@ -123,7 +136,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
         ## checks
         logger.info("Executing vulnerability checks...")
 
-        ## upscale the data (can be done after the checks)
+        # upscale the data (can be done after the checks)
         if "vulnerability.step_size" in self._cfg:
             self._vul_step_size = self._cfg.get("vulnerability.step_size")
             self._rounding = deter_dec(self._vul_step_size)
@@ -134,7 +147,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
 using a step size of: {self._vul_step_size}"
         )
         data.upscale(self._vul_step_size, inplace=True)
-        ## When all is done, add it
+        # When all is done, add it
         self._vulnerability_data = data
 
     def _set_model_srs(self):
@@ -146,7 +159,7 @@ using a step size of: {self._vul_step_size}"
             self.srs = osr.SpatialReference()
             self.srs.SetFromUserInput(_srs)
         else:
-            ## Inferring by 'sniffing'
+            # Inferring by 'sniffing'
             kw = self._cfg.generate_kwargs("hazard.multiband")
 
             gm = open_grid(
@@ -161,7 +174,7 @@ using a step size of: {self._vul_step_size}"
                     _srs.SetFromUserInput(self._cfg.get("hazard.crs"))
             self.srs = _srs
 
-        ## Simple check to see if it's not None
+        # Simple check to see if it's not None
         check_global_crs(
             self.srs,
             self._cfg.filepath.name,

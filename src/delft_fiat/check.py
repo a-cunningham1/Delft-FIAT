@@ -52,11 +52,10 @@ def check_global_crs(
 
 
 ## GIS
-def check_srs(
-    global_srs: osr.SpatialReference,
+def check_internal_srs(
     source_srs: osr.SpatialReference,
     fname: str,
-    cfg_srs: str = None,
+    cfg_srs: osr.SpatialReference = None,
 ):
     """_summary_"""
 
@@ -70,10 +69,20 @@ def check_srs(
     if source_srs is None:
         source_srs = osr.SpatialReference()
         source_srs.SetFromUserInput(cfg_srs)
+        return source_srs
+
+    return None
+
+
+def check_vs_srs(
+    global_srs: osr.SpatialReference,
+    source_srs: osr.SpatialReference,
+):
+    """_summary_"""
 
     if not (
         global_srs.IsSame(source_srs)
-        or global_srs.ExportToWkt() == source_srs.ExportToWkt()
+        or global_srs.ExportToProj4() == source_srs.ExportToProj4()
     ):
         return False
 
