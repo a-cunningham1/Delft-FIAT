@@ -56,7 +56,7 @@ def create_exposure_geoms():
     )
 
     field = ogr.FieldDefn(
-        "Object_ID",
+        "Object ID",
         ogr.OFTInteger,
     )
     layer.CreateField(field)
@@ -71,7 +71,7 @@ def create_exposure_geoms():
     for idx, geom in enumerate(geoms):
         geom = ogr.CreateGeometryFromWkt(geom)
         ft = ogr.Feature(layer.GetLayerDefn())
-        ft.SetField("Object_ID", idx + 1)
+        ft.SetField("Object ID", idx + 1)
         ft.SetField("ObjectName", f"fp_{idx+1}")
         ft.SetGeometry(geom)
 
@@ -101,7 +101,7 @@ def create_exposure_geoms_2():
     )
 
     field = ogr.FieldDefn(
-        "Object_ID",
+        "Object ID",
         ogr.OFTInteger,
     )
     layer.CreateField(field)
@@ -115,7 +115,7 @@ def create_exposure_geoms_2():
 
     geom = ogr.CreateGeometryFromWkt(geoms[0])
     ft = ogr.Feature(layer.GetLayerDefn())
-    ft.SetField("Object_ID", 5)
+    ft.SetField("Object ID", 5)
     ft.SetField("ObjectName", f"fp_{5}")
     ft.SetGeometry(geom)
 
