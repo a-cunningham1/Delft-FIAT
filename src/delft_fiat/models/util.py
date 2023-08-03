@@ -63,7 +63,7 @@ def geom_worker(
 
             _td = 0
             for key, col in exp.damage_function.items():
-                if isnan(inun) or ft_info[col] == "nan":
+                if isnan(inun) or str(ft_info[col]) == "nan":
                     _d = "nan"
                 else:
                     inun = max(min(vul_max, inun), vul_min)

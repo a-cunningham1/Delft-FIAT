@@ -188,13 +188,8 @@ def deter_type(
     f_p = rf"((^(-)?\d+(\.\d*)?(E(\+|\-)?\d+)?)$|^$)(\n((^(-)?\d+(\.\d*)?(E(\+|\-)?\d+)?)$|^$)){{{l}}}"
     f_c = re.compile(bytes(f_p, "utf-8"), re.MULTILINE | re.IGNORECASE)
 
-    i_p = rf"((^(-)?\d+(E(\+|\-)?\d+)?)$|^$)(\n((^(-)?\d+(E(\+|\-)?\d+)?)$|^$)){{{l}}}"
+    i_p = rf"((^(-)?\d+(E(\+|\-)?\d+)?)$)(\n((^(-)?\d+(E(\+|\-)?\d+)?)$)){{{l}}}"
     i_c = re.compile(bytes(i_p, "utf-8"), re.MULTILINE | re.IGNORECASE)
-
-    # l = (
-    #     bool(re.match(b"(^(-)?\d+)|^$|nan", e)),
-    #     bool(re.match(b"^(-)?\d+\.\d+", e)),
-    # )
 
     l = (
         bool(f_c.match(e)),
