@@ -23,6 +23,7 @@ _dtypes = {
 }
 
 _dtypes_reversed = {
+    0: str,
     1: int,
     2: float,
     3: str,

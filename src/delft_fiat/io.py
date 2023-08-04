@@ -427,8 +427,8 @@ class CSVParser:
                             )
                     if _get_index:
                         _index += sd[idcol :: self._ncol]
+                    del sd
 
-                del sd
                 if _get_dtypes:
                     self.meta["dtypes"] = [_dtypes_reversed[item] for item in _dtypes]
                 if _get_index:

@@ -58,6 +58,7 @@ def geom_worker(
                 res,
                 _ref,
                 ft_info[exp._columns["Ground Floor Height"]],
+                ft_info[exp._columns["Ground Elevation"]],
             )
             row += f",{round(inun, 2)},{round(redf, 2)}".encode()
 

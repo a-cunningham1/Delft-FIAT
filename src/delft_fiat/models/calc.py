@@ -141,9 +141,14 @@ def calc_haz(
         _description_
     """
 
+    _ge = 0
+    if ref.lower() == "datum" and not math.isnan(ge):
+        # The hazard data is referenced to a Datum (e.g., for flooding this is the water elevation).
+        _ge = ge
+
     # Remove the negative hazard values to 0.
     raw_l = len(haz)
-    haz = [n for n in haz if n > 0.0001]
+    haz = [n - _ge for n in haz if (n - _ge) > 0.0001]
 
     if not haz:
         return math.nan, math.nan
@@ -157,10 +162,6 @@ def calc_haz(
         haz = _inun_calc[method.lower()](haz)
     else:
         haz = haz[0]
-
-    if ref.lower() == "datum":
-        # The hazard data is referenced to a Datum (e.g., for flooding this is the water elevation).
-        haz = haz - ge
 
     # Subtract the Ground Floor Height from the hazard value
     haz = haz - gfh
