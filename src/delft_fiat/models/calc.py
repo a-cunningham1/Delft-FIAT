@@ -39,6 +39,9 @@ def calc_rp_coef(
     """
 
     # Step 1: Compute frequencies associated with T-values.
+    _rp = sorted(rp)
+    idxs = [_rp.index(n) for n in rp]
+    rp.sort()
     rp_l = len(rp)
 
     f = [1 / n for n in rp]
@@ -76,7 +79,7 @@ def calc_rp_coef(
         for idx in range(len(rp))
     ]
 
-    return alpha
+    return [alpha[idx] for idx in idxs]
 
 
 def calc_dm_f(
