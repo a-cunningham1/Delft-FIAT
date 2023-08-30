@@ -78,7 +78,7 @@ all = [
     "setuptools>=61.0.0",
 ]
 build = [
-    "GDAL @ https://github.com/cgohlke/geospatial-wheels/releases/download/v2023.4.22/GDAL-3.6.4-cp311-cp311-win_amd64.whl",
+    "GDAL @ https://github.com/cgohlke/geospatial-wheels/releases/download/v2023.7.16/GDAL-3.7.1-cp311-cp311-win_amd64.whl",
     "pyinstaller",
 ]
 dev = [
