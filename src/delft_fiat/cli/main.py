@@ -88,7 +88,7 @@ def run(
         dst=cfg.get("output.path"),
     )
     sys.stdout.write(fiat_start_str)
-    logger.info(f"Delft-Fiat version: {__version__}")
+    logger.info(f"Delft-FIAT version: {__version__}")
     obj = FIAT(cfg)
     obj.run()
 
