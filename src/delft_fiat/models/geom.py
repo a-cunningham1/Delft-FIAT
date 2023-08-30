@@ -71,7 +71,7 @@ class GeomModel(BaseModel):
         self._cfg["output.new_columns"] = cols
 
         ## When all is done, add it
-        self._exposure_data = data
+        self.exposure_data = data
 
     def _read_exposure_geoms(self):
         """_summary_"""
@@ -104,15 +104,15 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
             # Add to the dict
             _d[file.rsplit(".", 1)[1]] = data
         # When all is done, add it
-        self._exposure_geoms = _d
+        self.exposure_geoms = _d
 
-    def _patch_up(
+    def resolve(
         self,
     ):
         """_summary_"""
 
-        _exp = self._exposure_data
-        _gm = self._exposure_geoms
+        _exp = self.exposure_data
+        _gm = self.exposure_geoms
         _risk = self._cfg.get("hazard.risk")
         _rp_coef = self._cfg.get("hazard.rp_coefficients")
         _new_cols = self._cfg["output.new_columns"]
@@ -199,23 +199,23 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
 
         _nms = self._cfg.get("hazard.band_names")
         logger.info("Starting the calculations")
-        if self._hazard_grid.count > 1:
-            pcount = min(os.cpu_count(), self._hazard_grid.count)
+        if self.hazard_grid.count > 1:
+            pcount = min(os.cpu_count(), self.hazard_grid.count)
             futures = []
             with ProcessPoolExecutor(max_workers=pcount) as Pool:
                 _s = time.time()
-                for idx in range(self._hazard_grid.count):
+                for idx in range(self.hazard_grid.count):
                     logger.info(
                         f"Submitting a job for the calculations in regards to band: '{_nms[idx]}'"
                     )
                     fs = Pool.submit(
                         geom_worker,
                         self._cfg,
-                        self._hazard_grid,
+                        self.hazard_grid,
                         idx + 1,
-                        self._vulnerability_data,
-                        self._exposure_data,
-                        self._exposure_geoms,
+                        self.vulnerability_data,
+                        self.exposure_data,
+                        self.exposure_geoms,
                     )
                     futures.append(fs)
             logger.info("Busy...")
@@ -229,11 +229,11 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
                 target=geom_worker,
                 args=(
                     self._cfg,
-                    self._hazard_grid,
+                    self.hazard_grid,
                     1,
-                    self._vulnerability_data,
-                    self._exposure_data,
-                    self._exposure_geoms,
+                    self.vulnerability_data,
+                    self.exposure_data,
+                    self.exposure_geoms,
                 ),
             )
             p.start()
@@ -243,7 +243,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
         logger.info(f"Calculations time: {round(_e, 2)} seconds")
 
         logger.info("Producing model output from temporary files")
-        self._patch_up()
+        self.resolve()
         logger.info(f"Output generated in: '{self._cfg['output.path']}'")
 
         if not self._keep_temp:

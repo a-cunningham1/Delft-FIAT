@@ -31,11 +31,11 @@ class BaseModel(metaclass=ABCMeta):
 
         # Declarations
         self.srs = None
-        self._exposure_data = None
-        self._exposure_geoms = None
-        self._exposure_grid = None
-        self._hazard_grid = None
-        self._vulnerability_data = None
+        self.exposure_data = None
+        self.exposure_geoms = None
+        self.exposure_grid = None
+        self.hazard_grid = None
+        self.vulnerability_data = None
         self._vul_step_size = 0.01
         self._rounding = 2
         self._cfg["vulnerability.round"] = self._rounding
@@ -66,7 +66,7 @@ class BaseModel(metaclass=ABCMeta):
 
         path = self._cfg.get("hazard.file")
         logger.info(f"Reading hazard data ('{path.name}')")
-        kw = self._cfg.generate_kwargs("hazard.multiband")
+        kw = self._cfg.generate_kwargs("hazard.settings")
         data = open_grid(path, **kw)
         ## checks
         logger.info("Executing hazard checks...")
@@ -123,7 +123,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
         self._cfg["hazard.band_names"] = ns
 
         # When all is done, add it
-        self._hazard_grid = data
+        self.hazard_grid = data
 
     def _read_vulnerability_data(self):
         path = self._cfg.get("vulnerability.file")
@@ -148,7 +148,7 @@ using a step size of: {self._vul_step_size}"
         )
         data.upscale(self._vul_step_size, inplace=True)
         # When all is done, add it
-        self._vulnerability_data = data
+        self.vulnerability_data = data
 
     def _set_model_srs(self):
         """_summary_"""
