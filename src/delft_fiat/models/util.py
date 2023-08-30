@@ -1,9 +1,11 @@
-from delft_fiat.io import BufferTextHandler
+from delft_fiat.io import BufferTextHandler, GridSource
 from delft_fiat.gis import geom, overlay
 from delft_fiat.models.calc import calc_haz
 from delft_fiat.util import NEWLINE_CHAR, _pat, replace_empty
 
 from math import isnan
+from numpy import full, ravel, unravel_index, where
+from osgeo import gdal, osr
 from pathlib import Path
 
 
@@ -83,9 +85,60 @@ def geom_worker(
     writer = None
 
 
-def grid_worker(
+def grid_worker_exact(
     cfg: "ConfigReader",
+    haz: "GridSource",
+    idx: int,
+    vul: "Table",
+    exp: "GridSource",
 ):
+    """_summary_"""
+
+    exp_nd = exp[1].nodata
+
+    out_src = GridSource(
+        "C:\\temp\\output.nc",
+        mode="w",
+    )
+
+    out_src.create(
+        exp.shape,
+        1,
+        exp.dtype,
+        options=["FORMAT=NC4", "COMPRESS=DEFLATE"],
+    )
+    out_src.set_srs(exp.get_srs())
+    out_src.set_geotransform(exp.get_geotransform())
+
+    write_band = out_src[1]
+    write_band.src.SetNoDataValue(exp_nd)
+
+    for (_, h_ch), (_w, e_ch) in zip(haz[idx], exp[1]):
+        out_ch = full(e_ch.shape, exp_nd)
+        e_ch = ravel(e_ch)
+        _coords = where(e_ch != exp_nd)[0]
+        if len(_coords) == 0:
+            write_band.src.WriteArray(out_ch, *_w[:2])
+            continue
+
+        e_ch = e_ch[_coords]
+        h_ch = ravel(h_ch)
+        h_ch = h_ch[_coords]
+        _hcoords = where(h_ch != haz[idx].nodata)[0]
+        _coords = _coords[_hcoords]
+        e_ch = e_ch[_hcoords]
+        h_ch = h_ch[_hcoords]
+
+        pass
+
+    write_band.flush()
+    write_band = None
+    out_src = None
+
+    pass
+
+
+def grid_worker_loose():
     """_summary_"""
 
     pass
