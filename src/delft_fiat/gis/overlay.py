@@ -1,10 +1,11 @@
 from delft_fiat.gis.util import world2pixel, pixel2world
+from delft_fiat.io import Grid
 
 from osgeo import gdal, ogr
 
 
 def clip(
-    band: gdal.Band,
+    band: Grid,
     srs: "osr.SpatialReference",
     gtf: tuple,
     ft: ogr.Feature,
@@ -36,7 +37,7 @@ def clip(
     pxWidth = int(lrX - ulX) + 1
     pxHeight = int(lrY - ulY) + 1
 
-    clip = band.ReadAsArray(ulX, ulY, pxWidth, pxHeight)
+    clip = band[ulX, ulY, pxWidth, pxHeight]
     # m = mask.ReadAsArray(ulX,ulY,pxWidth,pxHeight)
 
     # pts = geom.GetGeometryRef(0)
@@ -140,7 +141,7 @@ def mask(
 
 
 def pin(
-    band: gdal.Band,
+    band: Grid,
     gtf: tuple,
     point: tuple,
 ) -> "numpy.array":
@@ -163,6 +164,6 @@ def pin(
 
     X, Y = world2pixel(gtf, *point)
 
-    value = band.ReadAsArray(X, Y, 1, 1)
+    value = band[X, Y, 1, 1]
 
     return value[0]
