@@ -28,14 +28,14 @@ def create_dbase_stucture():
 
 def create_exposure_dbase():
     with open(Path(p, "exposure", "spatial.csv"), "w") as f:
-        f.write("Object ID,Extraction Method,Ground Floor Height,")
+        f.write("Object ID,Extraction Method,Ground Floor Height,Ground Elevation,")
         f.write("Damage Function: Structure,Max Potential Damage: Structure\n")
         for n in range(5):
             if (n + 1) % 2 != 0:
                 dmc = "struct_1"
             else:
                 dmc = "struct_2"
-            f.write(f"{n+1},area,0,{dmc},{(n+1)*1000}\n")
+            f.write(f"{n+1},area,0,0,{dmc},{(n+1)*1000}\n")
 
 
 def create_exposure_geoms():

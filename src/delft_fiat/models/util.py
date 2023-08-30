@@ -60,12 +60,13 @@ def geom_worker(
                 res,
                 _ref,
                 ft_info[exp._columns["Ground Floor Height"]],
+                ft_info[exp._columns["Ground Elevation"]],
             )
             row += f",{round(inun, 2)},{round(redf, 2)}".encode()
 
             _td = 0
             for key, col in exp.damage_function.items():
-                if isnan(inun) or ft_info[col] == "nan":
+                if isnan(inun) or str(ft_info[col]) == "nan":
                     _d = "nan"
                 else:
                     inun = max(min(vul_max, inun), vul_min)
