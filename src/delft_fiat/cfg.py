@@ -9,6 +9,7 @@ from delft_fiat.util import (
 
 import os
 import tomli
+from osgeo import gdal
 
 
 class ConfigReader(dict):
@@ -37,6 +38,13 @@ class ConfigReader(dict):
 
         # Create the hidden temporary folder
         self._create_temp_dir()
+
+        # Set the cache size per GDAL object
+        _cache_size = self.get("global.gdal_cache")
+        if _cache_size is not None:
+            gdal.SetCacheMax(_cache_size * 1024**2)
+        else:
+            gdal.SetCacheMax(50 * 1024**2)
 
         # Do some checking concerning the file paths in the settings file
         for key, item in self.items():
