@@ -46,6 +46,8 @@ def geom_worker(
             row = b""
 
             ft_info_raw = exp[ft.GetField(0)]
+            if ft_info_raw is None:
+                continue
             ft_info = replace_empty(_pat.split(ft_info_raw))
             ft_info = [x(y) for x, y in zip(exp.dtypes, ft_info)]
             row += f"{ft_info[exp.index_col]}".encode()
