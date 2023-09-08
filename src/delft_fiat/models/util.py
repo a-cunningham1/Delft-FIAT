@@ -98,6 +98,7 @@ def grid_worker_exact(
     """_summary_"""
 
     exp_nd = exp[1].nodata
+    dmf = exp[1].get_metadata_item("damage_function")
 
     out_src = GridSource(
         "C:\\temp\\output.nc",
@@ -106,36 +107,50 @@ def grid_worker_exact(
 
     out_src.create(
         exp.shape,
-        1,
+        exp.count,
         exp.dtype,
         options=["FORMAT=NC4", "COMPRESS=DEFLATE"],
     )
     out_src.set_srs(exp.get_srs())
     out_src.set_geotransform(exp.get_geotransform())
 
-    write_band = out_src[1]
-    write_band.src.SetNoDataValue(exp_nd)
+    for _bandn in range(exp.count):
+        write_band = out_src[_bandn + 1]
+        write_band.src.SetNoDataValue(exp_nd)
 
-    for (_, h_ch), (_w, e_ch) in zip(haz[idx], exp[1]):
-        out_ch = full(e_ch.shape, exp_nd)
-        e_ch = ravel(e_ch)
-        _coords = where(e_ch != exp_nd)[0]
-        if len(_coords) == 0:
-            write_band.src.WriteArray(out_ch, *_w[:2])
-            continue
+        for (_, h_ch), (_w, e_ch) in zip(haz[idx], exp[_bandn + 1]):
+            out_ch = full(e_ch.shape, exp_nd)
+            e_ch = ravel(e_ch)
+            _coords = where(e_ch != exp_nd)[0]
+            if len(_coords) == 0:
+                write_band.src.WriteArray(out_ch, *_w[:2])
+                continue
 
-        e_ch = e_ch[_coords]
-        h_ch = ravel(h_ch)
-        h_ch = h_ch[_coords]
-        _hcoords = where(h_ch != haz[idx].nodata)[0]
-        _coords = _coords[_hcoords]
-        e_ch = e_ch[_hcoords]
-        h_ch = h_ch[_hcoords]
+            e_ch = e_ch[_coords]
+            h_ch = ravel(h_ch)
+            h_ch = h_ch[_coords]
+            _hcoords = where(h_ch != haz[idx].nodata)[0]
 
-        pass
+            if len(_hcoords) == 0:
+                write_band.src.WriteArray(out_ch, *_w[:2])
+                continue
 
-    write_band.flush()
-    write_band = None
+            _coords = _coords[_hcoords]
+            e_ch = e_ch[_hcoords]
+            h_ch = h_ch[_hcoords]
+            h_ch.clip(min(vul.index), max(vul.index))
+
+            dmm = [vul[round(float(n), 2), dmf] for n in h_ch]
+            e_ch = e_ch * dmm
+
+            idx2d = unravel_index(_coords, *[exp._chunk])
+            out_ch[idx2d] = e_ch
+
+            write_band.write_chunk(out_ch, _w[:2])
+
+        write_band.flush()
+        write_band = None
+    out_src.flush()
     out_src = None
 
     pass

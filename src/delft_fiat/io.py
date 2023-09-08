@@ -1,5 +1,6 @@
 from delft_fiat.error import DriverNotFoundError
 from delft_fiat.util import (
+    DoNotCall,
     GEOM_DRIVER_MAP,
     GRID_DRIVER_MAP,
     Path,
@@ -56,20 +57,25 @@ class _BaseIO(metaclass=ABCMeta):
         "w": 1,
     }
 
+    _closed = False
+    _path = None
+    path = None
+    src = None
+
     def __init__(
         self,
-        file: str,
+        file: str = None,
         mode: str = "r",
     ):
         """_summary_"""
 
+        if file is not None:
+            self.path = Path(file)
+            self._path = Path(file)
+
         if not mode in _BaseIO._mode_map:
             raise ValueError("")
 
-        self.path = Path(file)
-        self._path = Path(file)
-
-        self._closed = False
         self._mode = _BaseIO._mode_map[mode]
         self._mode_str = mode
 
@@ -511,13 +517,19 @@ class CSVParser:
 
 
 ## Structs
-class Grid(_BaseStruct):
+class Grid(
+    _BaseIO,
+    _BaseStruct,
+):
     def __init__(
         self,
         band: gdal.Band,
         chunk: tuple = None,
+        mode: str = "r",
     ):
         """_summary_"""
+
+        _BaseIO.__init__(self, mode=mode)
 
         self.src = band
         self._x = band.XSize
@@ -540,13 +552,8 @@ class Grid(_BaseStruct):
 
         self._recreate_windows()
 
-    def __del__(self):
-        self.flush()
-        self.src = None
-
     def __iter__(self):
         self.flush()
-        # self._recreate_windows()
         self._reset_chunking()
         return self
 
@@ -607,8 +614,14 @@ class Grid(_BaseStruct):
         self._l = 0
         self._u = 0
 
+    def close(self):
+        _BaseIO.close(self)
+        self.src = None
+        gc.collect()
+
     def flush(self):
-        self.src.FlushCache()
+        if self.src is not None:
+            self.src.FlushCache()
 
     @property
     def chunking(self):
@@ -618,6 +631,14 @@ class Grid(_BaseStruct):
     def shape(self):
         return self._x, self._y
 
+    def get_metadata_item(
+        self,
+        entry: str,
+    ):
+        """_summary_"""
+
+        return self.src.GetMetadataItem(entry)
+
     def set_chunking(
         self,
         chunk: tuple,
@@ -625,6 +646,37 @@ class Grid(_BaseStruct):
         """_summary_"""
 
         self._chunk = chunk
+
+    @_BaseIO._check_mode
+    def write(
+        self,
+        data: array,
+    ):
+        """_summary_
+
+        Parameters
+        ----------
+        data : array
+            _description_
+        """
+
+        pass
+
+    @_BaseIO._check_mode
+    def write_chunk(
+        self,
+        chunk: array,
+        upper_left: tuple | list,
+    ):
+        """_summary_
+
+        Parameters
+        ----------
+        chunk : array
+            _description_
+        """
+
+        self.src.WriteArray(chunk, *upper_left)
 
 
 class GeomSource(_BaseIO, _BaseStruct):
@@ -642,10 +694,6 @@ class GeomSource(_BaseIO, _BaseStruct):
         """_summary_"""
 
         obj = object.__new__(cls)
-        obj.__init__(
-            file,
-            mode,
-        )
 
         return obj
 
@@ -741,14 +789,17 @@ class GeomSource(_BaseIO, _BaseStruct):
     #     return self.layer.GetFeatureCount()
 
     def flush(self):
-        self.src.FlushCache()
+        if self.src is not None:
+            self.src.FlushCache()
 
     def reopen(self):
         """_summary_"""
 
         if not self._closed:
             return self
-        return GeomSource.__new__(GeomSource, self.path)
+        obj = GeomSource.__new__(GeomSource, self.path)
+        obj.__init__(self.path)
+        return obj
 
     @_BaseIO._check_mode
     @_BaseIO._check_state
@@ -911,7 +962,6 @@ class GridSource(_BaseIO, _BaseStruct):
         """_summary_"""
 
         obj = object.__new__(cls)
-        obj.__init__(file, chunk, subset, var_as_band, mode)
 
         return obj
 
@@ -1014,6 +1064,7 @@ class GridSource(_BaseIO, _BaseStruct):
         return Grid(
             self.src.GetRasterBand(oid),
             chunk=self._chunk,
+            mode=self._mode_str,
         )
 
     def __reduce__(self):
@@ -1034,20 +1085,23 @@ class GridSource(_BaseIO, _BaseStruct):
         gc.collect()
 
     def flush(self):
-        self.src.FlushCache()
+        if self.src is not None:
+            self.src.FlushCache()
 
     def reopen(self):
         """_summary_"""
 
         if not self._closed:
             return self
-        return GridSource.__new__(
+        obj = GridSource.__new__(
             GridSource,
             self.path,
             self._chunk,
             self.subset,
             self._var_as_band,
         )
+        obj.__init__(self.path, self._chunk, self.subset, self._var_as_band)
+        return obj
 
     @property
     @_BaseIO._check_state
