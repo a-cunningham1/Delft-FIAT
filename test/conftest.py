@@ -1,5 +1,6 @@
 from delft_fiat.cfg import ConfigReader
 from delft_fiat.io import open_geom, open_grid
+from delft_fiat.log import LogItem
 
 import pytest
 from pathlib import Path
@@ -43,3 +44,15 @@ def gr_event(cfg_event):
 def gr_risk(cfg_risk):
     d = open_grid(cfg_risk.get_path("hazard.file"), var_as_band=True)
     return d
+
+
+@pytest.fixture
+def log1():
+    obj = LogItem(level=2, msg="Hello!")
+    return obj
+
+
+@pytest.fixture
+def log2():
+    obj = LogItem(level=2, msg="Good Bye!")
+    return obj

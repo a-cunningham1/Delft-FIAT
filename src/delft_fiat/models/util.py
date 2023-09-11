@@ -1,5 +1,6 @@
-from delft_fiat.io import BufferTextHandler
 from delft_fiat.gis import geom, overlay
+from delft_fiat.io import BufferTextHandler
+from delft_fiat.log import Sender
 from delft_fiat.models.calc import calc_haz
 from delft_fiat.util import NEWLINE_CHAR, _pat, replace_empty
 
@@ -9,6 +10,7 @@ from pathlib import Path
 
 def geom_worker(
     cfg: "ConfigReader",
+    queue: "queue.Queue",
     haz: "GridSource",
     idx: int,
     vul: "Table",
@@ -16,6 +18,8 @@ def geom_worker(
     exp_geom: dict,
 ):
     """_summary_"""
+
+    _S = Sender(queue=queue)
 
     _band_name = cfg["hazard.band_names"][idx - 1]
     _ref = cfg.get("hazard.elevation_reference")

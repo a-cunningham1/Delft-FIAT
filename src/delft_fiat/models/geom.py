@@ -8,7 +8,7 @@ from delft_fiat.io import (
     open_exp,
     open_geom,
 )
-from delft_fiat.log import spawn_logger
+from delft_fiat.log import Receiver, spawn_logger, setup_mp_log
 from delft_fiat.models.base import BaseModel
 from delft_fiat.models.calc import calc_risk
 from delft_fiat.models.util import geom_worker
@@ -17,7 +17,8 @@ from delft_fiat.util import NEWLINE_CHAR
 import os
 import time
 from concurrent.futures import ProcessPoolExecutor, wait, as_completed
-from multiprocessing import Process
+from multiprocessing import Process, get_context
+from multiprocessing.queues import Queue
 from pathlib import Path
 
 logger = spawn_logger("fiat.model.geom")
@@ -39,6 +40,7 @@ class GeomModel(BaseModel):
 
         self._read_exposure_data()
         self._read_exposure_geoms()
+        self._queue = Queue(ctx=get_context())
 
     def __del__(self):
         BaseModel.__del__(self)
@@ -199,6 +201,10 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
 
         _nms = self._cfg.get("hazard.band_names")
         logger.info("Starting the calculations")
+        _R = setup_mp_log(
+            self._queue, "missing", log_level=2, dst=self._cfg.get("output.path")
+        )
+        _R.start()
         if self._hazard_grid.count > 1:
             pcount = min(os.cpu_count(), self._hazard_grid.count)
             futures = []
@@ -211,6 +217,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
                     fs = Pool.submit(
                         geom_worker,
                         self._cfg,
+                        self._queue,
                         self._hazard_grid,
                         idx + 1,
                         self._vulnerability_data,
@@ -229,6 +236,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
                 target=geom_worker,
                 args=(
                     self._cfg,
+                    self._queue,
                     self._hazard_grid,
                     1,
                     self._vulnerability_data,
@@ -241,6 +249,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
             p.join()
         _e = time.time() - _s
         logger.info(f"Calculations time: {round(_e, 2)} seconds")
+        _R.close()
 
         logger.info("Producing model output from temporary files")
         self._patch_up()
