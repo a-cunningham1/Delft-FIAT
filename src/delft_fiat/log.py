@@ -272,18 +272,16 @@ class Sender(BaseHandler):
         """_summary_"""
 
         BaseHandler.__init__(self)
-        self.queue = queue
+        self.q = queue
 
     def put(self, record):
         """_summary_"""
-        self.queue.put_nowait(record)
+
+        self.q.put_nowait(record)
 
     def emit(self, record):
-        """
-        Emit a record.
+        """Emit a record."""
 
-        Writes the LogRecord to the queue, preparing it for pickling first.
-        """
         try:
             self.put(record)
         except Exception:
@@ -591,7 +589,6 @@ class Receiver:
                 handler.emit(record)
 
     def _waiting(self):
-        q = self.q
         while True:
             try:
                 record = self.get(True)
@@ -607,13 +604,18 @@ class Receiver:
         self._t.join()
         self._t = None
 
+    def close_handlers(self):
+        for handler in self._handlers:
+            handler.close()
+            handler = None
+
     def get(
         self,
         block: bool = True,
     ):
         """_summary_"""
 
-        self.q.get(block=block)
+        return self.q.get(block=block)
 
     def add_handler(
         self,
@@ -630,9 +632,12 @@ class Receiver:
         self._handlers.append(handler)
 
     def start(self):
-        self._t = threading.Thread(target=self._waiting)
-        self._t.deamon = True
-        self._t.start()
+        self._t = t = threading.Thread(
+            target=self._waiting,
+            name="mp_logging_thread",
+        )
+        t.deamon = True
+        t.start()
 
 
 class Log(metaclass=Logmeta):
