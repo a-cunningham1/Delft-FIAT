@@ -14,6 +14,7 @@ from delft_fiat.models.calc import calc_rp_coef
 from delft_fiat.util import deter_dec
 
 from abc import ABCMeta, abstractmethod
+from os import cpu_count
 from osgeo import osr
 
 logger = spawn_logger("fiat.model")
@@ -43,6 +44,7 @@ class BaseModel(metaclass=ABCMeta):
         self._keep_temp = False
         self._out_meta = {}
 
+        self._set_max_threads()
         self._set_model_srs()
         self._read_hazard_grid()
         self._read_vulnerability_data()
@@ -149,6 +151,14 @@ using a step size of: {self._vul_step_size}"
         data.upscale(self._vul_step_size, inplace=True)
         # When all is done, add it
         self._vulnerability_data = data
+
+    def _set_max_threads(self):
+        """_summary_"""
+
+        self.max_threads = cpu_count()
+        _max_threads = self._cfg.get("global.max_threads")
+        if _max_threads is not None:
+            self.max_threads = min(self.max_threads, _max_threads)
 
     def _set_model_srs(self):
         """_summary_"""
