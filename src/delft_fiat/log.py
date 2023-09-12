@@ -18,7 +18,7 @@ DEFAULT_TIME_FMT = "%Y-%m-%d %H:%M:%S"
 STREAM_COUNT = 1
 
 _Global_and_Destruct_Lock = threading.RLock()
-_streams = weakref.WeakValueDictionary()
+_handlers = weakref.WeakValueDictionary()
 _loggers = weakref.WeakValueDictionary()
 
 _str_formatter = StrFormatter()
@@ -28,12 +28,13 @@ del StrFormatter
 def _Destruction():
     """Method called when python exits to clean up"""
 
-    items = list(_streams.items())
-    for _, stream in items:
-        stream.acquire()
-        stream.flush()
-        stream.close()
-        stream.release()
+    items = list(_handlers.items())
+    for _, handler in items:
+        handler.acquire()
+        if not handler.stream.closed:
+            handler.flush()
+        handler.close()
+        handler.release()
 
 
 atexit.register(_Destruction)
@@ -182,15 +183,6 @@ class MessageFormatter(object):
         s = self.format_message(record)
         if s[-1:] != "\n":
             s = s + "\n"
-        # if record.exc_info:
-        #     # Cache the traceback text to avoid converting it multiple times
-        #     # (it's constant anyway)
-        #     if not record.exc_text:
-        #         record.exc_text = self.format_exception(record.exc_info)
-        # if record.exc_text:
-        #     if s[-1:] != "\n":
-        #         s = s + "\n"
-        #     s = s + record.exc_text
         return s
 
 
@@ -212,7 +204,8 @@ class BaseHandler:
         self._make_lock()
 
     def __repr__(self):
-        pass
+        _mem_loc = f"{id(self):#018x}".upper()
+        return f"<{self.__class__.__name__} object at {_mem_loc}>"
 
     def _add_global_stream_ref(
         self,
@@ -220,7 +213,7 @@ class BaseHandler:
         """_summary_"""
 
         _Global_and_Destruct_Lock.acquire()
-        _streams[self._name] = self
+        _handlers[self._name] = self
         _Global_and_Destruct_Lock.acquire()
 
     def _make_lock(self):
@@ -237,7 +230,7 @@ class BaseHandler:
 
         _Global_and_Destruct_Lock.acquire()
         self._closed = True
-        del _streams[self._name]
+        del _handlers[self._name]
         _Global_and_Destruct_Lock.release()
 
     def emit(self):
@@ -700,11 +693,11 @@ class Log(metaclass=Logmeta):
 
         obj = self
         while obj:
-            for logger in obj._handlers:
-                if record.level < logger.level:
+            for handler in obj._handlers:
+                if record.level < handler.level:
                     continue
                 else:
-                    logger.emit(record)
+                    handler.emit(record)
             if not obj.bubble_up:
                 obj = None
             else:
