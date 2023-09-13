@@ -15,7 +15,6 @@ p = Path(__file__).parent
 folders = (
     "exposure",
     "hazard",
-    "run_default",
     "vulnerability",
 )
 

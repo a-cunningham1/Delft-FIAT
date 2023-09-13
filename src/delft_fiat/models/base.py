@@ -160,6 +160,8 @@ using a step size of: {self._vul_step_size}"
         if _max_threads is not None:
             self.max_threads = min(self.max_threads, _max_threads)
 
+        logger.info(f"Maximum number of threads: {self.max_threads}")
+
     def _set_model_srs(self):
         """_summary_"""
 
