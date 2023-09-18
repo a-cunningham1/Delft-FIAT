@@ -118,6 +118,10 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
         _gm = self._exposure_geoms
         _risk = self._cfg.get("hazard.risk")
         _rp_coef = self._cfg.get("hazard.rp_coefficients")
+        # Reverse the _rp_coef to let them coincide with the acquired
+        # values from the temporary files
+        if _rp_coef:
+            _rp_coef.reverse()
         _new_cols = self._cfg["output.new_columns"]
         _files = {}
 
