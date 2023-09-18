@@ -1,16 +1,17 @@
-from delft_fiat.log import CMDStream, Log, spawn_logger
+from delft_fiat.log import CHandler, Log, MessageFormatter, spawn_logger
 
 import io
 import pytest
 from pathlib import Path
 
 
-def test_stream():
+def test_stream(log1, log2):
     stream = io.StringIO()
-    sl = CMDStream(stream=stream)
+    sl = CHandler(stream=stream)
+    sl.set_formatter(MessageFormatter("{message}"))
 
-    sl.emit("Hello!\n")
-    sl.emit("Good day!\n")
+    sl.emit(log1)
+    sl.emit(log2)
 
     stream.seek(0)
     assert stream.readline().strip() == "Hello!"
@@ -18,10 +19,10 @@ def test_stream():
 
 def test_log(tmpdir):
     log = Log("test_log", log_level=2)
-    log.add_cmd_stream(
+    log.add_c_handler(
         level=2,
     )
-    log.add_file_stream(
+    log.add_file_handler(
         str(tmpdir),
         filename="test_log",
     )

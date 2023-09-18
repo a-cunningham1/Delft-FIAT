@@ -40,6 +40,10 @@ jobs:
          conda info
          conda list
 
+      - name: Create testdata
+        run:
+          python .testdata/create_test_data.py
+
       - name: Test
         run: python -m pytest --verbose --cov=delft_fiat --cov-report xml
 

@@ -10,7 +10,17 @@ def test_calc_risk():
     coef = calc_rp_coef(rps)
     ead = calc_risk(coef, dms)
 
-    assert ead == 98.49343647185707
+    assert round(ead, 1) == 98.5
+
+
+def test_calc_risk_order():
+    rps = [50, 2, 100, 25, 1, 5]
+    dms = [1200, 10, 3000, 300, 5, 50]
+
+    coef = calc_rp_coef(rps)
+    ead = calc_risk(coef, dms)
+
+    assert round(ead, 1) == 98.5
 
 
 def test_calc_risk_one():

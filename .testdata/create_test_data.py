@@ -15,7 +15,6 @@ p = Path(__file__).parent
 folders = (
     "exposure",
     "hazard",
-    "run_default",
     "vulnerability",
 )
 
@@ -117,6 +116,61 @@ def create_exposure_geoms_2():
     ft = ogr.Feature(layer.GetLayerDefn())
     ft.SetField("Object ID", 5)
     ft.SetField("ObjectName", f"fp_{5}")
+    ft.SetGeometry(geom)
+
+    layer.CreateFeature(ft)
+
+    srs = None
+    field = None
+    geom = None
+    ft = None
+    layer = None
+    src = None
+    dr = None
+
+
+def create_exposure_geoms_3():
+    geoms = (
+        "POLYGON ((4.375 52.025, 4.385 52.025, 4.385 52.015, 4.375 52.015, 4.375 52.025))",
+        "POLYGON ((4.425 51.975, 4.435 51.975, 4.435 51.965, 4.425 51.965, 4.425 51.975))",
+    )
+    srs = osr.SpatialReference()
+    srs.ImportFromEPSG(4326)
+    dr = ogr.GetDriverByName("GPKG")
+    src = dr.CreateDataSource(str(Path(p, "exposure", "spatial_missing.gpkg")))
+    layer = src.CreateLayer(
+        "spatial",
+        srs,
+        3,
+    )
+
+    field = ogr.FieldDefn(
+        "Object ID",
+        ogr.OFTInteger,
+    )
+    layer.CreateField(field)
+
+    field = ogr.FieldDefn(
+        "ObjectName",
+        ogr.OFTString,
+    )
+    field.SetWidth(50)
+    layer.CreateField(field)
+
+    geom = ogr.CreateGeometryFromWkt(geoms[0])
+    ft = ogr.Feature(layer.GetLayerDefn())
+    ft.SetField("Object ID", 5)
+    ft.SetField("ObjectName", f"fp_{5}")
+    ft.SetGeometry(geom)
+
+    layer.CreateFeature(ft)
+    geom = None
+    ft = None
+
+    geom = ogr.CreateGeometryFromWkt(geoms[1])
+    ft = ogr.Feature(layer.GetLayerDefn())
+    ft.SetField("Object ID", 6)
+    ft.SetField("ObjectName", f"fp_{6}")
     ft.SetGeometry(geom)
 
     layer.CreateFeature(ft)
@@ -298,6 +352,15 @@ def create_settings():
     with open(Path(p, "settings_2g.toml"), "wb") as f:
         tomli_w.dump(doc, f)
 
+    doc["output"]["path"] = "output/event_missing"
+    del doc["output"]["geom"]["name2"]
+    del doc["exposure"]["geom"]["file2"]
+    doc["output"]["geom"]["name1"] = "spatial_missing.gpkg"
+    doc["exposure"]["geom"]["file1"] = "exposure/spatial_missing.gpkg"
+
+    with open(Path(p, "settings_missing.toml"), "wb") as f:
+        tomli_w.dump(doc, f)
+
 
 def create_settings_risk():
     doc = {
@@ -318,7 +381,7 @@ def create_settings_risk():
             "elevation_reference": "DEM",
             "risk": True,
             "return_periods": [2, 5, 10, 25],
-            "multiband": {
+            "settings": {
                 "subset": "",
                 "var_as_band": True,
             },
@@ -381,6 +444,7 @@ if __name__ == "__main__":
     create_exposure_dbase()
     create_exposure_geoms()
     create_exposure_geoms_2()
+    create_exposure_geoms_3()
     create_exposure_grid()
     create_hazard_map()
     create_risk_map()
