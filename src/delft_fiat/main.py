@@ -34,9 +34,14 @@ class FIAT:
     def run(self):
         """_summary_"""
 
-        model = GeomModel(self.cfg)
-        model.run()
-
+        _models = self.cfg.get_model_type()
+        if _models[0]:
+            model = GeomModel(self.cfg)
+            model.run()
+        if _models[1]:
+            model = GridModel(self.cfg)
+            model.run()
+            
 
 if __name__ == "__main__":
     pass

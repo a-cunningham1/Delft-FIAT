@@ -1,4 +1,8 @@
-from delft_fiat.check import check_config_entries
+from delft_fiat.check import (
+    check_config_entries, 
+    check_config_geom,
+    check_config_grid,
+)
 from delft_fiat.util import (
     Path,
     create_hidden_folder,
@@ -89,10 +93,14 @@ class ConfigReader(dict):
     ):
         """_Summary_"""
 
-        if "exposure.geom_file" in self:
-            return 0
-        else:
-            return 1
+        _models = [False, False]
+
+        if check_config_geom(self):
+            _models[0] = True
+        if check_config_grid(self):
+            _models[1] = True
+
+        return _models
 
     def get_path(
         self,

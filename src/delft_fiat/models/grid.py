@@ -37,6 +37,7 @@ class GridModel(BaseModel):
         data = open_grid(file, **kw)
         ## checks
         logger.info("Executing exposure data checks...")
+        check_grid_exact(self.hazard_grid, data)
 
         self.exposure_grid = data
 

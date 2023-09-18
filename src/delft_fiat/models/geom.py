@@ -242,8 +242,8 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
 
         # If there are more than a hazard band in the dataset
         # Use a pool to execute the calculations
-        if self._hazard_grid.count > 1:
-            pcount = min(self.max_threads, self._hazard_grid.count)
+        if self.hazard_grid.count > 1:
+            pcount = min(self.max_threads, self.hazard_grid.count)
             futures = []
             with ProcessPoolExecutor(max_workers=pcount) as Pool:
                 _s = time.time()
