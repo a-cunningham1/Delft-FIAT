@@ -83,7 +83,6 @@ build = [
 ]
 dev = [
     "pyside2",
-    "tomli-w",
 ]
 docs = [
     "m2r2",
@@ -99,6 +98,7 @@ test = [
 	"pytest-cov",
     "pytest-mock",
 	"responses",
+    "tomli-w",
 ]
 
 [project.urls]
