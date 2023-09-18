@@ -64,8 +64,9 @@ coverage.xml
 *.py,cover
 .hypothesis/
 .pytest_cache/
-.testdata/output/
-.testdata/*.log
+.testdata/*
+!.testdata/.gitkeep
+!.testdata/create_test_data.py
 cover/
 
 # Scrapy stuff:
