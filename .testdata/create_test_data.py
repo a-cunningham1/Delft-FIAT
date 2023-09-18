@@ -353,8 +353,10 @@ def create_settings():
         tomli_w.dump(doc, f)
 
     doc["output"]["path"] = "output/event_missing"
-    doc["output"]["geom"]["name2"] = "spatial_missing.gpkg"
-    doc["exposure"]["geom"]["file2"] = "exposure/spatial_missing.gpkg"
+    del doc["output"]["geom"]["name2"]
+    del doc["exposure"]["geom"]["file2"]
+    doc["output"]["geom"]["name1"] = "spatial_missing.gpkg"
+    doc["exposure"]["geom"]["file1"] = "exposure/spatial_missing.gpkg"
 
     with open(Path(p, "settings_missing.toml"), "wb") as f:
         tomli_w.dump(doc, f)
