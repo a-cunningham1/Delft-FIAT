@@ -68,7 +68,7 @@ class BaseModel(metaclass=ABCMeta):
 
         path = self._cfg.get("hazard.file")
         logger.info(f"Reading hazard data ('{path.name}')")
-        kw = self._cfg.generate_kwargs("hazard.multiband")
+        kw = self._cfg.generate_kwargs("hazard.settings")
         data = open_grid(path, **kw)
         ## checks
         logger.info("Executing hazard checks...")
@@ -172,7 +172,7 @@ using a step size of: {self._vul_step_size}"
             self.srs.SetFromUserInput(_srs)
         else:
             # Inferring by 'sniffing'
-            kw = self._cfg.generate_kwargs("hazard.multiband")
+            kw = self._cfg.generate_kwargs("hazard.settings")
 
             gm = open_grid(
                 str(path),
@@ -194,6 +194,8 @@ using a step size of: {self._vul_step_size}"
         )
 
         logger.info(f"Model srs set to: '{get_srs_repr(self.srs)}'")
+        # Clean up
+        gm = None
 
     @abstractmethod
     def run():
