@@ -164,7 +164,8 @@ def create_exposure_geoms_3():
     ft.SetGeometry(geom)
 
     layer.CreateFeature(ft)
-    geom = None; ft = None
+    geom = None
+    ft = None
 
     geom = ogr.CreateGeometryFromWkt(geoms[1])
     ft = ogr.Feature(layer.GetLayerDefn())
@@ -441,6 +442,7 @@ if __name__ == "__main__":
     create_exposure_dbase()
     create_exposure_geoms()
     create_exposure_geoms_2()
+    create_exposure_geoms_3()
     create_exposure_grid()
     create_hazard_map()
     create_risk_map()
