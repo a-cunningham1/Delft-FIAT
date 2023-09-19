@@ -39,32 +39,32 @@ def check_config_entries(
 
 
 def check_config_geom(
-    cfg: 'ConfigReader',
+    cfg: "ConfigReader",
 ):
     """_summary_"""
 
     _req_cols = [
         "exposure.geom.crs",
-        "exposure.geom.csv", 
+        "exposure.geom.csv",
         "exposure.geom.file1",
     ]
-    _all_geom = [
-        item for item in cfg if item.startswith("exposure.geom")
-    ]
+    _all_geom = [item for item in cfg if item.startswith("exposure.geom")]
     if len(_all_geom) == 0:
         return False
-    
+
     _check = [item in _all_geom for item in _req_cols]
     if not all(_check):
         _missing = [item for item, b in zip(_req_cols, _check) if not b]
-        logger.warning(f"Info for the geometry model was found, but not all. {_missing} was/ were missing")
+        logger.warning(
+            f"Info for the geometry model was found, but not all. {_missing} was/ were missing"
+        )
         return False
-    
+
     return True
 
 
 def check_config_grid(
-    cfg: 'ConfigReader',
+    cfg: "ConfigReader",
 ):
     """_summary_"""
 
@@ -72,16 +72,16 @@ def check_config_grid(
         "exposure.grid.crs",
         "exposure.grid.file",
     ]
-    _all_grid = [
-        item for item in cfg if item.startswith("exposure.grid")
-    ]
+    _all_grid = [item for item in cfg if item.startswith("exposure.grid")]
     if len(_all_grid) == 0:
         return False
-    
+
     _check = [item in _all_grid for item in _req_cols]
     if not all(_check):
         _missing = [item for item, b in zip(_req_cols, _check) if not b]
-        logger.warning(f"Info for the grid (raster) model was found, but not all. {_missing} was/ were missing")
+        logger.warning(
+            f"Info for the grid (raster) model was found, but not all. {_missing} was/ were missing"
+        )
         return False
 
     return True
@@ -103,19 +103,19 @@ def check_global_crs(
 ## GIS
 def check_grid_exact(
     haz,
-    exp,  
+    exp,
 ):
     """_summary_"""
 
     if not check_vs_srs(
-        haz.get_srs(), 
+        haz.get_srs(),
         exp.get_srs(),
     ):
         logger.error("")
         sys.exit()
 
-    gtf1 = [round(_n,2) for _n in haz.get_geotransform()]
-    gtf2 = [round(_n,2) for _n in exp.get_geotransform()]
+    gtf1 = [round(_n, 2) for _n in haz.get_geotransform()]
+    gtf2 = [round(_n, 2) for _n in exp.get_geotransform()]
 
     if gtf1 != gtf2:
         logger.error()

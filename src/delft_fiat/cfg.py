@@ -1,5 +1,5 @@
 from delft_fiat.check import (
-    check_config_entries, 
+    check_config_entries,
     check_config_geom,
     check_config_grid,
 )

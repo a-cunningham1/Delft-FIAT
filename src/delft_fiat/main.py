@@ -38,10 +38,10 @@ class FIAT:
         if _models[0]:
             model = GeomModel(self.cfg)
             model.run()
-        if _models[1]:
-            model = GridModel(self.cfg)
-            model.run()
-            
+        # if _models[1]:
+        #     model = GridModel(self.cfg)
+        #     model.run()
+
 
 if __name__ == "__main__":
     pass
