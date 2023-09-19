@@ -15,6 +15,7 @@ from delft_fiat.util import deter_dec
 
 from abc import ABCMeta, abstractmethod
 from os import cpu_count
+from multiprocessing import Manager
 from osgeo import osr
 
 logger = spawn_logger("fiat.model")
@@ -42,6 +43,7 @@ class BaseModel(metaclass=ABCMeta):
         self._cfg["vulnerability.round"] = self._rounding
         self._outhandler = None
         self._keep_temp = False
+        self._mp_manager = Manager()
         self._out_meta = {}
 
         self._set_max_threads()
@@ -55,6 +57,7 @@ class BaseModel(metaclass=ABCMeta):
     @abstractmethod
     def __del__(self):
         self.srs = None
+        self._mp_manager.shutdown()
 
     def __repr__(self):
         return f"<{self.__class__.__name__} object at {id(self):#018x}>"

@@ -40,7 +40,7 @@ class GeomModel(BaseModel):
 
         self._read_exposure_data()
         self._read_exposure_geoms()
-        self._queue = Queue(maxsize=10000, ctx=get_context())
+        self._queue = self._mp_manager.Queue(maxsize=10000)
 
     def __del__(self):
         BaseModel.__del__(self)
