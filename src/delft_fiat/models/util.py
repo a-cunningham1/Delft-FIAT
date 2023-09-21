@@ -69,9 +69,7 @@ def geom_worker(
             if ft_info[exp._columns["Extraction Method"]].lower() == "area":
                 res = overlay.clip(band, haz.get_srs(), haz.get_geotransform(), ft)
             else:
-                res = overlay.pin(
-                    band, haz.get_geotransform(), geom.point_in_geom(ft)
-                )
+                res = overlay.pin(band, haz.get_geotransform(), geom.point_in_geom(ft))
 
             # Calculate the inundation
             inun, redf = calc_haz(

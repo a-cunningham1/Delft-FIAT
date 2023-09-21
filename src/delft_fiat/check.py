@@ -259,10 +259,15 @@ def check_exp_columns(
 
     _check = [item in mpd_suffix for item in dmg_suffix]
     if not any(_check):
-        logger.error("Damage function and maximum potential damage do not have a single match")
+        logger.error(
+            "Damage function and maximum potential damage do not have a single match"
+        )
         sys.exit()
     if not all(_check):
         _missing = [item for item, b in zip(dmg_suffix, _check) if not b]
-        logger.warning(f"No every damage function has a corresponding maximum potential damage: {_missing}")
+        logger.warning(
+            f"No every damage function has a corresponding maximum potential damage: {_missing}"
+        )
+
 
 ## Vulnerability
