@@ -21,6 +21,8 @@ def geom_worker(
 ):
     """_summary_"""
 
+    # Extract the hazard band as an object
+    band = haz[idx]
     # Setup some metadata
     _band_name = cfg["hazard.band_names"][idx - 1]
     _ref = cfg.get("hazard.elevation_reference")
@@ -65,10 +67,10 @@ def geom_worker(
 
             # Get the hazard data from the exposure geometrie
             if ft_info[exp._columns["Extraction Method"]].lower() == "area":
-                res = overlay.clip(haz[idx], haz.get_srs(), haz.get_geotransform(), ft)
+                res = overlay.clip(band, haz.get_srs(), haz.get_geotransform(), ft)
             else:
                 res = overlay.pin(
-                    haz[idx], haz.get_geotransform(), geom.point_in_geom(ft)
+                    band, haz.get_geotransform(), geom.point_in_geom(ft)
                 )
 
             # Calculate the inundation

@@ -1,6 +1,7 @@
 from delft_fiat.log import spawn_logger, setup_default_log
 from delft_fiat.util import NEWLINE_CHAR, deter_type, generic_path_check
 
+import fnmatch
 import sys
 from osgeo import gdal
 from osgeo import osr
@@ -226,6 +227,42 @@ multiple datasets (subsets)"""
 
 
 ## Exposure
+def check_exp_columns(
+    columns: tuple | list,
+):
+    """_summary_"""
 
+    _man_columns = [
+        "Object ID",
+        "Ground Elevation",
+        "Ground Floor Height",
+    ]
+
+    _check = [item in columns for item in _man_columns]
+    if not all(_check):
+        _missing = [item for item, b in zip(_man_columns, _check) if not b]
+        logger.error(f"Missing mandatory exposure columns: {_missing}")
+        sys.exit()
+
+    dmg = fnmatch.filter(columns, "Damage Function: *")
+    dmg_suffix = [item.split(":")[1].strip() for item in dmg]
+    mpd = fnmatch.filter(columns, "Max Potential Damage: *")
+    mpd_suffix = [item.split(":")[1].strip() for item in mpd]
+
+    if not dmg:
+        logger.error("No damage function were given in ")
+        sys.exit()
+
+    if not mpd:
+        logger.error("No maximum potential damages were given in ")
+        sys.exit()
+
+    _check = [item in mpd_suffix for item in dmg_suffix]
+    if not any(_check):
+        logger.error("Damage function and maximum potential damage do not have a single match")
+        sys.exit()
+    if not all(_check):
+        _missing = [item for item, b in zip(dmg_suffix, _check) if not b]
+        logger.warning(f"No every damage function has a corresponding maximum potential damage: {_missing}")
 
 ## Vulnerability

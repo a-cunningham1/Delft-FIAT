@@ -1,4 +1,8 @@
-from delft_fiat.check import check_internal_srs, check_vs_srs
+from delft_fiat.check import (
+    check_exp_columns,
+    check_internal_srs, 
+    check_vs_srs,
+)
 from delft_fiat.gis import geom, overlay
 from delft_fiat.gis.crs import get_srs_repr
 from delft_fiat.io import (
@@ -61,6 +65,7 @@ class GeomModel(BaseModel):
         data = open_exp(path, index="Object ID")
         ##checks
         logger.info("Executing exposure data checks...")
+        check_exp_columns(data.columns)
 
         ## Information for output
         _ex = None
