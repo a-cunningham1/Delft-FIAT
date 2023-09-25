@@ -631,6 +631,13 @@ class GeomSource(_BaseIO, _BaseStruct):
             return self
         return GeomSource.__new__(GeomSource, self.path)
 
+    @property
+    @_BaseIO._check_state
+    def bounds(self):
+        """_summary_"""
+
+        return self.layer.GetExtent()
+
     @_BaseIO._check_mode
     @_BaseIO._check_state
     def add_feature(
@@ -909,6 +916,19 @@ class GridSource(_BaseIO, _BaseStruct):
             self.path,
             self.subset,
             self._var_as_band,
+        )
+
+    @property
+    @_BaseIO._check_state
+    def bounds(self):
+        """_summary_"""
+
+        _gtf = self.src.GetGeoTransform()
+        return (
+            _gtf[0],
+            _gtf[0] + _gtf[1] * self.src.RasterXSize,
+            _gtf[3] + _gtf[5] * self.src.RasterYSize,
+            _gtf[3],
         )
 
     @_BaseIO._check_mode
