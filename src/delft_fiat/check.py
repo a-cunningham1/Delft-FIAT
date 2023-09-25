@@ -149,6 +149,24 @@ def check_internal_srs(
     return None
 
 
+def check_geom_extent(
+    gm_bounds: tuple | list,
+    gr_bounds: tuple | list,
+):
+    """_summary_"""
+
+    _checks = (
+        gm_bounds[0] > gr_bounds[0],
+        gm_bounds[1] < gr_bounds[1],
+        gm_bounds[2] > gr_bounds[2],
+        gm_bounds[3] < gr_bounds[3],
+    )
+
+    if not all(_checks):
+        logger.error(f"Geometry bounds {gm_bounds} exceed hazard bounds {gr_bounds}")
+        sys.exit()
+
+
 def check_vs_srs(
     global_srs: osr.SpatialReference,
     source_srs: osr.SpatialReference,
