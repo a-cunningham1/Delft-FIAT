@@ -53,7 +53,7 @@ class GeomModel(BaseModel):
     def _clean_up(self):
         """_summary_"""
 
-        _p = self._cfg.get("output.path.tmp")
+        _p = self.cfg.get("output.path.tmp")
         for _f in _p.glob("*"):
             os.unlink(_f)
         os.rmdir(_p)
@@ -61,7 +61,7 @@ class GeomModel(BaseModel):
     def _read_exposure_data(self):
         """_summary_"""
 
-        path = self._cfg.get("exposure.geom.csv")
+        path = self.cfg.get("exposure.geom.csv")
         logger.info(f"Reading exposure data ('{path.name}')")
         data = open_exp(path, index="Object ID")
         ##checks
@@ -70,13 +70,13 @@ class GeomModel(BaseModel):
 
         ## Information for output
         _ex = None
-        if self._cfg["hazard.risk"]:
+        if self.cfg["hazard.risk"]:
             _ex = ["Risk (EAD)"]
         cols = data.create_all_columns(
-            self._cfg.get("hazard.band_names"),
+            self.cfg.get("hazard.band_names"),
             _ex,
         )
-        self._cfg["output.new_columns"] = cols
+        self.cfg["output.new_columns"] = cols
 
         ## When all is done, add it
         self.exposure_data = data
@@ -85,9 +85,9 @@ class GeomModel(BaseModel):
         """_summary_"""
 
         _d = {}
-        _found = [item for item in list(self._cfg) if "exposure.geom.file" in item]
+        _found = [item for item in list(self.cfg) if "exposure.geom.file" in item]
         for file in _found:
-            path = self._cfg.get(file)
+            path = self.cfg.get(file)
             logger.info(
                 f"Reading exposure geometry '{file.split('.')[-1]}' ('{path.name}')"
             )
@@ -113,7 +113,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
             # check if it falls within the extent of the hazard map
             check_geom_extent(
                 data.bounds,
-                self._hazard_grid.bounds,
+                self.hazard_grid.bounds,
             )
 
             # Add to the dict
@@ -129,23 +129,23 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
         # Setup some local referenced datasets and metadata
         _exp = self.exposure_data
         _gm = self.exposure_geoms
-        _risk = self._cfg.get("hazard.risk")
-        _rp_coef = self._cfg.get("hazard.rp_coefficients")
+        _risk = self.cfg.get("hazard.risk")
+        _rp_coef = self.cfg.get("hazard.rp_coefficients")
         # Reverse the _rp_coef to let them coincide with the acquired
         # values from the temporary files
         if _rp_coef:
             _rp_coef.reverse()
-        _new_cols = self._cfg["output.new_columns"]
+        _new_cols = self.cfg["output.new_columns"]
         _files = {}
 
         # Define the outgoing file
         out_csv = "output.csv"
-        if "output.csv.name" in self._cfg:
-            out_csv = self._cfg["output.csv.name"]
+        if "output.csv.name" in self.cfg:
+            out_csv = self.cfg["output.csv.name"]
 
         # Setup the write and write the header of the file
         writer = BufferTextHandler(
-            Path(self._cfg["output.path"], out_csv),
+            Path(self.cfg["output.path"], out_csv),
             buffer_size=100000,
         )
         header = b""
@@ -155,7 +155,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
         writer.write(header)
 
         # Get all the temporary data paths
-        _paths = Path(self._cfg.get("output.path.tmp")).glob("*.dat")
+        _paths = Path(self.cfg.get("output.path.tmp")).glob("*.dat")
 
         # Open the temporary files lazy
         for p in _paths:
@@ -169,12 +169,12 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
 
             # Define outgoing dataset
             out_geom = f"spatial{_add}.gpkg"
-            if f"output.geom.name{_add}" in self._cfg:
-                out_geom = self._cfg[f"output.geom.name{_add}"]
+            if f"output.geom.name{_add}" in self.cfg:
+                out_geom = self.cfg[f"output.geom.name{_add}"]
 
             # Setup the geometry writer
             geom_writer = GeomMemFileHandler(
-                Path(self._cfg["output.path"], out_geom),
+                Path(self.cfg["output.path"], out_geom),
                 self.srs,
                 gm.layer.GetLayerDefn(),
             )
@@ -241,11 +241,11 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
         """_summary_"""
 
         # Get band names for logging
-        _nms = self._cfg.get("hazard.band_names")
+        _nms = self.cfg.get("hazard.band_names")
 
         # Setup the mp logger for missing stuff
         _receiver = setup_mp_log(
-            self._queue, "missing", log_level=2, dst=self._cfg.get("output.path")
+            self._queue, "missing", log_level=2, dst=self.cfg.get("output.path")
         )
 
         logger.info("Starting the calculations")
@@ -266,7 +266,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
                     )
                     fs = Pool.submit(
                         geom_worker,
-                        self._cfg,
+                        self.cfg,
                         self._queue,
                         self.hazard_grid,
                         idx + 1,
@@ -289,7 +289,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
             p = Process(
                 target=geom_worker,
                 args=(
-                    self._cfg,
+                    self.cfg,
                     self._queue,
                     self.hazard_grid,
                     1,
@@ -309,20 +309,20 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
         _receiver.close_handlers()
         if _receiver.count > 0:
             logger.warning(
-                f"Some objects had missing data. For more info: 'missing.log' in '{self._cfg.get('output.path')}'"
+                f"Some objects had missing data. For more info: 'missing.log' in '{self.cfg.get('output.path')}'"
             )
         else:
             os.unlink(
-                Path(self._cfg.get("output.path"), "missing.log"),
+                Path(self.cfg.get("output.path"), "missing.log"),
             )
 
         logger.info("Producing model output from temporary files")
         # Patch output from the seperate processes back together
         self.resolve()
-        logger.info(f"Output generated in: '{self._cfg['output.path']}'")
+        logger.info(f"Output generated in: '{self.cfg['output.path']}'")
 
         if not self._keep_temp:
             logger.info("Deleting temporary files...")
             self._clean_up()
 
-        logger.info("All done!")
+        logger.info("Geom calculation are done!")
