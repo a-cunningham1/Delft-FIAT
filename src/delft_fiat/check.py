@@ -119,7 +119,7 @@ def check_grid_exact(
     gtf2 = [round(_n, 2) for _n in exp.get_geotransform()]
 
     if gtf1 != gtf2:
-        logger.error()
+        logger.error("")
         sys.exit()
 
     if haz.shape != exp.shape:
