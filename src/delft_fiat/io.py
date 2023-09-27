@@ -550,7 +550,7 @@ class Grid(
         else:
             ValueError("")
 
-        self._recreate_windows()
+        self.create_windows()
 
     def __iter__(self):
         self.flush()
@@ -604,12 +604,6 @@ class Grid(
         chunk = self.src.ReadAsArray(*window)
         return chunk
 
-    def _recreate_windows(self):
-        self._windows = product(
-            range(0, self._x, self._chunk[0]),
-            range(0, self._y, self._chunk[1]),
-        )
-
     def _reset_chunking(self):
         self._l = 0
         self._u = 0
@@ -624,12 +618,29 @@ class Grid(
             self.src.FlushCache()
 
     @property
-    def chunking(self):
+    def chunk(self):
         return self._chunk
 
     @property
     def shape(self):
         return self._x, self._y
+
+    def create_windows(self):
+        _lu = tuple(
+            product(
+                range(0, self._x, self._chunk[0]),
+                range(0, self._y, self._chunk[1]),
+            ),
+        )
+        for _l, _u in _lu:
+            w = min(self._chunk[0], self._x - _l)
+            h = min(self._chunk[1], self._y - _u)
+            yield (
+                _l,
+                _u,
+                w,
+                h,
+            )
 
     def get_metadata_item(
         self,
@@ -639,7 +650,7 @@ class Grid(
 
         return self.src.GetMetadataItem(entry)
 
-    def set_chunking(
+    def set_chunk_size(
         self,
         chunk: tuple,
     ):
@@ -1070,14 +1081,14 @@ class GridSource(_BaseIO, _BaseStruct):
     ):
         return Grid(
             self.src.GetRasterBand(oid),
-            chunk=self._chunk,
+            chunk=self.chunk,
             mode=self._mode_str,
         )
 
     def __reduce__(self):
         return self.__class__, (
             self.path,
-            self._chunk,
+            self.chunk,
             self.subset,
             self._var_as_band,
             self._mode_str,
@@ -1103,12 +1114,31 @@ class GridSource(_BaseIO, _BaseStruct):
         obj = GridSource.__new__(
             GridSource,
             self.path,
-            self._chunk,
+            self.chunk,
             self.subset,
             self._var_as_band,
         )
         obj.__init__(self.path, self._chunk, self.subset, self._var_as_band)
         return obj
+
+    @property
+    @_BaseIO._check_state
+    def bounds(self):
+        """_summary_"""
+
+        _gtf = self.src.GetGeoTransform()
+        return (
+            _gtf[0],
+            _gtf[0] + _gtf[1] * self.src.RasterXSize,
+            _gtf[3] + _gtf[5] * self.src.RasterYSize,
+            _gtf[3],
+        )
+
+    @property
+    def chunk(self):
+        """_summary_"""
+
+        return self._chunk
 
     @property
     @_BaseIO._check_state
@@ -1147,19 +1177,6 @@ class GridSource(_BaseIO, _BaseStruct):
         )
 
         self.count = nb
-
-    @property
-    @_BaseIO._check_state
-    def bounds(self):
-        """_summary_"""
-
-        _gtf = self.src.GetGeoTransform()
-        return (
-            _gtf[0],
-            _gtf[0] + _gtf[1] * self.src.RasterXSize,
-            _gtf[3] + _gtf[5] * self.src.RasterYSize,
-            _gtf[3],
-        )
 
     @_BaseIO._check_mode
     @_BaseIO._check_state
