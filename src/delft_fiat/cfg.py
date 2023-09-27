@@ -14,13 +14,23 @@ from delft_fiat.util import (
 import os
 import tomli
 from osgeo import gdal
+from typing import Any
 
 
 class ConfigReader(dict):
     def __init__(
         self,
         file: str,
+        extra: dict = None,
     ):
+        """_summary_"""
+
+        # container for extra
+        self._build = True
+        self._extra = {}
+        if extra is not None:
+            self._extra.update(extra)
+
         # Set the root directory
         self.filepath = Path(file)
         self.path = self.filepath.parent
@@ -64,8 +74,26 @@ class ConfigReader(dict):
                 if isinstance(item, str):
                     self[key] = item.lower()
 
+        self._build = False
+
+        # (Re)set the extra values
+        self.update(self._extra)
+
     def __repr__(self):
         return f"<ConfigReader object file='{self.filepath}'>"
+
+    def __reduce__(self):
+        """_summary_"""
+
+        return self.__class__, (
+            self.filepath,
+            self._extra,
+        )
+
+    def __setitem__(self, __key: Any, __value: Any):
+        if not self._build:
+            self._extra[__key] = __value
+        super().__setitem__(__key, __value)
 
     def _create_output_dir(
         self,
