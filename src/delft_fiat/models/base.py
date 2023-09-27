@@ -17,6 +17,7 @@ from abc import ABCMeta, abstractmethod
 from os import cpu_count
 from multiprocessing import Manager
 from osgeo import osr
+from pathlib import Path
 
 logger = spawn_logger("fiat.model")
 
@@ -28,8 +29,8 @@ class BaseModel(metaclass=ABCMeta):
     ):
         """_summary_"""
 
-        self._cfg = cfg
-        logger.info(f"Using settings from '{self._cfg.filepath}'")
+        self.cfg = cfg
+        logger.info(f"Using settings from '{self.cfg.filepath}'")
 
         # Declarations
         self.srs = None
@@ -40,7 +41,7 @@ class BaseModel(metaclass=ABCMeta):
         self.vulnerability_data = None
         self._vul_step_size = 0.01
         self._rounding = 2
-        self._cfg["vulnerability.round"] = self._rounding
+        self.cfg["vulnerability.round"] = self._rounding
         self._outhandler = None
         self._keep_temp = False
         self._mp_manager = Manager()
@@ -51,8 +52,8 @@ class BaseModel(metaclass=ABCMeta):
         self._read_hazard_grid()
         self._read_vulnerability_data()
 
-        if "global.keep_temp_files" in self._cfg:
-            self._keep_temp = self._cfg.get("global.keep_temp_files")
+        if "global.keep_temp_files" in self.cfg:
+            self._keep_temp = self.cfg.get("global.keep_temp_files")
 
     @abstractmethod
     def __del__(self):
@@ -69,9 +70,16 @@ class BaseModel(metaclass=ABCMeta):
     def _read_hazard_grid(self):
         """_summary_"""
 
-        path = self._cfg.get("hazard.file")
+        path = self.cfg.get("hazard.file")
         logger.info(f"Reading hazard data ('{path.name}')")
-        kw = self._cfg.generate_kwargs("hazard.settings")
+        # Set the extra arguments from the settings file
+        kw = {}
+        kw.update(
+            self.cfg.generate_kwargs("global.grid"),
+        )
+        kw.update(
+            self.cfg.generate_kwargs("hazard.settings"),
+        )
         data = open_grid(path, **kw)
         ## checks
         logger.info("Executing hazard checks...")
@@ -90,7 +98,7 @@ class BaseModel(metaclass=ABCMeta):
         if _int_srs is not None:
             logger.info(
                 f"Setting spatial reference of '{path.name}' \
-from '{self._cfg.filepath.name}' ('{get_srs_repr(_int_srs)}')"
+from '{self.cfg.filepath.name}' ('{get_srs_repr(_int_srs)}')"
             )
             raise ValueError("")
 
@@ -102,50 +110,55 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
             )
             logger.info(f"Reprojecting '{path.name}' to '{get_srs_repr(self.srs)}'")
             _resalg = 0
-            if "hazard.resampling_method" in self._cfg:
-                _resalg = self._cfg.get("hazard.resampling_method")
+            if "hazard.resampling_method" in self.cfg:
+                _resalg = self.cfg.get("hazard.resampling_method")
             data = grid.reproject(data, self.srs.ExportToWkt(), _resalg)
 
         # check risk return periods
-        if self._cfg["hazard.risk"]:
+        if self.cfg["hazard.risk"]:
             rp = check_hazard_rp_iden(
                 data.get_band_names(),
-                self._cfg.get("hazard.return_periods"),
+                self.cfg.get("hazard.return_periods"),
                 path,
             )
-            self._cfg["hazard.return_periods"] = rp
+            self.cfg["hazard.return_periods"] = rp
             # Directly calculate the coefficients
             rp_coef = calc_rp_coef(rp)
-            self._cfg["hazard.rp_coefficients"] = rp_coef
+            self.cfg["hazard.rp_coefficients"] = rp_coef
+            # Set the risk folder for raster calculations
+            self.cfg["output.path.risk"] = Path(
+                self.cfg["output.path"],
+                "rp_damages",
+            )
 
         # Information for output
         ns = check_hazard_band_names(
             data.deter_band_names(),
-            self._cfg.get("hazard.risk"),
-            self._cfg.get("hazard.return_periods"),
+            self.cfg.get("hazard.risk"),
+            self.cfg.get("hazard.return_periods"),
             data.count,
         )
-        self._cfg["hazard.band_names"] = ns
+        self.cfg["hazard.band_names"] = ns
 
         # When all is done, add it
         self.hazard_grid = data
 
     def _read_vulnerability_data(self):
-        path = self._cfg.get("vulnerability.file")
+        path = self.cfg.get("vulnerability.file")
         logger.info(f"Reading vulnerability curves ('{path.name}')")
 
         index = "water depth"
-        if "vulnerability.index" in self._cfg:
-            index = self._cfg.get("vulnerability.index")
+        if "vulnerability.index" in self.cfg:
+            index = self.cfg.get("vulnerability.index")
         data = open_csv(str(path), index=index)
         ## checks
         logger.info("Executing vulnerability checks...")
 
         # upscale the data (can be done after the checks)
-        if "vulnerability.step_size" in self._cfg:
-            self._vul_step_size = self._cfg.get("vulnerability.step_size")
+        if "vulnerability.step_size" in self.cfg:
+            self._vul_step_size = self.cfg.get("vulnerability.step_size")
             self._rounding = deter_dec(self._vul_step_size)
-            self._cfg["vulnerability.round"] = self._rounding
+            self.cfg["vulnerability.round"] = self._rounding
 
         logger.info(
             f"Upscaling vulnerability curves, \
@@ -159,7 +172,7 @@ using a step size of: {self._vul_step_size}"
         """_summary_"""
 
         self.max_threads = cpu_count()
-        _max_threads = self._cfg.get("global.max_threads")
+        _max_threads = self.cfg.get("global.max_threads")
         if _max_threads is not None:
             self.max_threads = min(self.max_threads, _max_threads)
 
@@ -168,14 +181,14 @@ using a step size of: {self._vul_step_size}"
     def _set_model_srs(self):
         """_summary_"""
 
-        _srs = self._cfg.get("global.crs")
-        path = self._cfg.get("hazard.file")
+        _srs = self.cfg.get("global.crs")
+        path = self.cfg.get("hazard.file")
         if _srs is not None:
             self.srs = osr.SpatialReference()
             self.srs.SetFromUserInput(_srs)
         else:
             # Inferring by 'sniffing'
-            kw = self._cfg.generate_kwargs("hazard.settings")
+            kw = self.cfg.generate_kwargs("hazard.settings")
 
             gm = open_grid(
                 str(path),
@@ -184,15 +197,15 @@ using a step size of: {self._vul_step_size}"
 
             _srs = gm.get_srs()
             if _srs is None:
-                if "hazard.crs" in self._cfg:
+                if "hazard.crs" in self.cfg:
                     _srs = osr.SpatialReference()
-                    _srs.SetFromUserInput(self._cfg.get("hazard.crs"))
+                    _srs.SetFromUserInput(self.cfg.get("hazard.crs"))
             self.srs = _srs
 
         # Simple check to see if it's not None
         check_global_crs(
             self.srs,
-            self._cfg.filepath.name,
+            self.cfg.filepath.name,
             path.name,
         )
 
