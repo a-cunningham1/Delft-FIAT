@@ -5,14 +5,14 @@ build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-include = ["delft_fiat*"]
+include = ["fiat*"]
 
 [tool.setuptools.dynamic]
-version = {attr = "delft_fiat.version.__version__"}
+version = {attr = "fiat.version.__version__"}
 
 ## Project related stuff
 [project]
-name = "delft_fiat"
+name = "fiat"
 dynamic = ['version']
 
 authors = [
@@ -29,7 +29,6 @@ license = {text = "MIT"}
 
 requires-python = ">=3.7" 
 dependencies = [
-"click",
 "gdal>=3.5",
 "numpy",
 "regex",
@@ -78,19 +77,19 @@ all = [
     "setuptools>=61.0.0",
 ]
 build = [
-    "GDAL @ https://github.com/cgohlke/geospatial-wheels/releases/download/v2023.4.22/GDAL-3.6.4-cp311-cp311-win_amd64.whl",
     "pyinstaller",
+    "fiat[all]",
 ]
 dev = [
     "pyside2",
+    "fiat[all,docs,extra,test]",
 ]
 docs = [
-    "m2r2",
-    "numpydoc",
-    "pydata-sphinx-theme",
-    "sphinx",
-    "sphinx_design",
-    "sphinx_autosummary_accessors",
+    "quartodoc",
+    "fiat[all]",
+]
+extra = [
+    "tomli-w",
 ]
 test = [
     "black",
@@ -98,7 +97,7 @@ test = [
 	"pytest-cov",
     "pytest-mock",
 	"responses",
-    "tomli-w",
+    "fiat[all,extra]",
 ]
 
 [project.urls]
@@ -107,7 +106,11 @@ test = [
 "Source" =  "https://github.com/Deltares/Delft-FIAT"
 
 [project.scripts]
-fiat = "delft_fiat.cli.main:main"
+fiat = "fiat.cli.main:main"
+
+[tool.make_env]
+channels = ["conda-forge"]
+deps_not_in_conda = ["quartodoc"]
 
 ## Some stuff for pytest and coverage
 [tool.pytest.ini_options]
