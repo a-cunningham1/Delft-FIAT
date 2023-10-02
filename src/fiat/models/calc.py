@@ -1,4 +1,4 @@
-from delft_fiat.util import mean
+from fiat.util import mean
 
 import math
 

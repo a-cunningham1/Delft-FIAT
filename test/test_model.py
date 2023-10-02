@@ -1,5 +1,5 @@
-from delft_fiat.io import open_csv
-from delft_fiat.models import GeomModel
+from fiat.io import open_csv
+from fiat.models import GeomModel
 
 import pytest
 from pathlib import Path

@@ -1,4 +1,4 @@
-from delft_fiat.util import generic_folder_check
+from fiat.util import generic_folder_check
 
 import os
 import shutil
@@ -40,7 +40,7 @@ block_cipher = None
 
 # Build event
 a = Analysis(
-    ["../../src/delft_fiat/cli/main.py"],
+    ["../../src/fiat/cli/main.py"],
     pathex=["../../src", Path(env_path, "lib/site-packages"), bin],
     binaries=binaries,
     datas=[],

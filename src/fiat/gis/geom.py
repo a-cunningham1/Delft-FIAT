@@ -1,4 +1,4 @@
-from delft_fiat.io import open_geom
+from fiat.io import open_geom
 
 import gc
 from osgeo import ogr

@@ -1,4 +1,4 @@
-.. currentmodule:: delft_fiat
+.. currentmodule:: fiat
 
 .. _api_reference:
 
@@ -12,8 +12,8 @@ Models
 .. autosummary::
    :toctree: ../_generated
 
-   delft_fiat.models.GeomModel
-   delft_fiat.models.GridModel
+   fiat.models.GeomModel
+   fiat.models.GridModel
 
 GIS
 ---
@@ -21,7 +21,7 @@ GIS
 .. autosummary::
    :toctree: ../_generated
 
-   delft_fiat.io.GeomSource
-   delft_fiat.io.GridSource
-   delft_fiat.gis.geom.reproject
-   delft_fiat.gis.grid.reproject
+   fiat.io.GeomSource
+   fiat.io.GridSource
+   fiat.gis.geom.reproject
+   fiat.gis.grid.reproject

@@ -1,5 +1,5 @@
-from delft_fiat.log import spawn_logger, setup_default_log
-from delft_fiat.util import NEWLINE_CHAR, deter_type, generic_path_check
+from fiat.log import spawn_logger, setup_default_log
+from fiat.util import NEWLINE_CHAR, deter_type, generic_path_check
 
 import sys
 from osgeo import gdal

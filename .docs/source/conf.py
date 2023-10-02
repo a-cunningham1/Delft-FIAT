@@ -5,7 +5,7 @@
 
 # -- Software (information) --------------------------------------------------
 
-from delft_fiat.version import __version__
+from fiat.version import __version__
 
 import os
 import shutil

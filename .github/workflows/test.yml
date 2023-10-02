@@ -67,7 +67,7 @@ jobs:
           python .testdata/create_test_data.py
 
       - name: Test
-        run: python -m pytest --verbose --cov=delft_fiat --cov-report xml
+        run: python -m pytest --verbose --cov=fiat --cov-report xml
 
       - name: Check style
         run: black --check .

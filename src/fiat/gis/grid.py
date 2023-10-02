@@ -1,4 +1,4 @@
-from delft_fiat.io import open_grid
+from fiat.io import open_grid
 
 import gc
 import os
