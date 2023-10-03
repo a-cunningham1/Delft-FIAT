@@ -1,7 +1,7 @@
 from pathlib import Path
 
 
-def file_path_check(ctx, _, path):
+def file_path_check(path):
     """this is a cli friendly version of the method
     'generic_path_check' from fiat.util
     """
