@@ -8,7 +8,8 @@ SCRIPTPATH=$(dirname "$SCRIPT")
 # Setup conda stuff
 echo "Locate conda.."
 conda_executable=$(which conda)
-source $conda_executable
+conda_base_dir=$(dirname $(dirname $conda_executable))
+source $conda_base_dir/etc/profile.d/conda.sh
 
 # Extract the GDAL version number
 echo "Get GDAL version"
@@ -35,6 +36,5 @@ conda deactivate
 
 # Clear the conda and pip cache
 echo "Clear the python cache"
-conda_base_dir=$(dirname $(dirname $conda_executable))
 rm -rf $conda_base_dir/pkgs/*
 pip cache purge
