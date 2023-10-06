@@ -1,6 +1,6 @@
-from delft_fiat.cfg import ConfigReader
-from delft_fiat.io import open_geom, open_grid
-from delft_fiat.log import LogItem
+from fiat.cfg import ConfigReader
+from fiat.io import open_geom, open_grid
+from fiat.log import LogItem
 
 import pytest
 from pathlib import Path

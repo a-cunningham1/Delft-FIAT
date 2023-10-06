@@ -1,8 +1,8 @@
-from delft_fiat.cfg import ConfigReader
-from delft_fiat.log import setup_default_log
-from delft_fiat.main import FIAT
-from delft_fiat.version import __version__
-from delft_fiat.cli.util import Path, file_path_check
+from fiat.cfg import ConfigReader
+from fiat.log import setup_default_log
+from fiat.main import FIAT
+from fiat.version import __version__
+from fiat.cli.util import Path, file_path_check
 
 import click
 import sys

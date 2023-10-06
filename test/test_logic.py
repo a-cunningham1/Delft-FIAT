@@ -1,4 +1,4 @@
-from delft_fiat.models.calc import calc_rp_coef, calc_risk
+from fiat.models.calc import calc_rp_coef, calc_risk
 
 import pytest
 

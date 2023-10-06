@@ -1,4 +1,4 @@
-from delft_fiat.gis.util import world2pixel, pixel2world
+from fiat.gis.util import world2pixel, pixel2world
 
 from osgeo import gdal, ogr
 

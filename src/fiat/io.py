@@ -1,6 +1,6 @@
 from typing import Any
-from delft_fiat.error import DriverNotFoundError
-from delft_fiat.util import (
+from fiat.error import DriverNotFoundError
+from fiat.util import (
     GEOM_DRIVER_MAP,
     GRID_DRIVER_MAP,
     Path,

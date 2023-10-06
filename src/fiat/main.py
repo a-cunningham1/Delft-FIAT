@@ -1,6 +1,6 @@
-from delft_fiat.cfg import ConfigReader
-from delft_fiat.log import Log
-from delft_fiat.models import GeomModel, GridModel
+from fiat.cfg import ConfigReader
+from fiat.log import Log
+from fiat.models import GeomModel, GridModel
 
 from pathlib import Path
 
