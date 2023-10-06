@@ -4,6 +4,7 @@ import argparse
 import fnmatch
 import platform
 import re
+from pathlib import Path
 from sys import version_info
 from typing import List
 
@@ -11,6 +12,8 @@ if version_info.minor >= 11:
     from tomllib import load
 else:
     from tomli import load
+
+_FILE_DIR = Path(__file__).parent
 
 
 # our quick and dirty implementation of recursive depedencies
@@ -53,7 +56,7 @@ parser.add_argument("--py-version", "-p", default=None)
 args = parser.parse_args()
 
 #
-with open("pyproject.toml", "rb") as f:
+with open(Path(_FILE_DIR, "pyproject.toml"), "rb") as f:
     toml = load(f)
 deps = toml["project"]["dependencies"]
 opt_deps = toml["project"]["optional-dependencies"]
@@ -135,5 +138,5 @@ if len(pip_deps) > 0:
   - {pip_deps_to_install_string}
 """
 
-with open(args.output, "w") as out:
+with open(Path(_FILE_DIR, args.output), "w") as out:
     out.write(env_spec)

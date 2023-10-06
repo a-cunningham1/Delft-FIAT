@@ -5,13 +5,13 @@ SCRIPT=$(readlink -f "$0")
 SCRIPTPATH=$(dirname "$SCRIPT")
 
 # Extract the GDAL version number
-version=gdalinfo --version | cut -d' ' -f2
+version=$(gdalinfo --version | cut -d' ' -f2)
 # Remove the annoying comma
 version=${version%,}
 
 # Make the yaml and create the environment
 python $SCRIPTPATH/../make_env.py build
-mamba env create -f environment.yml
+mamba env create -f $SCRIPTPATH/../environment.yml
 
 # Set the appropriate env variables for GDAL
 export CPLUS_INCLUDE_PATH=/usr/include/gdal
