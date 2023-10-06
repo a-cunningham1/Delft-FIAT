@@ -81,7 +81,9 @@ build = [
     "fiat[all]",
 ]
 dev = [
+    "pre-commit",
     "pyside2",
+    "ruff",
     "fiat[all,docs,extra,test]",
 ]
 docs = [
