@@ -6,7 +6,7 @@ SCRIPT=$(readlink -f "$0")
 SCRIPTPATH=$(dirname "$SCRIPT")
 
 # Setup conda stuff
-echo "Locate conda.."
+echo "Locating conda.."
 conda_executable=$(which conda)
 conda_base_dir=$(dirname $(dirname $conda_executable))
 source $conda_base_dir/etc/profile.d/conda.sh
@@ -19,7 +19,7 @@ version=${version%,}
 
 # Make the yaml and create the environment
 echo "Create the fiat_build env"
-python $SCRIPTPATH/../make_env.py build -py 3.11.*
+python $SCRIPTPATH/../make_env.py build -p 3.11.*
 mamba env create -f $SCRIPTPATH/../environment.yml
 
 # Set the appropriate env variables for GDAL
