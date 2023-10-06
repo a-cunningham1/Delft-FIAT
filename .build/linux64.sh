@@ -1,3 +1,4 @@
 source ~/miniforge3/etc/profile.d/conda.sh
 conda activate fiat_build
-pyinstaller "linux64_build.spec" --distpath ../../bin/core --workpath ../../bin/core/intermediates
+export PROJ_LIB=/usr/share/proj
+pyinstaller "linux64.spec" --distpath ../bin --workpath ../bin/intermediates

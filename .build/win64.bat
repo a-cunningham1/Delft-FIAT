@@ -1,6 +1,6 @@
 @echo off
 
 call activate fiat_build
-pyinstaller "pybuild.spec" --distpath ../../bin/core --workpath ../../bin/core/intermediates
+pyinstaller "win64.spec" --distpath ../bin --workpath ../bin/intermediates
 
 pause
