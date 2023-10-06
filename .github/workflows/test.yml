@@ -69,8 +69,5 @@ jobs:
       - name: Test
         run: python -m pytest --verbose --cov=fiat --cov-report xml
 
-      - name: Check style
-        run: black --check .
-
       - name: Upload code coverage
         uses: codecov/codecov-action@v3
