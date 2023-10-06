@@ -96,6 +96,8 @@ pip_deps = sorted(list(set(pip_deps)))
 # Make an exception for the build environment
 if args.profile == "build":
     py = fnmatch.filter(conda_deps, "python*")
+    if py:
+        conda_deps.remove(*py)
     pip_deps += conda_deps
     conda_deps = []
     if py:
