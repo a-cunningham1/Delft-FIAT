@@ -1,4 +1,3 @@
-
 from fiat.error import DriverNotFoundError
 from fiat.util import (
     DoNotCall,
