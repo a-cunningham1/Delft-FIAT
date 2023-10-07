@@ -1,4 +1,4 @@
-from delft_fiat.check import (
+from fiat.check import (
     check_global_crs,
     check_hazard_band_names,
     check_hazard_rp_iden,
@@ -6,12 +6,12 @@ from delft_fiat.check import (
     check_internal_srs,
     check_vs_srs,
 )
-from delft_fiat.gis import grid
-from delft_fiat.gis.crs import get_srs_repr
-from delft_fiat.io import open_csv, open_grid
-from delft_fiat.log import spawn_logger
-from delft_fiat.models.calc import calc_rp_coef
-from delft_fiat.util import deter_dec
+from fiat.gis import grid
+from fiat.gis.crs import get_srs_repr
+from fiat.io import open_csv, open_grid
+from fiat.log import spawn_logger
+from fiat.models.calc import calc_rp_coef
+from fiat.util import deter_dec
 
 from abc import ABCMeta, abstractmethod
 from os import cpu_count

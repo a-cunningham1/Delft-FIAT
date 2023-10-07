@@ -1,4 +1,4 @@
-from delft_fiat.log import Log
+from fiat.log import Log
 
 import gc
 import math

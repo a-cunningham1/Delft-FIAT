@@ -4,7 +4,7 @@
 #define MyAppName "Delft-FIAT"
 #define MyAppVersion "0.1.0"
 #define MyAppPublisher "Deltares"
-#define MyAppExeName "delft_fiat.exe"
+#define MyAppExeName "fiat.exe"
 #define PathToSelf ExtractFileDir(SourcePath)
 
 [Setup]
@@ -36,7 +36,7 @@ ArchitecturesInstallIn64BitMode=x64
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "{#PathToSelf}\bin\x64\release\delft_fiat.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#PathToSelf}\bin\x64\release\fiat.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#PathToSelf}\bin\x64\release\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 

@@ -1,9 +1,9 @@
-from delft_fiat.check import (
+from fiat.check import (
     check_config_entries,
     check_config_geom,
     check_config_grid,
 )
-from delft_fiat.util import (
+from fiat.util import (
     Path,
     create_hidden_folder,
     flatten_dict,

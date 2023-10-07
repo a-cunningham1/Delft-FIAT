@@ -1,4 +1,4 @@
-from delft_fiat.log import CHandler, Log, MessageFormatter, spawn_logger
+from fiat.log import CHandler, Log, MessageFormatter, spawn_logger
 
 import io
 import pytest

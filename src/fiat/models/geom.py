@@ -1,23 +1,23 @@
-from delft_fiat.check import (
+from fiat.check import (
     check_exp_columns,
     check_geom_extent,
     check_internal_srs,
     check_vs_srs,
 )
-from delft_fiat.gis import geom, overlay
-from delft_fiat.gis.crs import get_srs_repr
-from delft_fiat.io import (
+from fiat.gis import geom, overlay
+from fiat.gis.crs import get_srs_repr
+from fiat.io import (
     BufferTextHandler,
     GeomMemFileHandler,
     open_csv,
     open_exp,
     open_geom,
 )
-from delft_fiat.log import Receiver, spawn_logger, setup_mp_log
-from delft_fiat.models.base import BaseModel
-from delft_fiat.models.calc import calc_risk
-from delft_fiat.models.util import geom_worker
-from delft_fiat.util import NEWLINE_CHAR
+from fiat.log import Receiver, spawn_logger, setup_mp_log
+from fiat.models.base import BaseModel
+from fiat.models.calc import calc_risk
+from fiat.models.util import geom_worker
+from fiat.util import NEWLINE_CHAR
 
 import os
 import time

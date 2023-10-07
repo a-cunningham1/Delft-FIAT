@@ -1,4 +1,4 @@
-from delft_fiat.cfg import ConfigReader
+from fiat.cfg import ConfigReader
 
 import pytest
 from pathlib import Path

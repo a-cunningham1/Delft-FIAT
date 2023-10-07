@@ -1,4 +1,4 @@
-from delft_fiat.io import open_csv
+from fiat.io import open_csv
 
 import pytest
 

@@ -1,5 +1,5 @@
-from delft_fiat.gis.util import world2pixel, pixel2world
-from delft_fiat.io import Grid
+from fiat.gis.util import world2pixel, pixel2world
+from fiat.io import Grid
 
 from osgeo import gdal, ogr
 

@@ -1,9 +1,9 @@
-from delft_fiat.check import *
-from delft_fiat.io import BufferTextHandler, open_grid
-from delft_fiat.log import spawn_logger
-from delft_fiat.models.base import BaseModel
-from delft_fiat.models.util import grid_worker_exact
-from delft_fiat.util import NEWLINE_CHAR
+from fiat.check import *
+from fiat.io import BufferTextHandler, open_grid
+from fiat.log import spawn_logger
+from fiat.models.base import BaseModel
+from fiat.models.util import grid_worker_exact
+from fiat.util import NEWLINE_CHAR
 
 import time
 from concurrent.futures import ProcessPoolExecutor, wait

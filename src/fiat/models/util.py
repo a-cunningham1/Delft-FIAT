@@ -1,8 +1,8 @@
-from delft_fiat.gis import geom, overlay
-from delft_fiat.io import BufferTextHandler, GridSource
-from delft_fiat.log import LogItem, Sender
-from delft_fiat.models.calc import calc_haz
-from delft_fiat.util import NEWLINE_CHAR, _pat, replace_empty
+from fiat.gis import geom, overlay
+from fiat.io import BufferTextHandler, GridSource
+from fiat.log import LogItem, Sender
+from fiat.models.calc import calc_haz
+from fiat.util import NEWLINE_CHAR, _pat, replace_empty
 
 from math import isnan
 from numpy import full, ravel, unravel_index, where
