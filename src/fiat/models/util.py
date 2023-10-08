@@ -141,24 +141,24 @@ def grid_worker_exact(
     out_src.set_srs(exp.get_srs())
     out_src.set_geotransform(exp.get_geotransform())
     # Create the outgoing total damage grid
-    # td_out = GridSource(
-    #     Path(
-    #         _out,
-    #         "total_damages.nc",
-    #     ),
-    #     mode="w",
-    # )
-    # td_out.create(
-    #     exp.shape,
-    #     1,
-    #     exp.dtype,
-    #     options=["FORMAT=NC4", "COMPRESS=DEFLATE"],
-    # )
-    # td_out.set_geotransform(exp.get_geotransform())
-    # td_out.set_srs(exp.get_srs())
-    # td_band = td_out[1]
-    # td_noval = -0.5 * 2**128
-    # td_band.src.SetNoDataValue(td_noval)
+    td_out = GridSource(
+        Path(
+            _out,
+            "total_damages.nc",
+        ),
+        mode="w",
+    )
+    td_out.create(
+        exp.shape,
+        1,
+        exp.dtype,
+        options=["FORMAT=NC4", "COMPRESS=DEFLATE"],
+    )
+    td_out.set_geotransform(exp.get_geotransform())
+    td_out.set_srs(exp.get_srs())
+    td_band = td_out[1]
+    td_noval = -0.5 * 2**128
+    td_band.src.SetNoDataValue(td_noval)
 
     for idx in range(exp.count):
         exp_bands.append(exp[idx + 1])
@@ -168,7 +168,7 @@ def grid_worker_exact(
         dmfs.append(exp_bands[idx].get_metadata_item("damage_function"))
 
     for _w, h_ch in haz_band:
-        # td_ch = td_band[_w]
+        td_ch = td_band[_w]
 
         for idx, exp_band in enumerate(exp_bands):
             e_ch = exp_band[_w]
@@ -202,12 +202,12 @@ def grid_worker_exact(
 
             write_bands[idx].write_chunk(out_ch, _w[:2])
 
-            # td_1d = td_ch[idx2d]
-            # td_1d[where(td_1d == td_noval)] = 0
-            # td_1d += e_ch
-            # td_ch[idx2d] = td_1d
+            td_1d = td_ch[idx2d]
+            td_1d[where(td_1d == td_noval)] = 0
+            td_1d += e_ch
+            td_ch[idx2d] = td_1d
 
-        # td_band.write_chunk(td_ch, _w[:2])
+        td_band.write_chunk(td_ch, _w[:2])
 
     for _w in write_bands[:]:
         w = _w
@@ -216,52 +216,10 @@ def grid_worker_exact(
         w = None
 
     exp_bands = None
-    # td_band.flush()
-    # td_band = None
-    # td_out.flush()
-    # td_out = None
+    td_band.flush()
+    td_band = None
+    td_out = None
 
-    # for _bandn in range(exp.count):
-    #     exp_band = exp[_bandn + 1]
-    #     exp_nd = exp_band.nodata
-    #     dmf = exp_band.get_metadata_item("damage_function")
-
-    #     write_band = out_src[_bandn + 1]
-    #     write_band.src.SetNoDataValue(exp_nd)
-
-    #     for (_, h_ch), (_w, e_ch) in zip(haz_band, exp_band):
-    #         out_ch = full(e_ch.shape, exp_nd)
-    #         e_ch = ravel(e_ch)
-    #         _coords = where(e_ch != exp_nd)[0]
-    #         if len(_coords) == 0:
-    #             write_band.src.WriteArray(out_ch, *_w[:2])
-    #             continue
-
-    #         e_ch = e_ch[_coords]
-    #         h_ch = ravel(h_ch)
-    #         h_ch = h_ch[_coords]
-    #         _hcoords = where(h_ch != haz_band.nodata)[0]
-
-    #         if len(_hcoords) == 0:
-    #             write_band.src.WriteArray(out_ch, *_w[:2])
-    #             continue
-
-    #         _coords = _coords[_hcoords]
-    #         e_ch = e_ch[_hcoords]
-    #         h_ch = h_ch[_hcoords]
-    #         h_ch.clip(min(vul.index), max(vul.index))
-
-    #         dmm = [vul[round(float(n), 2), dmf] for n in h_ch]
-    #         e_ch = e_ch * dmm
-
-    #         idx2d = unravel_index(_coords, *[exp._chunk])
-    #         out_ch[idx2d] = e_ch
-
-    #         write_band.write_chunk(out_ch, _w[:2])
-
-    #     write_band.flush()
-    #     write_band = None
-    #     exp_band = None
     out_src.flush()
     out_src = None
 
