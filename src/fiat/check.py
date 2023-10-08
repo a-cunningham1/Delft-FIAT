@@ -44,18 +44,20 @@ def check_config_geom(
 ):
     """_summary_"""
 
-    _req_cols = [
+    _req_fields = [
+        "exposure.csv.file",
         "exposure.geom.crs",
-        "exposure.geom.csv",
         "exposure.geom.file1",
     ]
-    _all_geom = [item for item in cfg if item.startswith("exposure.geom")]
+    _all_geom = [
+        item for item in cfg if item.startswith(("exposure.geom", "exposure.csv"))
+    ]
     if len(_all_geom) == 0:
         return False
 
-    _check = [item in _all_geom for item in _req_cols]
+    _check = [item in _all_geom for item in _req_fields]
     if not all(_check):
-        _missing = [item for item, b in zip(_req_cols, _check) if not b]
+        _missing = [item for item, b in zip(_req_fields, _check) if not b]
         logger.warning(
             f"Info for the geometry model was found, but not all. {_missing} was/ were missing"
         )
@@ -69,7 +71,7 @@ def check_config_grid(
 ):
     """_summary_"""
 
-    _req_cols = [
+    _req_fields = [
         "exposure.grid.crs",
         "exposure.grid.file",
     ]
@@ -77,9 +79,9 @@ def check_config_grid(
     if len(_all_grid) == 0:
         return False
 
-    _check = [item in _all_grid for item in _req_cols]
+    _check = [item in _all_grid for item in _req_fields]
     if not all(_check):
-        _missing = [item for item, b in zip(_req_cols, _check) if not b]
+        _missing = [item for item, b in zip(_req_fields, _check) if not b]
         logger.warning(
             f"Info for the grid (raster) model was found, but not all. {_missing} was/ were missing"
         )

@@ -819,6 +819,19 @@ class GeomSource(_BaseIO, _BaseStruct):
 
         return self.layer.GetExtent()
 
+    @property
+    @_BaseIO._check_state
+    def fields(self):
+        """_summary_"""
+
+        if self.layer is not None:
+            _flds = self.layer.GetLayerDefn()
+            fh = [
+                _flds.GetFieldDefn(_i).GetName() for _i in range(_flds.GetFieldCount())
+            ]
+            _flds = None
+            return fh
+
     @_BaseIO._check_mode
     @_BaseIO._check_state
     def add_feature(

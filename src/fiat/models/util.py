@@ -126,6 +126,7 @@ def grid_worker_exact(
     _out = cfg.get("output.path")
     if cfg.get("hazard.risk"):
         _out = cfg.get("hazard.path.risk")
+
     # Create the outgoing netcdf containing every exposure damages
     out_src = GridSource(
         Path(_out, "output.nc"),
@@ -139,7 +140,7 @@ def grid_worker_exact(
     )
     out_src.set_srs(exp.get_srs())
     out_src.set_geotransform(exp.get_geotransform())
-
+    # Create the outgoing total damage grid
     # td_out = GridSource(
     #     Path(
     #         _out,
@@ -166,9 +167,8 @@ def grid_worker_exact(
         write_bands[idx].src.SetNoDataValue(exp_nds[idx])
         dmfs.append(exp_bands[idx].get_metadata_item("damage_function"))
 
-    for _w in haz_band.create_windows():
+    for _w, h_ch in haz_band:
         # td_ch = td_band[_w]
-        h_ch = haz_band[_w]
 
         for idx, exp_band in enumerate(exp_bands):
             e_ch = exp_band[_w]

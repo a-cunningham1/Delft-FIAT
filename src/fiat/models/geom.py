@@ -61,9 +61,12 @@ class GeomModel(BaseModel):
     def _read_exposure_data(self):
         """_summary_"""
 
-        path = self.cfg.get("exposure.geom.csv")
+        path = self.cfg.get("exposure.csv.file")
         logger.info(f"Reading exposure data ('{path.name}')")
-        data = open_exp(path, index="Object ID")
+        index_col = "Object ID"
+        if self.cfg.get("exposure.csv.index") is not None:
+            index_col = self.cfg.get("exposure.csv.index")
+        data = open_exp(path, index=index_col)
         ##checks
         logger.info("Executing exposure data checks...")
         check_exp_columns(data.columns)
