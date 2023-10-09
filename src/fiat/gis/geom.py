@@ -1,26 +1,27 @@
-from fiat.io import open_geom
+"""Only vector methods for FIAT."""
 
 import gc
-from osgeo import ogr
-from osgeo import osr
 from pathlib import Path
+
+from osgeo import ogr, osr
+
+from fiat.io import open_geom
 
 
 def coor_transform():
+    """_summary_."""
     pass
 
 
 def geom_centroid(ft: ogr.Feature) -> tuple:
-    """_summary_"""
-
+    """_summary_."""
     pass
 
 
 def point_in_geom(
     ft: ogr.Feature,
 ) -> tuple:
-    """_Summary_"""
-
+    """_Summary_."""
     geom = ft.GetGeometryRef()
     p = geom.PointOnSurface()
     geom = None
@@ -31,16 +32,17 @@ def reproject_feature(
     ft: ogr.Feature,
     crs: str,
 ):
+    """_summary_."""
     pass
 
 
 def reproject(
-    gs: "GeomSource",
+    gs: object,
     crs: str,
     out: str = None,
 ):
     """
-    _summary_
+    _summary_.
 
     Parameters
     ----------
@@ -51,7 +53,6 @@ def reproject(
     out : str
         _description_
     """
-
     if not Path(str(out)).is_dir():
         out = gs.path.parent
 

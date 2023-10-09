@@ -1,3 +1,5 @@
+"""Configurations file for Sphinx."""
+
 # Configuration file for the Sphinx documentation builder.
 #
 # For the full list of built-in configuration values, see the documentation:
@@ -5,14 +7,15 @@
 
 # -- Software (information) --------------------------------------------------
 
-from fiat.version import __version__
-
 import os
 import shutil
+
 import sphinx_autosummary_accessors
+from fiat.version import __version__
 
 
 def remove_dir_content(path: str) -> None:
+    """_summary_."""
     for root, dirs, files in os.walk(path):
         for f in files:
             os.unlink(os.path.join(root, f))

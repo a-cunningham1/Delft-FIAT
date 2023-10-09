@@ -1,6 +1,8 @@
-from fiat.util import mean
+"""Logic of FIAT."""
 
 import math
+
+from fiat.util import mean
 
 _inun_calc = {
     "mean": mean,
@@ -8,24 +10,28 @@ _inun_calc = {
 }
 
 
-## Calculates coefficients used to compute the EAD as a linear function of the known damages
+## Calculates coefficients used to compute the EAD as a linear function of
+## the known damages
 #    Args:
 #        T (list of ints): return periods T1 … Tn for which damages are known
 #    Returns:
-#        alpha [list of floats]: coefficients a1, …, an (used to compute the AED as a linear function of the known damages)
-#    In which D(f) is the damage, D, as a function of the frequency of exceedance, f. In order to compute this EAD,
-#    function D(f) needs to be known for the entire range of frequencies. Instead, D(f) is only given for the n
-#    frequencies as mentioned in the table above. So, in order to compute the integral above, some assumptions need
-#    to be made for function D(h):
+#        alpha [list of floats]: coefficients a1, …, an (used to compute the AED as
+#        a linear function of the known damages)
+#    In which D(f) is the damage, D, as a function of the frequency of exceedance, f.
+#    In order to compute this EAD, function D(f) needs to be known for
+#    the entire range of frequencies. Instead, D(f) is only given for the n
+#    frequencies as mentioned in the table above. So, in order to compute the integral
+#    above, some assumptions need to be made for function D(h):
 #    (i)	   For f > f1 the damage is assumed to be equal to 0
 #    (ii)   For f<fn, the damage is assumed to be equal to Dn
-#    (iii)  For all other frequencies, the damage is estimated from log-linear interpolation between the known damages and frequencies
+#    (iii)  For all other frequencies, the damage is estimated from log-linear
+#           interpolation between the known damages and frequencies
 
 
 def calc_rp_coef(
     rp: list | tuple,
 ):
-    """_summary_
+    """_summary_.
 
     Parameters
     ----------
@@ -37,7 +43,6 @@ def calc_rp_coef(
     _type_
         _description_
     """
-
     # Step 1: Compute frequencies associated with T-values.
     _rp = sorted(rp)
     idxs = [_rp.index(n) for n in rp]
@@ -88,7 +93,7 @@ def calc_dm_f(
     values: tuple,
     sig: int,
 ) -> float:
-    """_summary_
+    """_summary_.
 
     Parameters
     ----------
@@ -106,7 +111,6 @@ def calc_dm_f(
     float
         Damage factor
     """
-
     if math.isnan(haz):
         return 0.0
 
@@ -123,7 +127,7 @@ def calc_haz(
     ge: float = 0,
     method: str = "mean",
 ) -> float:
-    """_summary_
+    """_summary_.
 
     Parameters
     ----------
@@ -143,10 +147,10 @@ def calc_haz(
     float
         _description_
     """
-
     _ge = 0
     if ref.lower() == "datum" and not math.isnan(ge):
-        # The hazard data is referenced to a Datum (e.g., for flooding this is the water elevation).
+        # The hazard data is referenced to a Datum
+        # (e.g., for flooding this is the water elevation).
         _ge = ge
 
     # Remove the negative hazard values to 0.
@@ -176,15 +180,17 @@ def calc_risk(
     rp_coef: list,
     dms: list,
 ) -> float:
-    """Calculates the EAD (risk) from a list of return periods and list of
-    corresponding damages.
+    """Calculate the EAD (risk).
+
+    From a list of return periods and list of corresponding damages.
 
     Parameters
     ----------
     rp_coef : list
         List of return period coefficients.
     dms : list
-        List of corresponding damages (in the same order of the return periods coefficients).
+        List of corresponding damages
+        (in the same order of the return periods coefficients).
 
     Returns
     -------
@@ -192,7 +198,6 @@ def calc_risk(
         The Expected Annual Damage (EAD), or risk, as a log-linear integration over the
         return periods.
     """
-
     # Calculate the EAD
     ead = sum([x * y for x, y in zip(rp_coef, dms)])
     return ead

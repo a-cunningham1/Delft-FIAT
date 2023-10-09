@@ -1,8 +1,8 @@
+from pathlib import Path
+
 from fiat.io import open_csv
 from fiat.models import GeomModel, GridModel
-
 from osgeo import gdal
-from pathlib import Path
 
 
 def test_geom_model(tmpdir, cfg_event):

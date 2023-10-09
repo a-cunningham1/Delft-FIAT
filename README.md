@@ -41,7 +41,7 @@ git clone https://github.com/Deltares/Delft-FIAT.git fiat
 ```
 
 Now let's do the python stuff.
-Make sure you either have tomli or tomllib (build-in with py 3.11) 
+Make sure you either have tomli or tomllib (build-in with py 3.11)
 in your base enviroment
 ```bat
 # Go into the FIAT repository directory
@@ -85,8 +85,8 @@ And just execute the pybuild.bat script
 pybuild.bat
 ```
 
-That's it. 
-FIAT will be located in the {root}/bin/core/Release folder. 
+That's it.
+FIAT will be located in the {root}/bin/core/Release folder.
 
 ## License
 [MIT](https://github.com/Deltares/Delft-FIAT/blob/master/LICENSE)

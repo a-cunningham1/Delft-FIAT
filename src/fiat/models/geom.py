@@ -1,3 +1,11 @@
+"""Geom model of FIAT."""
+
+import os
+import time
+from concurrent.futures import ProcessPoolExecutor, wait
+from multiprocessing import Process
+from pathlib import Path
+
 from fiat.check import (
     check_exp_columns,
     check_geom_extent,
@@ -13,23 +21,18 @@ from fiat.io import (
     open_exp,
     open_geom,
 )
-from fiat.log import Receiver, spawn_logger, setup_mp_log
+from fiat.log import setup_mp_log, spawn_logger
 from fiat.models.base import BaseModel
 from fiat.models.calc import calc_risk
 from fiat.models.util import geom_worker
 from fiat.util import NEWLINE_CHAR
 
-import os
-import time
-from concurrent.futures import ProcessPoolExecutor, wait, as_completed
-from multiprocessing import Process, get_context
-from multiprocessing.queues import Queue, SimpleQueue
-from pathlib import Path
-
 logger = spawn_logger("fiat.model.geom")
 
 
 class GeomModel(BaseModel):
+    """_summary_."""
+
     _method = {
         "area": overlay.clip,
         "centroid": overlay.pin,
@@ -37,10 +40,9 @@ class GeomModel(BaseModel):
 
     def __init__(
         self,
-        cfg: "ConfigReader",
+        cfg: object,
     ):
-        """_summary_"""
-
+        """_summary_."""
         super().__init__(cfg)
 
         self._read_exposure_data()
@@ -51,16 +53,14 @@ class GeomModel(BaseModel):
         BaseModel.__del__(self)
 
     def _clean_up(self):
-        """_summary_"""
-
+        """_summary_."""
         _p = self.cfg.get("output.path.tmp")
         for _f in _p.glob("*"):
             os.unlink(_f)
         os.rmdir(_p)
 
     def _read_exposure_data(self):
-        """_summary_"""
-
+        """_summary_."""
         path = self.cfg.get("exposure.csv.file")
         logger.info(f"Reading exposure data ('{path.name}')")
         index_col = "Object ID"
@@ -85,8 +85,7 @@ class GeomModel(BaseModel):
         self.exposure_data = data
 
     def _read_exposure_geoms(self):
-        """_summary_"""
-
+        """_summary_."""
         _d = {}
         _found = [item for item in list(self.cfg) if "exposure.geom.file" in item]
         for file in _found:
@@ -107,8 +106,9 @@ class GeomModel(BaseModel):
             # check if file srs is the same as the model srs
             if not check_vs_srs(self.srs, data.get_srs()):
                 logger.warning(
-                    f"Spatial reference of '{path.name}' ('{get_srs_repr(data.get_srs())}') \
-does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
+                    f"Spatial reference of '{path.name}' \
+('{get_srs_repr(data.get_srs())}') does not match \
+the model spatial reference ('{get_srs_repr(self.srs)}')"
                 )
                 logger.info(f"Reprojecting '{path.name}' to '{get_srs_repr(self.srs)}'")
                 data = geom.reproject(data, self.srs.ExportToWkt())
@@ -127,8 +127,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
     def resolve(
         self,
     ):
-        """_summary_"""
-
+        """_summary_."""
         # Setup some local referenced datasets and metadata
         _exp = self.exposure_data
         _gm = self.exposure_geoms
@@ -205,7 +204,8 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
                 row += ft_info.strip()
                 vals = []
 
-                # Loop over all the temporary files (loaded) to get the damage per object
+                # Loop over all the temporary files (loaded) to
+                # get the damage per object
                 for item in _files.values():
                     row += b","
                     _data = item[oid].strip().split(b",", 1)[1]
@@ -241,8 +241,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
     def run(
         self,
     ):
-        """_summary_"""
-
+        """_summary_."""
         # Get band names for logging
         _nms = self.cfg.get("hazard.band_names")
 
@@ -265,7 +264,8 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
                 _s = time.time()
                 for idx in range(self.hazard_grid.count):
                     logger.info(
-                        f"Submitting a job for the calculations in regards to band: '{_nms[idx]}'"
+                        f"Submitting a job for the calculations \
+in regards to band: '{_nms[idx]}'"
                     )
                     fs = Pool.submit(
                         geom_worker,
@@ -287,7 +287,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
         # If there is only one hazard band present, call Process directly
         # No need for the extra overhead the Pool provides
         else:
-            logger.info(f"Submitting a job for the calculations in a seperate process")
+            logger.info("Submitting a job for the calculations in a seperate process")
             _s = time.time()
             p = Process(
                 target=geom_worker,
@@ -312,7 +312,8 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
         _receiver.close_handlers()
         if _receiver.count > 0:
             logger.warning(
-                f"Some objects had missing data. For more info: 'missing.log' in '{self.cfg.get('output.path')}'"
+                f"Some objects had missing data. For more info: \
+'missing.log' in '{self.cfg.get('output.path')}'"
             )
         else:
             os.unlink(

@@ -16,5 +16,5 @@ Added
 -----
 - Everything!
 
-Documentation 
+Documentation
 -------------

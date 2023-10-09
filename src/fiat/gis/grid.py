@@ -1,9 +1,12 @@
-from fiat.io import open_grid
+"""Only raster methods for FIAT."""
 
 import gc
 import os
-from osgeo import gdal, osr
 from pathlib import Path
+
+from osgeo import gdal, osr
+
+from fiat.io import open_grid
 
 
 def clip(
@@ -11,7 +14,7 @@ def clip(
     gtf: tuple,
     idx: tuple,
 ):
-    """_summary_
+    """_summary_.
 
     Parameters
     ----------
@@ -22,17 +25,16 @@ def clip(
     idx : tuple
         _description_
     """
-
     pass
 
 
 def reproject(
-    gs: "GridSource",
+    gs: object,
     crs: str,
     out: str = None,
     resample: int = 0,
 ) -> object:
-    """_summary_
+    """_summary_.
 
     Parameters
     ----------
@@ -46,7 +48,6 @@ def reproject(
     object
         _description_
     """
-
     _gs_kwargs = gs._kwargs
 
     if not Path(str(out)).is_dir():
@@ -74,8 +75,7 @@ def reproject(
         return open_grid(fname_int)
 
     gs.close()
-    tr_src = gdal.Translate(str(fname), dst_src)
-    tr_src = None
+    gdal.Translate(str(fname), dst_src)
     dst_src = None
     gc.collect()
 

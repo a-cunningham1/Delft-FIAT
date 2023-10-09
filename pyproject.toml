@@ -27,7 +27,7 @@ description = "Delft Fast Impact Assessment Tool"
 readme = "README.md"
 license = {text = "MIT"}
 
-requires-python = ">=3.7" 
+requires-python = ">=3.7"
 dependencies = [
 "gdal>=3.5",
 "numpy",
@@ -159,14 +159,17 @@ line-length = 88
 # enable pydocstyle (E), pyflake (F) and isort (I), pytest-style (PT)
 select = ["E", "F", "I", "PT", "D"]
 ignore-init-module-imports = true
-ignore = ["D211", "D213", "E741", "D105", "E712"]
+ignore = ["D211", "D213", "E741", "D105", "E712", "B904"]
 exclude = ["docs"]
 
 [tool.ruff.per-file-ignores]
 "test/**" = ["D103", "D100", "D104"]
 "test/conftest.py" = ["E402"]
 "src/fiat/__init__.py" = ["E402", "F401", "F403"]
+"src/fiat/cli/__init__.py" = ["F403"]
+"src/fiat/cy/__init__.py" = ["F403"]
 "src/fiat/gis/__init__.py" = ["F403"]
+"src/fiat/gui/__init__.py" = ["F403"]
 "src/fiat/models/__init__.py" = ["F403"]
 
 [tool.ruff.pydocstyle]

@@ -1,32 +1,32 @@
+"""Where I/O stuff gets handled."""
+
+import atexit
+import gc
+import os
+import weakref
+from abc import ABCMeta, abstractmethod
+from io import BufferedReader, BufferedWriter, FileIO, TextIOWrapper
+from itertools import product
+from math import floor, log10
+from typing import Any
+
+from numpy import arange, array, column_stack, interp, ndarray
+from osgeo import gdal, ogr, osr
+
 from fiat.error import DriverNotFoundError
 from fiat.util import (
-    DoNotCall,
     GEOM_DRIVER_MAP,
     GRID_DRIVER_MAP,
     Path,
-    deter_type,
-    replace_empty,
     _dtypes_from_string,
     _dtypes_reversed,
     _pat,
     _pat_multi,
     _read_gridsrouce_layers,
     _text_chunk_gen,
+    deter_type,
+    replace_empty,
 )
-
-import atexit
-import gc
-import os
-import time
-import weakref
-from abc import ABCMeta, abstractmethod
-from io import BufferedReader, BufferedWriter, FileIO, TextIOWrapper
-from itertools import product
-from math import nan, floor, log10
-from numpy import arange, array, column_stack, interp, ndarray, where
-from osgeo import gdal, ogr
-from osgeo import osr
-from typing import Any
 
 _IOS = weakref.WeakValueDictionary()
 _IOS_COUNT = 1
@@ -67,13 +67,12 @@ class _BaseIO(metaclass=ABCMeta):
         file: str = None,
         mode: str = "r",
     ):
-        """_summary_"""
-
+        """_summary_."""
         if file is not None:
             self.path = Path(file)
             self._path = Path(file)
 
-        if not mode in _BaseIO._mode_map:
+        if mode not in _BaseIO._mode_map:
             raise ValueError("")
 
         self._mode = _BaseIO._mode_map[mode]
@@ -130,8 +129,7 @@ class _BaseHandler(metaclass=ABCMeta):
         file: str,
         skip: int = 0,
     ) -> "_BaseHandler":
-        """_summary_"""
-
+        """_summary_."""
         self.path = Path(file)
 
         self.skip = skip
@@ -156,6 +154,7 @@ class _BaseHandler(metaclass=ABCMeta):
         return False
 
     def read_line_once(self):
+        """_summary_."""
         line = self.readline()
         self._skip += len(line)
         self.flush()
@@ -163,7 +162,7 @@ class _BaseHandler(metaclass=ABCMeta):
 
 
 class _BaseStruct(metaclass=ABCMeta):
-    """A struct container"""
+    """A struct container."""
 
     def __init__(self):
         self._kwargs = {}
@@ -180,8 +179,7 @@ class _BaseStruct(metaclass=ABCMeta):
         self,
         **kwargs,
     ):
-        """_summary_"""
-
+        """_summary_."""
         self._kwargs.update(
             **kwargs,
         )
@@ -189,12 +187,14 @@ class _BaseStruct(metaclass=ABCMeta):
 
 ## Handlers
 class BufferHandler(_BaseHandler, BufferedReader):
+    """_summary_."""
+
     def __init__(
         self,
         file: str,
         skip: int = 0,
     ) -> "BufferHandler":
-        """_summary_
+        """_summary_.
 
         Parameters
         ----------
@@ -206,7 +206,6 @@ class BufferHandler(_BaseHandler, BufferedReader):
         BufferHandler
             _description_
         """
-
         BufferedReader.__init__(self, FileIO(file))
         _BaseHandler.__init__(self, file, skip)
 
@@ -218,6 +217,8 @@ class BufferHandler(_BaseHandler, BufferedReader):
 
 
 class BufferTextHandler(BufferedWriter):
+    """_summary_."""
+
     def __init__(
         self,
         file: str,
@@ -247,13 +248,15 @@ class BufferTextHandler(BufferedWriter):
 
 
 class GeomMemFileHandler:
+    """_summary_."""
+
     def __init__(
         self,
         file: str or Path,
         srs: osr.SpatialReference,
         layer_meta: ogr.FeatureDefn,
     ):
-        """_summary_
+        """_summary_.
 
         Parameters
         ----------
@@ -266,7 +269,6 @@ class GeomMemFileHandler:
         field_meta : dict
             _description_
         """
-
         self._memory = open_geom("memset", "w")
         self._memory.create_layer(
             srs,
@@ -294,8 +296,7 @@ class GeomMemFileHandler:
         ft: ogr.Feature,
         fmap: dict,
     ):
-        """_summary_"""
-
+        """_summary_."""
         _local_ft = ogr.Feature(self._memory.layer.GetLayerDefn())
         _local_ft.SetFID(ft.GetFID())
         _local_ft.SetGeometry(ft.GetGeometryRef())
@@ -318,13 +319,13 @@ class GeomMemFileHandler:
         self,
         flds: zip,
     ):
-        """_summary_"""
-
+        """_summary_."""
         self._memory.create_fields(
             dict(flds),
         )
 
     def dump2drive(self):
+        """_summary_."""
         self._drive.create_layer_from_copy(self._memory.layer)
         self._drive.flush()
 
@@ -347,11 +348,13 @@ class GeomMemFileHandler:
 
 
 class TextHandler(_BaseHandler, TextIOWrapper):
+    """_summary_."""
+
     def __init__(
         self,
         file: str,
     ) -> "TextHandler":
-        """_summary_
+        """_summary_.
 
         Parameters
         ----------
@@ -363,7 +366,6 @@ class TextHandler(_BaseHandler, TextIOWrapper):
         TextHandler
             _description_
         """
-
         TextIOWrapper.__init__(self, FileIO(file))
         _BaseHandler.__init__()
 
@@ -373,14 +375,15 @@ class TextHandler(_BaseHandler, TextIOWrapper):
 
 ## Parsing
 class CSVParser:
+    """_summary_."""
+
     def __init__(
         self,
         handler: BufferHandler,
         header: bool,
         index: str = None,
     ):
-        """_summary_"""
-
+        """_summary_."""
         self.data = handler
         self.meta = {}
         self.meta["index_col"] = -1
@@ -397,8 +400,7 @@ class CSVParser:
         self,
         index: str,
     ):
-        """_summary_"""
-
+        """_summary_."""
         _get_index = False
         _get_dtypes = True
 
@@ -448,8 +450,7 @@ class CSVParser:
         self,
         header: bool,
     ):
-        """_summary_"""
-
+        """_summary_."""
         self.data.seek(0)
 
         while True:
@@ -488,8 +489,7 @@ class CSVParser:
         self,
         large: bool = False,
     ):
-        """_summary_"""
-
+        """_summary_."""
         if large:
             return TableLazy(
                 data=self.data,
@@ -506,8 +506,7 @@ class CSVParser:
         )
 
     def read_exp(self):
-        """_summary_"""
-
+        """_summary_."""
         return ExposureTable(
             data=self.data,
             index=self.index,
@@ -521,14 +520,15 @@ class Grid(
     _BaseIO,
     _BaseStruct,
 ):
+    """_summary_."""
+
     def __init__(
         self,
         band: gdal.Band,
         chunk: tuple = None,
         mode: str = "r",
     ):
-        """_summary_"""
-
+        """_summary_."""
         _BaseIO.__init__(self, mode=mode)
 
         self.src = band
@@ -609,23 +609,28 @@ class Grid(
         self._u = 0
 
     def close(self):
+        """_summary_."""
         _BaseIO.close(self)
         self.src = None
         gc.collect()
 
     def flush(self):
+        """_summary_."""
         if self.src is not None:
             self.src.FlushCache()
 
     @property
     def chunk(self):
+        """_summary_."""
         return self._chunk
 
     @property
     def shape(self):
+        """_summary_."""
         return self._x, self._y
 
     def create_windows(self):
+        """_summary_."""
         _lu = tuple(
             product(
                 range(0, self._x, self._chunk[0]),
@@ -646,16 +651,14 @@ class Grid(
         self,
         entry: str,
     ):
-        """_summary_"""
-
+        """_summary_."""
         return self.src.GetMetadataItem(entry)
 
     def set_chunk_size(
         self,
         chunk: tuple,
     ):
-        """_summary_"""
-
+        """_summary_."""
         self._chunk = chunk
 
     @_BaseIO._check_mode
@@ -663,14 +666,13 @@ class Grid(
         self,
         data: array,
     ):
-        """_summary_
+        """_summary_.
 
         Parameters
         ----------
         data : array
             _description_
         """
-
         pass
 
     @_BaseIO._check_mode
@@ -679,18 +681,19 @@ class Grid(
         chunk: array,
         upper_left: tuple | list,
     ):
-        """_summary_
+        """_summary_.
 
         Parameters
         ----------
         chunk : array
             _description_
         """
-
         self.src.WriteArray(chunk, *upper_left)
 
 
 class GeomSource(_BaseIO, _BaseStruct):
+    """_summary_."""
+
     _type_map = {
         "int": ogr.OFTInteger64,
         "float": ogr.OFTReal,
@@ -702,8 +705,7 @@ class GeomSource(_BaseIO, _BaseStruct):
         file: str,
         mode: str = "r",
     ):
-        """_summary_"""
-
+        """_summary_."""
         obj = object.__new__(cls)
 
         return obj
@@ -713,7 +715,7 @@ class GeomSource(_BaseIO, _BaseStruct):
         file: str,
         mode: str = "r",
     ):
-        """Essentially an OGR DataSource Wrapper
+        """Essentially an OGR DataSource Wrapper.
 
         Parameters
         ----------
@@ -740,11 +742,10 @@ class GeomSource(_BaseIO, _BaseStruct):
         OSError
             _description_
         """
-
         _BaseIO.__init__(self, file, mode)
 
-        if not self.path.suffix in GEOM_DRIVER_MAP:
-            raise DriverNotFoundError(f"")
+        if self.path.suffix not in GEOM_DRIVER_MAP:
+            raise DriverNotFoundError("")
 
         driver = GEOM_DRIVER_MAP[self.path.suffix]
 
@@ -787,6 +788,7 @@ class GeomSource(_BaseIO, _BaseStruct):
         )
 
     def close(self):
+        """_summary_."""
         _BaseIO.close(self)
 
         self.layer = None
@@ -800,12 +802,12 @@ class GeomSource(_BaseIO, _BaseStruct):
     #     return self.layer.GetFeatureCount()
 
     def flush(self):
+        """_summary_."""
         if self.src is not None:
             self.src.FlushCache()
 
     def reopen(self):
-        """_summary_"""
-
+        """_summary_."""
         if not self._closed:
             return self
         obj = GeomSource.__new__(GeomSource, self.path)
@@ -815,15 +817,13 @@ class GeomSource(_BaseIO, _BaseStruct):
     @property
     @_BaseIO._check_state
     def bounds(self):
-        """_summary_"""
-
+        """_summary_."""
         return self.layer.GetExtent()
 
     @property
     @_BaseIO._check_state
     def fields(self):
-        """_summary_"""
-
+        """_summary_."""
         if self.layer is not None:
             _flds = self.layer.GetLayerDefn()
             fh = [
@@ -838,6 +838,7 @@ class GeomSource(_BaseIO, _BaseStruct):
         self,
         ft: ogr.Feature,
     ):
+        """_summary_."""
         self.layer.CreateFeature(ft)
 
     @_BaseIO._check_mode
@@ -848,6 +849,7 @@ class GeomSource(_BaseIO, _BaseStruct):
         in_ft: ogr.Feature,
         out_ft: ogr.Feature,
     ):
+        """_summary_."""
         out_ft.SetGeometry(geom)
 
         for n in range(in_ft.GetFieldCount()):
@@ -862,7 +864,7 @@ class GeomSource(_BaseIO, _BaseStruct):
         name: str,
         type: object,
     ):
-        """_summary_
+        """_summary_.
 
         Parameters
         ----------
@@ -871,7 +873,6 @@ class GeomSource(_BaseIO, _BaseStruct):
         type : _type_
             _description_
         """
-
         self.layer.CreateField(
             ogr.FieldDefn(
                 name,
@@ -885,7 +886,7 @@ class GeomSource(_BaseIO, _BaseStruct):
         self,
         fmap: dict,
     ):
-        """_summary_
+        """_summary_.
 
         Parameters
         ----------
@@ -894,7 +895,6 @@ class GeomSource(_BaseIO, _BaseStruct):
         type : _type_
             _description_
         """
-
         self.layer.CreateFields(
             [
                 ogr.FieldDefn(key, GeomSource._type_map[item])
@@ -909,14 +909,13 @@ class GeomSource(_BaseIO, _BaseStruct):
         srs: osr.SpatialReference,
         geom_type: int,
     ):
-        """_summary_
+        """_summary_.
 
         Parameters
         ----------
         srs : osr.SpatialReference
             _description_
         """
-
         self.layer = self.src.CreateLayer(self.path.stem, srs, geom_type)
 
     @_BaseIO._check_mode
@@ -926,14 +925,13 @@ class GeomSource(_BaseIO, _BaseStruct):
         layer: ogr.Layer,
         overwrite: bool = True,
     ):
-        """_Summary_
+        """_Summary_.
 
         Parameters
         ----------
         layer : ogr.Layer
             _description_
         """
-
         _ow = {
             True: "YES",
             False: "NO",
@@ -944,17 +942,16 @@ class GeomSource(_BaseIO, _BaseStruct):
         )
 
     def get_bbox(self):
-        """_summary_"""
-
+        """_summary_."""
         return self.layer.GetExtent()
 
     def get_layer(self, l_id):
+        """_summary_."""
         pass
 
     @_BaseIO._check_state
     def get_srs(self):
-        """_Summary_"""
-
+        """_Summary_."""
         return self.layer.GetSpatialRef()
 
     @_BaseIO._check_mode
@@ -963,19 +960,20 @@ class GeomSource(_BaseIO, _BaseStruct):
         self,
         ref: ogr.FeatureDefn,
     ):
-        """_summary_
+        """_summary_.
 
         Parameters
         ----------
         ref : ogr.FeatureDefn
             _description_
         """
-
         for n in range(ref.GetFieldCount()):
             self.layer.CreateField(ref.GetFieldDefn(n))
 
 
 class GridSource(_BaseIO, _BaseStruct):
+    """_summary_."""
+
     _type_map = {
         "float": gdal.GFT_Real,
         "int": gdal.GDT_Int16,
@@ -990,8 +988,7 @@ class GridSource(_BaseIO, _BaseStruct):
         var_as_band: bool = False,
         mode: str = "r",
     ):
-        """_summary_"""
-
+        """_summary_."""
         obj = object.__new__(cls)
 
         return obj
@@ -1004,7 +1001,7 @@ class GridSource(_BaseIO, _BaseStruct):
         var_as_band: bool = False,
         mode: str = "r",
     ):
-        """Essentially a GDAL Dataset Wrapper
+        """Essentially a GDAL Dataset Wrapper.
 
         Parameters
         ----------
@@ -1024,7 +1021,6 @@ class GridSource(_BaseIO, _BaseStruct):
         DriverNotFoundError
             _description_
         """
-
         _open_options = []
 
         _BaseStruct.__init__(self)
@@ -1035,7 +1031,7 @@ class GridSource(_BaseIO, _BaseStruct):
 
         _BaseIO.__init__(self, file, mode)
 
-        if not self.path.suffix in GRID_DRIVER_MAP:
+        if self.path.suffix not in GRID_DRIVER_MAP:
             raise DriverNotFoundError("")
 
         driver = GRID_DRIVER_MAP[self.path.suffix]
@@ -1108,6 +1104,7 @@ class GridSource(_BaseIO, _BaseStruct):
         )
 
     def close(self):
+        """_summary_."""
         _BaseIO.close(self)
 
         self.src = None
@@ -1116,12 +1113,12 @@ class GridSource(_BaseIO, _BaseStruct):
         gc.collect()
 
     def flush(self):
+        """_summary_."""
         if self.src is not None:
             self.src.FlushCache()
 
     def reopen(self):
-        """_summary_"""
-
+        """_summary_."""
         if not self._closed:
             return self
         obj = GridSource.__new__(
@@ -1137,8 +1134,7 @@ class GridSource(_BaseIO, _BaseStruct):
     @property
     @_BaseIO._check_state
     def bounds(self):
-        """_summary_"""
-
+        """_summary_."""
         _gtf = self.src.GetGeoTransform()
         return (
             _gtf[0],
@@ -1149,13 +1145,13 @@ class GridSource(_BaseIO, _BaseStruct):
 
     @property
     def chunk(self):
-        """_summary_"""
-
+        """_summary_."""
         return self._chunk
 
     @property
     @_BaseIO._check_state
     def dtype(self):
+        """_summary_."""
         if not self._dtype:
             _b = self[1]
             self._dtype = _b.dtype
@@ -1165,6 +1161,7 @@ class GridSource(_BaseIO, _BaseStruct):
     @property
     @_BaseIO._check_state
     def shape(self):
+        """_summary_."""
         return (
             self.src.RasterXSize,
             self.src.RasterYSize,
@@ -1179,8 +1176,7 @@ class GridSource(_BaseIO, _BaseStruct):
         type: int,
         options: list = [],
     ):
-        """_summary_"""
-
+        """_summary_."""
         self.src = self._driver.Create(
             str(self.path),
             *shape,
@@ -1196,8 +1192,7 @@ class GridSource(_BaseIO, _BaseStruct):
     def create_band(
         self,
     ):
-        """_summary_"""
-
+        """_summary_."""
         self.src.AddBand()
         self.count += 1
 
@@ -1205,8 +1200,7 @@ class GridSource(_BaseIO, _BaseStruct):
     def deter_band_names(
         self,
     ):
-        """_summary_"""
-
+        """_summary_."""
         _names = []
         for n in range(self.count):
             name = self.get_band_name(n + 1)
@@ -1219,8 +1213,7 @@ class GridSource(_BaseIO, _BaseStruct):
 
     @_BaseIO._check_state
     def get_band_name(self, n: int):
-        """_summary_"""
-
+        """_summary_."""
         _desc = self[n].src.GetDescription()
         _meta = self[n].src.GetMetadata()
 
@@ -1237,8 +1230,7 @@ class GridSource(_BaseIO, _BaseStruct):
     def get_band_names(
         self,
     ):
-        """_summary_"""
-
+        """_summary_."""
         _names = []
         for n in range(self.count):
             _names.append(self.get_band_name(n + 1))
@@ -1247,8 +1239,7 @@ class GridSource(_BaseIO, _BaseStruct):
 
     @_BaseIO._check_state
     def get_bbox(self):
-        """_summary_"""
-
+        """_summary_."""
         gtf = self.src.GetGeoTransform()
         bbox = (
             gtf[0],
@@ -1262,16 +1253,17 @@ class GridSource(_BaseIO, _BaseStruct):
 
     @_BaseIO._check_state
     def get_geotransform(self):
+        """_summary_."""
         return self.src.GetGeoTransform()
 
     @_BaseIO._check_state
     def get_srs(self):
-        """_summary_"""
-
+        """_summary_."""
         return self.src.GetSpatialRef()
 
     @_BaseIO._check_mode
     def set_geotransform(self, affine: tuple):
+        """_summary_."""
         self.src.SetGeoTransform(affine)
 
     @_BaseIO._check_mode
@@ -1280,6 +1272,7 @@ class GridSource(_BaseIO, _BaseStruct):
         self,
         srs: osr.SpatialReference,
     ):
+        """_summary_."""
         self.src.SetSpatialRef(srs)
 
     @_BaseIO._check_mode
@@ -1289,8 +1282,7 @@ class GridSource(_BaseIO, _BaseStruct):
         array: "array",
         band: int,
     ):
-        """_summary_"""
-
+        """_summary_."""
         pass
 
 
@@ -1301,8 +1293,7 @@ class _Table(_BaseStruct, metaclass=ABCMeta):
         columns: tuple = None,
         **kwargs,
     ) -> object:
-        """_summary_"""
-
+        """_summary_."""
         # Declarations
         self.dtypes = ()
         self.meta = kwargs
@@ -1329,7 +1320,7 @@ class _Table(_BaseStruct, metaclass=ABCMeta):
         self._index = dict(zip(index, index_int))
 
     def __del__(self):
-        data = None
+        pass
 
     def __len__(self):
         return self.meta["nrow"]
@@ -1363,6 +1354,8 @@ class _Table(_BaseStruct, metaclass=ABCMeta):
 
 
 class Table(_Table):
+    """_summary_."""
+
     def __init__(
         self,
         data: BufferHandler or dict,
@@ -1370,7 +1363,7 @@ class Table(_Table):
         columns: list = None,
         **kwargs,
     ) -> object:
-        """_summary_
+        """_summary_.
 
         Parameters
         ----------
@@ -1382,7 +1375,6 @@ class Table(_Table):
         object
             _description_
         """
-
         if isinstance(data, BufferHandler):
             self._build_from_stream(
                 data,
@@ -1410,8 +1402,7 @@ class Table(_Table):
         pass
 
     def __getitem__(self, keys):
-        """_summary_"""
-
+        """_summary_."""
         keys = list(keys)
 
         if keys[0] != slice(None):
@@ -1453,11 +1444,10 @@ class Table(_Table):
         columns: list,
         kwargs,
     ):
-        """_summary_"""
-
+        """_summary_."""
         dtypes = kwargs["dtypes"]
         ncol = kwargs["ncol"]
-        nrow = kwargs["nrow"]
+        kwargs["nrow"]
         index_col = kwargs["index_col"]
         with data as h:
             _d = _pat_multi.split(h.read().strip())
@@ -1487,18 +1477,15 @@ class Table(_Table):
         self,
         data: list,
     ):
-        """_summary_"""
-
+        """_summary_."""
         self.data = array(data, dtype=object)
 
     def mean():
-        """_summary_"""
-
+        """_summary_."""
         pass
 
     def max():
-        """_summary_"""
-
+        """_summary_."""
         pass
 
     def upscale(
@@ -1506,7 +1493,7 @@ class Table(_Table):
         delta: float,
         inplace: bool = False,
     ):
-        """_summary_
+        """_summary_.
 
         Parameters
         ----------
@@ -1516,7 +1503,6 @@ class Table(_Table):
             _description_, by default True
 
         """
-
         meta = self.meta.copy()
 
         _rnd = abs(floor(log10(delta)))
@@ -1559,6 +1545,8 @@ class Table(_Table):
 
 
 class TableLazy(_Table):
+    """_summary_."""
+
     def __init__(
         self,
         data: BufferHandler,
@@ -1566,7 +1554,7 @@ class TableLazy(_Table):
         columns: list = None,
         **kwargs,
     ) -> object:
-        """_summary_
+        """_summary_.
 
         Parameters
         ----------
@@ -1578,7 +1566,6 @@ class TableLazy(_Table):
         object
             _description_
         """
-
         self.data = data
 
         # Get internal indexing
@@ -1610,10 +1597,9 @@ class TableLazy(_Table):
 
     def __getitem__(
         self,
-        oid: "ANY",
+        oid: object,
     ):
-        """_summary_"""
-
+        """_summary_."""
         try:
             idx = self._index[oid]
         except Exception:
@@ -1630,17 +1616,15 @@ class TableLazy(_Table):
         self,
         oid: str,
     ):
-        """_summary_"""
-
+        """_summary_."""
         return self.__getitem__(oid)
 
     def set_index(
         self,
         key: str,
     ):
-        """_summary_"""
-
-        if not key in self.headers:
+        """_summary_."""
+        if key not in self.headers:
             raise ValueError("")
 
         if key == self.index_col:
@@ -1665,6 +1649,8 @@ class TableLazy(_Table):
 
 
 class ExposureTable(TableLazy):
+    """_summary_."""
+
     def __init__(
         self,
         data: BufferHandler,
@@ -1672,7 +1658,7 @@ class ExposureTable(TableLazy):
         columns: list = None,
         **kwargs,
     ):
-        """A Table structure specifically catering to the exposure database
+        """Create a table just for exposure data.
 
         Parameters
         ----------
@@ -1683,7 +1669,6 @@ class ExposureTable(TableLazy):
         columns : list, optional
             _description_, by default None
         """
-
         TableLazy.__init__(
             self,
             data,
@@ -1716,8 +1701,7 @@ class ExposureTable(TableLazy):
         self._dat_len = len(self._blueprint_columns)
 
     def create_specific_columns(self, name: str):
-        """_summary_"""
-
+        """_summary_."""
         _out = []
         if name:
             name = f"({name})"
@@ -1739,8 +1723,7 @@ class ExposureTable(TableLazy):
         names: list,
         extra: list = None,
     ):
-        """_summary_"""
-
+        """_summary_."""
         cols = []
         for n in names:
             cols += self.create_specific_columns(n)
@@ -1751,8 +1734,7 @@ class ExposureTable(TableLazy):
         return cols
 
     def gen_dat_dtypes(self):
-        """_summary_"""
-
+        """_summary_."""
         return ",".join(["float"] * self._dat_len).encode()
 
 
@@ -1764,7 +1746,7 @@ def open_csv(
     index: str = None,
     large: bool = False,
 ) -> object:
-    """_summary_
+    """_summary_.
 
     Parameters
     ----------
@@ -1776,7 +1758,6 @@ def open_csv(
     object
         _description_
     """
-
     _handler = BufferHandler(file)
 
     parser = CSVParser(
@@ -1795,8 +1776,7 @@ def open_exp(
     header: bool = True,
     index: str = None,
 ):
-    """_summary_"""
-
+    """_summary_."""
     _handler = BufferHandler(file)
 
     parser = CSVParser(
@@ -1812,8 +1792,7 @@ def open_geom(
     file: str,
     mode: str = "r",
 ):
-    """_summary_"""
-
+    """_summary_."""
     return GeomSource(
         file,
         mode,
@@ -1827,8 +1806,7 @@ def open_grid(
     var_as_band: bool = False,
     mode: str = "r",
 ):
-    """_summary_"""
-
+    """_summary_."""
     return GridSource(
         file,
         chunk,

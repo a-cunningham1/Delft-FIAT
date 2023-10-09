@@ -1,26 +1,27 @@
+"""The FIAT model workers."""
+
+from math import isnan
+from pathlib import Path
+
+from numpy import full, ravel, unravel_index, where
+
 from fiat.gis import geom, overlay
 from fiat.io import BufferTextHandler, GridSource
 from fiat.log import LogItem, Sender
 from fiat.models.calc import calc_haz
 from fiat.util import NEWLINE_CHAR, _pat, replace_empty
 
-from math import isnan
-from numpy import full, ravel, unravel_index, where
-from osgeo import gdal, osr
-from pathlib import Path
-
 
 def geom_worker(
-    cfg: "ConfigReader",
-    queue: "queue.Queue",
+    cfg: object,
+    queue: object,
     haz: GridSource,
     idx: int,
-    vul: "Table",
-    exp: "TableLazy",
+    vul: object,
+    exp: object,
     exp_geom: dict,
 ):
-    """_summary_"""
-
+    """_summary_."""
     # Extract the hazard band as an object
     band = haz[idx]
     # Setup some metadata
@@ -57,7 +58,8 @@ def geom_worker(
                 _sender.emit(
                     LogItem(
                         2,
-                        f"Object with ID: {ft.GetField(0)} -> No data found in exposure database",
+                        f"Object with ID: {ft.GetField(0)} -> \
+No data found in exposure database",
                     )
                 )
                 continue
@@ -106,14 +108,13 @@ def geom_worker(
 
 
 def grid_worker_exact(
-    cfg: "ConfigReader",
+    cfg: object,
     haz: GridSource,
     idx: int,
-    vul: "Table",
+    vul: object,
     exp: GridSource,
 ):
-    """_summary_"""
-
+    """_summary_."""
     # Set some variables for the calculations
     exp_bands = []
     write_bands = []
@@ -240,6 +241,5 @@ def grid_worker_exact(
 
 
 def grid_worker_loose():
-    """_summary_"""
-
+    """_summary_."""
     pass

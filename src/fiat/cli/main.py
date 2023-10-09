@@ -1,13 +1,15 @@
+"""Cli of FIAT."""
+
+import argparse
+import sys
+from multiprocessing import freeze_support
+
 from fiat.cfg import ConfigReader
 from fiat.cli.formatter import MainHelpFormatter
 from fiat.cli.util import file_path_check
 from fiat.log import setup_default_log
 from fiat.main import FIAT
 from fiat.version import __version__
-
-import argparse
-import sys
-from multiprocessing import freeze_support
 
 fiat_start_str = """
 ###############################################################
@@ -25,20 +27,20 @@ fiat_start_str = """
 ###############################################################
 
                 Fast Impact Assessment Tool
-                \u00A9 Deltares 
+                \u00A9 Deltares
 
 """
 
 
 #
 def info(args):
+    """_summary_."""
     pass
 
 
 #
 def run(args):
-    """_summary_"""
-
+    """_summary_."""
     # Setup the config reader
     cfg = file_path_check(args.config)
     cfg = ConfigReader(cfg)
@@ -59,8 +61,7 @@ def run(args):
 
 ## Main entry point: parsing gets done here
 def main():
-    """_summary_"""
-
+    """_summary_."""
     parser = argparse.ArgumentParser(
         #    usage="%(prog)s <options> <commands>",
         formatter_class=MainHelpFormatter,
@@ -86,7 +87,7 @@ def main():
         metavar="<commands>",
     )
 
-    info_parser = subparser.add_parser(
+    subparser.add_parser(
         name="info",
         help="Information concerning Delft-FIAT",
     )
