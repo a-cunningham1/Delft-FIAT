@@ -290,4 +290,22 @@ def check_exp_columns(
         )
 
 
+def check_exp_grid_dmfs(
+    exp: object,
+    dmfs: tuple | list,
+):
+    """_summary_"""
+
+    _ef = [_i.get_metadata_item("damage_function") for _i in exp]
+    _i = None
+
+    _check = [item in dmfs for item in _ef]
+    if not all(_check):
+        _missing = [item for item, b in zip(_ef, _check) if not b]
+        logger.error(
+            f"Incorrect damage function identifier found in exposure grid: {_missing}",
+        )
+        sys.exit()
+
+
 ## Vulnerability

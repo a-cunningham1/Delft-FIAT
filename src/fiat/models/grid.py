@@ -1,4 +1,7 @@
-from fiat.check import *
+from fiat.check import (
+    check_exp_grid_dmfs,
+    check_grid_exact,
+)
 from fiat.io import BufferTextHandler, open_grid
 from fiat.log import spawn_logger
 from fiat.models.base import BaseModel
@@ -45,7 +48,13 @@ class GridModel(BaseModel):
         data = open_grid(file, **kw)
         ## checks
         logger.info("Executing exposure data checks...")
+        # Check exact overlay of exposure and hazard
         check_grid_exact(self.hazard_grid, data)
+        # Check if all damage functions are correct
+        check_exp_grid_dmfs(
+            data,
+            self.vulnerability_data.columns,
+        )
 
         self.exposure_grid = data
 
