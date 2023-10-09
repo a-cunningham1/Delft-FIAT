@@ -379,9 +379,6 @@ def create_settings_grid():
             "elevation_reference": "DEM",
         },
         "exposure": {
-            "csv": {
-                "file": "exposure/spatial.csv",
-            },
             "grid": {
                 "file": "exposure/spatial.nc",
                 "crs": "EPSG:4326",
@@ -428,12 +425,8 @@ def create_settings_risk():
             },
         },
         "exposure": {
-            "csv ": {
+            "csv": {
                 "file": "exposure/spatial.csv",
-            },
-            "grid": {
-                "file": "exposure/spatial.nc",
-                "crs": "EPSG:4326",
             },
             "geom": {
                 "file1": "exposure/spatial.gpkg",
