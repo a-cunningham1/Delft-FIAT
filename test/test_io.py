@@ -1,7 +1,5 @@
 from fiat.io import open_csv
 
-import pytest
-
 
 def test_tabel(cfg_event):
     tb = open_csv(cfg_event.get("vulnerability.file"))
