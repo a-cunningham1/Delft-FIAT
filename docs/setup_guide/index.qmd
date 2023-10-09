@@ -30,4 +30,3 @@ title: "Setup guide"
 ## Some very general info
 
 Maybe something about python or conda
-
