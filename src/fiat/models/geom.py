@@ -161,7 +161,7 @@ does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
         _paths = Path(self.cfg.get("output.path.tmp")).glob("*.dat")
 
         # Open the temporary files lazy
-        for p in _paths:
+        for p in sorted(_paths):
             _d = open_csv(p, index=_exp.meta["index_name"], large=True)
             _files[p.stem] = _d
             _d = None
