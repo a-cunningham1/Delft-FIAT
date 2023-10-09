@@ -1,3 +1,11 @@
+"""The config interpreter of FIAT."""
+
+import os
+from typing import Any
+
+import tomli
+from osgeo import gdal
+
 from fiat.check import (
     check_config_entries,
     check_config_geom,
@@ -11,20 +19,16 @@ from fiat.util import (
     generic_path_check,
 )
 
-import os
-import tomli
-from osgeo import gdal
-from typing import Any
-
 
 class ConfigReader(dict):
+    """_summary_."""
+
     def __init__(
         self,
         file: str,
         extra: dict = None,
     ):
-        """_summary_"""
-
+        """_summary_."""
         # container for extra
         self._build = True
         self._extra = {}
@@ -83,8 +87,7 @@ class ConfigReader(dict):
         return f"<ConfigReader object file='{self.filepath}'>"
 
     def __reduce__(self):
-        """_summary_"""
-
+        """_summary_."""
         return self.__class__, (
             self.filepath,
             self._extra,
@@ -99,8 +102,7 @@ class ConfigReader(dict):
         self,
         path: Path | str,
     ):
-        """_summary_"""
-
+        """_summary_."""
         _p = Path(path)
         if not _p.is_absolute():
             _p = Path(self.path, _p)
@@ -110,8 +112,7 @@ class ConfigReader(dict):
     def _create_temp_dir(
         self,
     ):
-        """_summary_"""
-
+        """_summary_."""
         _ph = Path(self["output.path"], ".tmp")
         create_hidden_folder(_ph)
         self["output.path.tmp"] = _ph
@@ -119,8 +120,7 @@ class ConfigReader(dict):
     def get_model_type(
         self,
     ):
-        """_Summary_"""
-
+        """_Summary_."""
         _models = [False, False]
 
         if check_config_geom(self):
@@ -134,16 +134,14 @@ class ConfigReader(dict):
         self,
         key: str,
     ):
-        """_Summary_"""
-
+        """_Summary_."""
         return str(self[key])
 
     def generate_kwargs(
         self,
         base: str,
     ):
-        """_summary_"""
-
+        """_summary_."""
         keys = [item for item in list(self) if base in item]
         kw = {key.split(".")[-1]: self[key] for key in keys}
 
@@ -153,8 +151,7 @@ class ConfigReader(dict):
         self,
         path: Path | str,
     ):
-        """_summary_"""
-
+        """_summary_."""
         _p = Path(path)
         if not _p.is_absolute():
             _p = Path(self.path, _p)

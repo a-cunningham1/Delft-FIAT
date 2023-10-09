@@ -1,5 +1,4 @@
-from fiat.gis import overlay, geom, grid
-
+from fiat.gis import geom, grid, overlay
 from numpy import mean
 
 

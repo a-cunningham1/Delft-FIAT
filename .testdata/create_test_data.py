@@ -1,15 +1,15 @@
-from fiat.log import Log
+"""Create data to test with."""
 
 import copy
 import gc
 import math
 import os
-import tomli_w
 from itertools import product
-from numpy import arange, random, zeros, float32
-from osgeo import gdal, ogr
-from osgeo import osr
 from pathlib import Path
+
+import tomli_w
+from numpy import arange, zeros
+from osgeo import gdal, ogr, osr
 
 p = Path(__file__).parent
 
@@ -21,12 +21,14 @@ folders = (
 
 
 def create_dbase_stucture():
+    """_summary_."""
     for f in folders:
         if not Path(p, f).exists():
             os.mkdir(Path(p, f))
 
 
 def create_exposure_dbase():
+    """_summary_."""
     with open(Path(p, "exposure", "spatial.csv"), "w") as f:
         f.write("Object ID,Extraction Method,Ground Floor Height,Ground Elevation,")
         f.write("Damage Function: Structure,Max Potential Damage: Structure\n")
@@ -39,11 +41,15 @@ def create_exposure_dbase():
 
 
 def create_exposure_geoms():
+    """_summary_."""
     geoms = (
-        "POLYGON ((4.355 52.045, 4.355 52.035, 4.365 52.035, 4.365 52.045, 4.355 52.045))",
-        "POLYGON ((4.395 52.005, 4.395 51.975, 4.415 51.975, 4.415 51.985, 4.405 51.985, 4.405 52.005, 4.395 52.005))",
+        "POLYGON ((4.355 52.045, 4.355 52.035, 4.365 52.035, \
+4.365 52.045, 4.355 52.045))",
+        "POLYGON ((4.395 52.005, 4.395 51.975, 4.415 51.975, \
+4.415 51.985, 4.405 51.985, 4.405 52.005, 4.395 52.005))",
         "POLYGON ((4.365 51.960, 4.375 51.990, 4.385 51.960, 4.365 51.960))",
-        "POLYGON ((4.410 52.030, 4.440 52.030, 4.435 52.010, 4.415 52.010, 4.410 52.030))",
+        "POLYGON ((4.410 52.030, 4.440 52.030, 4.435 52.010, \
+4.415 52.010, 4.410 52.030))",
     )
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(4326)
@@ -87,8 +93,10 @@ def create_exposure_geoms():
 
 
 def create_exposure_geoms_2():
+    """_summary_."""
     geoms = (
-        "POLYGON ((4.375 52.025, 4.385 52.025, 4.385 52.015, 4.375 52.015, 4.375 52.025))",
+        "POLYGON ((4.375 52.025, 4.385 52.025, 4.385 52.015, \
+4.375 52.015, 4.375 52.025))",
     )
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(4326)
@@ -131,9 +139,12 @@ def create_exposure_geoms_2():
 
 
 def create_exposure_geoms_3():
+    """_summary_."""
     geoms = (
-        "POLYGON ((4.375 52.025, 4.385 52.025, 4.385 52.015, 4.375 52.015, 4.375 52.025))",
-        "POLYGON ((4.425 51.975, 4.435 51.975, 4.435 51.965, 4.425 51.965, 4.425 51.975))",
+        "POLYGON ((4.375 52.025, 4.385 52.025, 4.385 52.015, \
+4.375 52.015, 4.375 52.025))",
+        "POLYGON ((4.425 51.975, 4.435 51.975, 4.435 51.965, \
+4.425 51.965, 4.425 51.975))",
     )
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(4326)
@@ -186,6 +197,7 @@ def create_exposure_geoms_3():
 
 
 def create_exposure_grid():
+    """_summary_."""
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(4326)
     dr = gdal.GetDriverByName("netCDF")
@@ -225,6 +237,7 @@ def create_exposure_grid():
 
 
 def create_hazard_map():
+    """_summary_."""
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(4326)
     dr = gdal.GetDriverByName("netCDF")
@@ -263,6 +276,7 @@ def create_hazard_map():
 
 
 def create_risk_map():
+    """_summary_."""
     srs = osr.SpatialReference()
     srs.ImportFromEPSG(4326)
     dr = gdal.GetDriverByName("netCDF")
@@ -303,6 +317,7 @@ def create_risk_map():
 
 
 def create_settings():
+    """_summary_."""
     doc = {
         "global": {
             "crs": "EPSG:4326",
@@ -363,6 +378,7 @@ def create_settings():
 
 
 def create_settings_grid():
+    """_summary_."""
     doc = {
         "global": {
             "crs": "EPSG:4326",
@@ -401,6 +417,7 @@ def create_settings_grid():
 
 
 def create_settings_risk():
+    """_summary_."""
     doc = {
         "global": {
             "crs": "EPSG:4326",
@@ -457,6 +474,8 @@ def create_settings_risk():
 
 
 def create_vulnerability():
+    """_summary_."""
+
     def log_base(b, x):
         r = math.log(x) / math.log(b)
         if r < 0:

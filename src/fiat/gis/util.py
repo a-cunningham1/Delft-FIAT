@@ -1,11 +1,14 @@
+"""Util of GIS module."""
+
+
 def world2pixel(geoMatrix, x, y):
-    """Uses a gdal geomatrix (gdal.GetGeoTransform()) to calculate
-    the pixel location of a geospatial coordinate
+    """Use a gdal geomatrix (gdal.GetGeoTransform()).
+
+    To calculate he pixel location of a geospatial coordinate.
 
     (Thanks to the ogr cookbook!;
     https://pcjericks.github.io/py-gdalogr-cookbook/index.html)
     """
-
     ulX = geoMatrix[0]
     ulY = geoMatrix[3]
     xDist = geoMatrix[1]
@@ -18,8 +21,7 @@ def world2pixel(geoMatrix, x, y):
 
 
 def pixel2world(geoMatrix, x, y):
-    """_Summary_"""
-
+    """_Summary_."""
     ulX = geoMatrix[0]
     ulY = geoMatrix[3]
     xDist = geoMatrix[1]

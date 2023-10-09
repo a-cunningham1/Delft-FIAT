@@ -1,27 +1,29 @@
+"""The FIAT grid model."""
+
+import time
+from concurrent.futures import ProcessPoolExecutor, wait
+from multiprocessing import Process
+
 from fiat.check import (
     check_exp_grid_dmfs,
     check_grid_exact,
 )
-from fiat.io import BufferTextHandler, open_grid
+from fiat.io import open_grid
 from fiat.log import spawn_logger
 from fiat.models.base import BaseModel
 from fiat.models.util import grid_worker_exact
-from fiat.util import NEWLINE_CHAR
-
-import time
-from concurrent.futures import ProcessPoolExecutor, wait
-from multiprocessing import Process, get_context
 
 logger = spawn_logger("fiat.model.grid")
 
 
 class GridModel(BaseModel):
+    """_summary_."""
+
     def __init__(
         self,
-        cfg: "ConfigReader",
+        cfg: object,
     ):
-        """_summary_"""
-
+        """_summary_."""
         super().__init__(cfg)
 
         self._read_exposure_grid()
@@ -33,8 +35,7 @@ class GridModel(BaseModel):
         pass
 
     def _read_exposure_grid(self):
-        """_summary_"""
-
+        """_summary_."""
         file = self.cfg.get("exposure.grid.file")
         logger.info(f"Reading exposure grid ('{file.name}')")
         # Set the extra arguments from the settings file
@@ -59,13 +60,11 @@ class GridModel(BaseModel):
         self.exposure_grid = data
 
     def resolve():
-        """_summary_"""
-
+        """_summary_."""
         pass
 
     def run(self):
-        """_summary_"""
-
+        """_summary_."""
         _nms = self.cfg.get("hazard.band_names")
 
         if self.hazard_grid.count > 1:
@@ -75,7 +74,8 @@ class GridModel(BaseModel):
                 _s = time.time()
                 for idx in range(self.hazard_grid.count):
                     logger.info(
-                        f"Submitting a job for the calculations in regards to band: '{_nms[idx]}'"
+                        f"Submitting a job for the calculations \
+in regards to band: '{_nms[idx]}'"
                     )
                     fs = Pool.submit(
                         grid_worker_exact,
@@ -90,7 +90,7 @@ class GridModel(BaseModel):
             wait(futures)
 
         else:
-            logger.info(f"Submitting a job for the calculations in a seperate process")
+            logger.info("Submitting a job for the calculations in a seperate process")
             _s = time.time()
             p = Process(
                 target=grid_worker_exact,

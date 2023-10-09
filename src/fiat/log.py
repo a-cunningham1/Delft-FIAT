@@ -1,3 +1,5 @@
+"""Logging module of FIAT."""
+
 import atexit
 import io
 import os
@@ -8,7 +10,6 @@ import threading
 import time
 import traceback
 import weakref
-from datetime import datetime
 from enum import Enum
 from string import Formatter as StrFormatter
 from warnings import warn
@@ -26,8 +27,7 @@ del StrFormatter
 
 
 def _Destruction():
-    """Method called when python exits to clean up"""
-
+    """Clean up at interpreter exit."""
     items = list(_handlers.items())
     for _, handler in items:
         handler.acquire()
@@ -41,15 +41,14 @@ atexit.register(_Destruction)
 
 
 def _Level(level):
-    """Check if level can be used"""
-
+    """Check if level can be used."""
     if level not in LogLevels._value2member_map_:
         raise ValueError("")
     return level
 
 
 class LogLevels(Enum):
-    """Dumb c-like thing"""
+    """Dumb c-like thing."""
 
     DEBUG = 1
     INFO = 2
@@ -59,13 +58,14 @@ class LogLevels(Enum):
 
 
 class LogItem:
+    """_summary_."""
+
     def __init__(
         self,
         level: str,
         msg: str,
     ):
         """Struct for logging messages..."""
-
         self.ct = time.time()
         self.level = level
         self.levelname = LogLevels(level).name
@@ -74,10 +74,13 @@ class LogItem:
     def get_message(
         self,
     ):
+        """_summary_."""
         return str(self.msg)
 
 
 class FormatStyler:
+    """_summary_."""
+
     default_format = "{message}"
     asctime_format = "{asctime}"
     asctime_search = "{asctime"
@@ -92,10 +95,11 @@ class FormatStyler:
         self._defaults = defaults
 
     def uses_time(self):
+        """_summary_."""
         return self._fmt.find(self.asctime_search) >= 0
 
     def validate(self):
-        """Validate the input format, ensure it is the correct string formatting style"""
+        """Validate the input format, ensure correct string formatting style."""
         fields = set()
         try:
             for _, fieldname, spec, conversion in _str_formatter.parse(self._fmt):
@@ -122,6 +126,7 @@ class FormatStyler:
         return self._fmt.format(**values)
 
     def format(self, record):
+        """_summary_."""
         try:
             return self._format(record)
         except KeyError as e:
@@ -129,13 +134,12 @@ class FormatStyler:
 
 
 class MessageFormatter(object):
-    """_summary_"""
+    """_summary_."""
 
     _conv = time.localtime
 
     def __init__(self, fmt=None, datefmt=None, validate=True, *, defaults=None):
-        """_summary_"""
-
+        """_summary_."""
         self._style = FormatStyler(fmt, defaults=defaults)
         if validate:
             self._style.validate()
@@ -144,8 +148,7 @@ class MessageFormatter(object):
         self.datefmt = datefmt
 
     def format_time(self, record):
-        """_summary_"""
-
+        """_summary_."""
         ct = self._conv(record.ct)
         if datefmt := self.datefmt:
             s = time.strftime(datefmt, ct)
@@ -154,8 +157,7 @@ class MessageFormatter(object):
         return s
 
     def format_exception(self, ei):
-        """_summary_"""
-
+        """_summary_."""
         sio = io.StringIO()
         tb = ei[2]
         traceback.print_exception(ei[0], ei[1], tb, None, sio)
@@ -166,17 +168,15 @@ class MessageFormatter(object):
         return s
 
     def uses_time(self):
-        """
-        Check if the format uses the creation time of the record.
-        """
+        """Check if the format uses the creation time of the record."""
         return self._style.uses_time()
 
     def format_message(self, record):
+        """_summary_."""
         return self._style.format(record)
 
     def format(self, record):
-        """_summary_"""
-
+        """_summary_."""
         record.message = record.get_message()
         if self.uses_time():
             record.asctime = self.format_time(record)
@@ -190,12 +190,13 @@ _default_formatter = MessageFormatter(DEFAULT_FMT, DEFAULT_TIME_FMT)
 
 
 class BaseHandler:
+    """_summary_."""
+
     def __init__(
         self,
         level: int = 2,
     ):
-        """Base class for all stream handlers"""
-
+        """Create base class for all stream handlers."""
         self.level = _Level(level)
         self.msg_formatter = None
         self._name = None
@@ -210,8 +211,7 @@ class BaseHandler:
     def _add_global_stream_ref(
         self,
     ):
-        """_summary_"""
-
+        """_summary_."""
         _Global_and_Destruct_Lock.acquire()
         _handlers[self._name] = self
         _Global_and_Destruct_Lock.acquire()
@@ -220,31 +220,33 @@ class BaseHandler:
         self._lock = threading.RLock()
 
     def acquire(self):
+        """_summary_."""
         self._lock.acquire()
 
     def release(self):
+        """_summary_."""
         self._lock.release()
 
     def close(self):
-        """Close and clean up"""
-
+        """Close and clean up."""
         _Global_and_Destruct_Lock.acquire()
         self._closed = True
         del _handlers[self._name]
         _Global_and_Destruct_Lock.release()
 
     def emit(self):
+        """_summary_."""
         NotImplementedError()
 
     def flush(self):
+        """_summary_."""
         NotImplementedError()
 
     def format(
         self,
         record: LogItem,
     ):
-        """_summary_"""
-
+        """_summary_."""
         if self.msg_formatter:
             msg_fmt = self.msg_formatter
         else:
@@ -255,26 +257,24 @@ class BaseHandler:
         self,
         formatter: MessageFormatter,
     ):
-        """_summary_"""
-
+        """_summary_."""
         self.msg_formatter = formatter
 
 
 class Sender(BaseHandler):
-    def __init__(self, queue):
-        """_summary_"""
+    """_summary_."""
 
+    def __init__(self, queue):
+        """_summary_."""
         BaseHandler.__init__(self)
         self.q = queue
 
     def put(self, record):
-        """_summary_"""
-
+        """_summary_."""
         self.q.put_nowait(record)
 
     def emit(self, record):
         """Emit a record."""
-
         try:
             self.put(record)
         except Exception:
@@ -282,13 +282,15 @@ class Sender(BaseHandler):
 
 
 class CHandler(BaseHandler):
+    """_summary_."""
+
     def __init__(
         self,
         level: int = 2,
         stream: type = None,
         name: str = None,
     ):
-        """Output text to the console
+        """Output text to the console.
 
         Parameters
         ----------
@@ -299,7 +301,6 @@ class CHandler(BaseHandler):
         stream : type, optional
             _description_, by default None
         """
-
         BaseHandler.__init__(self, level=level)
 
         if stream is None:
@@ -319,21 +320,21 @@ class CHandler(BaseHandler):
         self._add_global_stream_ref()
 
     def emit(self, record):
-        """Emit a certain message"""
-
+        """Emit a certain message."""
         msg = self.format(record)
         self.stream.write(msg)
         self.flush()
 
     def flush(self):
-        """Dump cache to desired destination"""
-
+        """Dump cache to desired destination."""
         self.acquire()
         self.stream.flush()
         self.release()
 
 
 class FileHandler(CHandler):
+    """_summary_."""
+
     def __init__(
         self,
         level: int,
@@ -341,7 +342,7 @@ class FileHandler(CHandler):
         name: str = None,
         mode: str = "w",
     ):
-        """Output text to a file
+        """Output text to a file.
 
         Parameters
         ----------
@@ -352,7 +353,6 @@ class FileHandler(CHandler):
         name : str, optional
             _description_, by default None
         """
-
         if name is None:
             name = "log_default"
         self._filename = os.path.join(dst, f"{name}.log")
@@ -362,13 +362,11 @@ class FileHandler(CHandler):
         self,
         mode: str = "w",
     ):
-        """Open a txt file and return the handler"""
-
+        """Open a txt file and return the handler."""
         return open(self._filename, mode)
 
     def close(self):
-        """Close and clean up"""
-
+        """Close and clean up."""
         self.acquire()
         self.flush()
 
@@ -381,14 +379,16 @@ class FileHandler(CHandler):
 
 
 class DummyLog:
+    """_summary_."""
+
     def __init__(
         self,
         obj,
     ):
-        """Dummy class for tracking children
-        (actually funny..)
-        """
+        """Create dummy class for tracking children.
 
+        (actually funny..).
+        """
         self.child_tree = {obj: None}
 
     def __repr__(self):
@@ -399,8 +399,7 @@ class DummyLog:
         self,
         obj,
     ):
-        """Remove child if older one is present"""
-
+        """Remove child if older one is present."""
         _disinherit = [
             child for child in self.child_tree if child.name.startswith(obj.name)
         ]
@@ -409,19 +408,19 @@ class DummyLog:
             del self.child_tree[child]
 
     def add_to_chain(self, obj):
-        """_summary_"""
-
+        """_summary_."""
         self._check_succession(obj)
         self.child_tree[obj] = None
 
 
 class LogManager:
+    """_summary_."""
+
     def __init__(
         self,
         stuff=None,
     ):
-        """_summary_"""
-
+        """_summary_."""
         self.logger_tree = {}
 
     def _check_children(
@@ -429,8 +428,7 @@ class LogManager:
         obj: DummyLog,
         logger: "Log",
     ):
-        """Ensure the hierarchy is corrected downwards"""
-
+        """Ensure the hierarchy is corrected downwards."""
         name = logger.name
 
         for child in obj.child_tree.keys():
@@ -442,8 +440,7 @@ class LogManager:
                 child.parent = logger
 
     def _check_parents(self, logger: "Log"):
-        """Ensure the hierarchy is corrected upwards"""
-
+        """Ensure the hierarchy is corrected upwards."""
         name = logger.name
         parent = None
         parts = name.split(".")
@@ -474,8 +471,7 @@ class LogManager:
         self,
         logger: "Log",
     ):
-        """_summary_"""
-
+        """_summary_."""
         obj = None
         name = logger.name
 
@@ -520,7 +516,7 @@ class LogManager:
 def spawn_logger(
     name: str,
 ) -> "Log":
-    """Spawn a logger within a hierarchy
+    """Spawn a logger within a hierarchy.
 
     Parameters
     ----------
@@ -532,20 +528,21 @@ def spawn_logger(
     Log
         _description_
     """
-
     return Log(name)
 
 
 class Logmeta(type):
+    """_summary_."""
+
     def __call__(
         cls,
         name: str,
         log_level: int = 2,
     ):
-        """overriding default calling behaviour to accommodate
-        the check in the logger tree
-        """
+        """Override default calling behaviour.
 
+        To accommodate the check in the logger tree.
+        """
         obj = cls.__new__(cls, name, log_level)
         cls.__init__(obj, name, log_level)
 
@@ -561,11 +558,12 @@ class Logmeta(type):
 
 
 class Receiver:
+    """_summary_."""
+
     _sentinel = None
 
     def __init__(self, queue):
-        """_summary_"""
-
+        """_summary_."""
         self._t = None
         self._handlers = []
         self.count = 0
@@ -575,8 +573,7 @@ class Receiver:
         self,
         record: LogItem,
     ):
-        """_summary_"""
-
+        """_summary_."""
         for handler in self._handlers:
             if record.level >= handler.level:
                 handler.emit(record)
@@ -593,11 +590,13 @@ class Receiver:
                 break
 
     def close(self):
+        """_summary_."""
         self.q.put_nowait(self._sentinel)
         self._t.join()
         self._t = None
 
     def close_handlers(self):
+        """_summary_."""
         for handler in self._handlers:
             handler.close()
             handler = None
@@ -606,25 +605,24 @@ class Receiver:
         self,
         block: bool = True,
     ):
-        """_summary_"""
-
+        """_summary_."""
         return self.q.get(block=block)
 
     def add_handler(
         self,
         handler,
     ):
-        """_summary_
+        """_summary_.
 
         Parameters
         ----------
         handler : _type_
             _description_
         """
-
         self._handlers.append(handler)
 
     def start(self):
+        """_summary_."""
         self._t = t = threading.Thread(
             target=self._waiting,
             name="mp_logging_thread",
@@ -634,7 +632,7 @@ class Receiver:
 
 
 class Log(metaclass=Logmeta):
-    """_summary_"""
+    """_summary_."""
 
     manager = LogManager()
 
@@ -649,7 +647,8 @@ class Log(metaclass=Logmeta):
 
     #     res = Log.manager.fit_external_logger(obj)
     #     if res is not None:
-    #         warn(f"{name} is already in use -> returning currently known object", UserWarning)
+    #         warn(f"{name} is already in use -> \
+    # returning currently known object", UserWarning)
     #         obj = res
 
     #     return obj
@@ -659,7 +658,7 @@ class Log(metaclass=Logmeta):
         name: str,
         log_level: int = 2,
     ):
-        """Logging!
+        """Generate a logger.
 
         Parameters
         ----------
@@ -668,7 +667,6 @@ class Log(metaclass=Logmeta):
         log_level : int, optional
             _description_, by default 2
         """
-
         self._log_level = _Level(log_level)
         self.name = name
         self.bubble_up = True
@@ -689,8 +687,7 @@ class Log(metaclass=Logmeta):
         return f"<{self.__class__.__name__} object at {_mem_loc}>"
 
     def _log(self, record):
-        """Handles logging"""
-
+        """Handle logging."""
         obj = self
         while obj:
             for handler in obj._handlers:
@@ -704,7 +701,7 @@ class Log(metaclass=Logmeta):
                 obj = obj.parent
 
     def handleLog(log_m):
-        """A wrapper for logging messages"""
+        """Wrap logging messages."""
 
         def handle(self, *args, **kwargs):
             lvl, msg = log_m(self, *args, **kwargs)
@@ -717,7 +714,7 @@ class Log(metaclass=Logmeta):
         level: int = 2,
         name: str = None,
     ):
-        """Add an outlet to the console
+        """Add an outlet to the console.
 
         Parameters
         ----------
@@ -726,7 +723,6 @@ class Log(metaclass=Logmeta):
         name : str, optional
             _description_, by default None
         """
-
         self._handlers.append(CHandler(level=level, name=name))
 
     def add_file_handler(
@@ -735,7 +731,7 @@ class Log(metaclass=Logmeta):
         level: int = 2,
         filename: str = None,
     ):
-        """Add an outlet to a file
+        """Add an outlet to a file.
 
         Parameters
         ----------
@@ -746,11 +742,11 @@ class Log(metaclass=Logmeta):
         filename : str, optional
             _description_, by default None
         """
-
         self._handlers.append(FileHandler(dst=dst, level=level, name=filename))
 
     @property
     def log_level(self):
+        """_summary_."""
         return self._log_level
 
     @log_level.setter
@@ -762,37 +758,31 @@ class Log(metaclass=Logmeta):
 
     @handleLog
     def debug(self, msg: str):
-        """_summary_"""
-
+        """_summary_."""
         return 1, msg
 
     @handleLog
     def info(self, msg: str):
-        """_summary_"""
-
+        """_summary_."""
         return 2, msg
 
     @handleLog
     def warning(self, msg: str):
-        """_summary_"""
-
+        """_summary_."""
         return 3, msg
 
     @handleLog
     def error(self, msg: str):
-        """_summary_"""
-
+        """_summary_."""
         return 4, msg
 
     @handleLog
     def dead(self, msg: str):
-        """_summary_"""
-
+        """_summary_."""
         return 5, msg
 
     def direct(self, msg):
-        """_summary_"""
-
+        """_summary_."""
         self._log()
 
 
@@ -801,7 +791,7 @@ def setup_default_log(
     log_level: int,
     dst: str,
 ) -> Log:
-    """_summary_
+    """_summary_.
 
     Parameters
     ----------
@@ -843,7 +833,7 @@ def setup_mp_log(
     log_level: int,
     dst: str = None,
 ):
-    """_summary_
+    """_summary_.
 
     Parameters
     ----------
@@ -854,7 +844,6 @@ def setup_mp_log(
     dst : str, optional
         _description_, by default None
     """
-
     obj = Receiver(queue)
     h = FileHandler(level=log_level, dst=dst, name=name)
     h.set_formatter(MessageFormatter("{asctime:20s}{message}"))

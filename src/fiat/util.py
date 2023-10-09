@@ -1,15 +1,18 @@
+"""Base FIAT utility."""
+
 import ctypes
 import math
 import os
 import platform
 import re
-import regex
 import sys
 from collections.abc import MutableMapping
 from gc import get_referents
-from osgeo import gdal
 from pathlib import Path
-from types import ModuleType, FunctionType
+from types import FunctionType, ModuleType
+
+import regex
+from osgeo import gdal
 
 BLACKLIST = type, ModuleType, FunctionType
 FILE_ATTRIBUTE_HIDDEN = 0x02
@@ -43,11 +46,11 @@ def _read_gridsource_info(
     gr: gdal.Dataset,
     format: str = "json",
 ):
-    """_summary_
-    Thanks to:
-    https://stackoverflow.com/questions/72059815/how-to-retrieve-all-variable-names-within-a-netcdf-using-gdal
-    """
+    """_summary_.
 
+    Thanks to:
+    https://stackoverflow.com/questions/72059815/how-to-retrieve-all-variable-names-within-a-netcdf-using-gdal.
+    """
     info = gdal.Info(gr, options=gdal.InfoOptions(format=format))
     return info
 
@@ -55,8 +58,7 @@ def _read_gridsource_info(
 def _read_gridsrouce_layers(
     gr: gdal.Dataset,
 ):
-    """_summary_"""
-
+    """_summary_."""
     sd = gr.GetSubDatasets()
 
     out = {}
@@ -72,11 +74,11 @@ def _read_gridsrouce_layers(
 def _read_gridsource_layers_from_info(
     info: dict,
 ):
-    """_summary_
-    Thanks to:
-    https://stackoverflow.com/questions/72059815/how-to-retrieve-all-variable-names-within-a-netcdf-using-gdal
-    """
+    """_summary_.
 
+    Thanks to:
+    https://stackoverflow.com/questions/72059815/how-to-retrieve-all-variable-names-within-a-netcdf-using-gdal.
+    """
     _sub_data_keys = [x for x in info["metadata"]["SUBDATASETS"].keys() if "_NAME" in x]
     _sub_data_vars = [info["metadata"]["SUBDATASETS"][x] for x in _sub_data_keys]
 
@@ -84,8 +86,7 @@ def _read_gridsource_layers_from_info(
 
 
 def _create_geom_driver_map():
-    """_summary_"""
-
+    """_summary_."""
     geom_drivers = {}
     _c = gdal.GetDriverCount()
 
@@ -118,8 +119,7 @@ GEOM_DRIVER_MAP[""] = "Memory"
 
 
 def _create_grid_driver_map():
-    """_summary_"""
-
+    """_summary_."""
     grid_drivers = {}
     _c = gdal.GetDriverCount()
 
@@ -152,7 +152,7 @@ GRID_DRIVER_MAP[""] = "MEM"
 
 
 def _text_chunk_gen(
-    h: "FileHandler",
+    h: object,
     chunk_size: int = 100000,
 ):
     _res = b""
@@ -175,17 +175,19 @@ def _text_chunk_gen(
 
 
 class DoNotCall(type):
+    """_summary_."""
+
     def __call__(
         self,
         *args,
         **kwargs,
     ):
+        """_summary_."""
         raise AttributeError("Cannot initialize directly, needs a contructor")
 
 
 def replace_empty(l: list):
-    """_summary_"""
-
+    """_summary_."""
     return ["nan" if not e else e.decode() for e in l]
 
 
@@ -193,9 +195,8 @@ def deter_type(
     e: bytes,
     l: int,
 ):
-    """_summary_"""
-
-    f_p = rf"((^(-)?\d+(\.\d*)?(E(\+|\-)?\d+)?)$|^$)(\n((^(-)?\d+(\.\d*)?(E(\+|\-)?\d+)?)$|^$)){{{l}}}"
+    """_summary_."""
+    f_p = rf"((^(-)?\d+(\.\d*)?(E(\+|\-)?\d+)?)$|^$)(\n((^(-)?\d+(\.\d*)?(E(\+|\-)?\d+)?)$|^$)){{{l}}}"  # noqa: E501
     f_c = re.compile(bytes(f_p, "utf-8"), re.MULTILINE | re.IGNORECASE)
 
     i_p = rf"((^(-)?\d+(E(\+|\-)?\d+)?)$)(\n((^(-)?\d+(E(\+|\-)?\d+)?)$)){{{l}}}"
@@ -212,15 +213,13 @@ def deter_dec(
     e: float,
     base: float = 10.0,
 ):
-    """_summary_"""
-
+    """_summary_."""
     ndec = math.floor(math.log(e) / math.log(base))
     return abs(ndec)
 
 
 def mean(values: list):
-    """Very simple python mean"""
-
+    """Very simple python mean."""
     return sum(values) / len(values)
 
 
@@ -234,21 +233,22 @@ def _flatten_dict_gen(d, parent_key, sep):
 
 
 def flatten_dict(d: MutableMapping, parent_key: str = "", sep: str = "."):
-    """Flatten a dictionary
+    """Flatten a dictionary.
+
     Thanks to this post:
-    (https://www.freecodecamp.org/news/how-to-flatten-a-dictionary-in-python-in-4-different-ways/)
+    (https://www.freecodecamp.org/news/how-to-flatten-a-dictionary-in-python-in-4-different-ways/).
     """
     return dict(_flatten_dict_gen(d, parent_key, sep))
 
 
 def object_size(obj):
-    """Actual size of an object (bit overestimated)
+    """Calculate the actual size of an object (bit overestimated).
+
     Thanks to this post on stackoverflow:
-    (https://stackoverflow.com/questions/449560/how-do-i-determine-the-size-of-an-object-in-python)
+    (https://stackoverflow.com/questions/449560/how-do-i-determine-the-size-of-an-object-in-python).
 
     Just for internal and debugging uses
     """
-
     if isinstance(obj, BLACKLIST):
         raise TypeError("getsize() does not take argument of type: " + str(type(obj)))
 
@@ -271,14 +271,13 @@ def object_size(obj):
 def generic_folder_check(
     path: Path | str,
 ):
-    """_summary_
+    """_summary_.
 
     Parameters
     ----------
     path : Path | str
         _description_
     """
-
     path = Path(path)
     if not path.exists():
         path.mkdir(parents=True)
@@ -287,14 +286,13 @@ def generic_folder_check(
 def create_hidden_folder(
     path: Path | str,
 ):
-    """_summary_
+    """_summary_.
 
     Parameters
     ----------
     path : Path | str
         _description_
     """
-
     path = Path(path)
     if not path.stem.startswith("."):
         path = Path(path.parent, f".{path.stem}")
@@ -314,7 +312,7 @@ def generic_path_check(
     path: str,
     root: str,
 ) -> Path:
-    """_summary_
+    """_summary_.
 
     Parameters
     ----------
@@ -333,7 +331,6 @@ def generic_path_check(
     FileNotFoundError
         _description_
     """
-
     path = Path(path)
     if not path.is_absolute():
         path = Path(root, path)

@@ -1,11 +1,12 @@
+"""Custom CRS define."""
+
 from osgeo import osr
 
 
 def get_srs_repr(
     srs: osr.SpatialReference,
 ):
-    """_summary_"""
-
+    """_summary_."""
     _auth_c = srs.GetAuthorityCode(None)
     _auth_n = srs.GetAuthorityName(None)
 
@@ -16,6 +17,8 @@ def get_srs_repr(
 
 
 class CRS:
+    """_summary_."""
+
     def __init__(
         self,
         srs: osr.SpatialReference,
@@ -33,4 +36,5 @@ class CRS:
         cls,
         user_input: str,
     ):
+        """_summary_."""
         return cls()

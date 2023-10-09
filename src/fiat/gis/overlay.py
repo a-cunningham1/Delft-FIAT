@@ -1,16 +1,18 @@
-from fiat.gis.util import world2pixel, pixel2world
-from fiat.io import Grid
+"""Combined vector and raster methods for FIAT."""
 
-from osgeo import gdal, ogr
+from osgeo import gdal, ogr, osr
+
+from fiat.gis.util import pixel2world, world2pixel
+from fiat.io import Grid
 
 
 def clip(
     band: Grid,
-    srs: "osr.SpatialReference",
+    srs: osr.SpatialReference,
     gtf: tuple,
     ft: ogr.Feature,
-) -> "numpy.array":
-    """_summary_
+) -> object:
+    """_summary_.
 
     Parameters
     ----------
@@ -26,7 +28,6 @@ def clip(
     numpy.array
         _description_
     """
-
     geom = ft.GetGeometryRef()
 
     minX, maxX, minY, maxY = geom.GetEnvelope()
@@ -69,12 +70,12 @@ def clip(
 
 def clip_weighted(
     band: gdal.Band,
-    srs: "osr.SpatialReference",
+    srs: osr.SpatialReference,
     gtf: tuple,
     ft: ogr.Feature,
     upscale: int = 1,
-) -> "numpy.array":
-    """_summary_
+) -> object:
+    """_summary_.
 
     Parameters
     ----------
@@ -90,7 +91,6 @@ def clip_weighted(
     numpy.array
         _description_
     """
-
     geom = ft.GetGeometryRef()
 
     minX, maxX, minY, maxY = geom.GetEnvelope()
@@ -137,6 +137,7 @@ def clip_weighted(
 def mask(
     driver: str,
 ):
+    """_summary_."""
     pass
 
 
@@ -144,8 +145,8 @@ def pin(
     band: Grid,
     gtf: tuple,
     point: tuple,
-) -> "numpy.array":
-    """_summary_
+) -> object:
+    """_summary_.
 
     Parameters
     ----------
@@ -161,7 +162,6 @@ def pin(
     numpy.array
         _description_
     """
-
     X, Y = world2pixel(gtf, *point)
 
     value = band[X, Y, 1, 1]

@@ -1,22 +1,25 @@
+"""Main entry point code-wise."""
+
+from pathlib import Path
+
 from fiat.cfg import ConfigReader
 from fiat.log import spawn_logger
 from fiat.models import GeomModel, GridModel
-
-from pathlib import Path
 
 logger = spawn_logger("fiat.main")
 
 
 class FIAT:
+    """_summary_."""
+
     def __init__(self, cfg: ConfigReader):
-        """_summary_
+        """_summary_.
 
         Parameters
         ----------
         cfg : ConfigReader
             _description_
         """
-
         self.cfg = cfg
 
     @classmethod
@@ -24,8 +27,7 @@ class FIAT:
         cls,
         file: str,
     ):
-        """_summary_"""
-
+        """_summary_."""
         file = Path(file)
         if not Path(file).is_absolute():
             file = Path(Path.cwd(), file)
@@ -34,8 +36,7 @@ class FIAT:
         return cls(cfg)
 
     def run(self):
-        """_summary_"""
-
+        """_summary_."""
         _models = self.cfg.get_model_type()
         if _models[0]:
             logger.info("Setting up geom model..")

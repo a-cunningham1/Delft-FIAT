@@ -1,9 +1,8 @@
-from fiat.cfg import ConfigReader
-
-import pytest
 from pathlib import Path
+
+from fiat.cfg import ConfigReader
 
 
 def test_settings():
-    c = ConfigReader(Path(Path.cwd(), ".testdata", "settings.toml"))
+    ConfigReader(Path(Path.cwd(), ".testdata", "settings.toml"))
     pass

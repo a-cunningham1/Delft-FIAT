@@ -1,7 +1,7 @@
-from fiat.log import CHandler, Log, MessageFormatter, spawn_logger
-
 import io
 from pathlib import Path
+
+from fiat.log import CHandler, Log, MessageFormatter, spawn_logger
 
 
 def test_stream(log1, log2):

@@ -1,11 +1,10 @@
+"""Util for cli."""
+
 from pathlib import Path
 
 
 def file_path_check(path):
-    """this is a cli friendly version of the method
-    'generic_path_check' from fiat.util
-    """
-
+    """Cli friendly version of path checking."""
     root = Path.cwd()
     path = Path(path)
     if not path.is_absolute():

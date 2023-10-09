@@ -1,5 +1,5 @@
-.. mdinclude:: ../../README.md 
-   
+.. mdinclude:: ../../README.md
+
 .. toctree::
    :titlesonly:
    :hidden:

@@ -1,11 +1,13 @@
-from fiat.log import spawn_logger, setup_default_log
-from fiat.util import NEWLINE_CHAR, deter_type, generic_path_check
+"""Checks for the data of FIAT."""
 
 import fnmatch
 import sys
-from osgeo import gdal
-from osgeo import osr
 from pathlib import Path
+
+from osgeo import osr
+
+from fiat.log import setup_default_log, spawn_logger
+from fiat.util import deter_type
 
 logger = spawn_logger("fiat.checks")
 
@@ -16,8 +18,7 @@ def check_config_entries(
     path: Path,
     parent: Path,
 ):
-    """_summary_"""
-
+    """_summary_."""
     _man_cols = [
         "output.path",
         "hazard.file",
@@ -40,10 +41,9 @@ def check_config_entries(
 
 
 def check_config_geom(
-    cfg: "ConfigReader",
+    cfg: object,
 ):
-    """_summary_"""
-
+    """_summary_."""
     _req_fields = [
         "exposure.csv.file",
         "exposure.geom.crs",
@@ -59,7 +59,8 @@ def check_config_geom(
     if not all(_check):
         _missing = [item for item, b in zip(_req_fields, _check) if not b]
         logger.warning(
-            f"Info for the geometry model was found, but not all. {_missing} was/ were missing"
+            f"Info for the geometry model was found, but not all. \
+{_missing} was/ were missing"
         )
         return False
 
@@ -67,10 +68,9 @@ def check_config_geom(
 
 
 def check_config_grid(
-    cfg: "ConfigReader",
+    cfg: object,
 ):
-    """_summary_"""
-
+    """_summary_."""
     _req_fields = [
         "exposure.grid.crs",
         "exposure.grid.file",
@@ -83,7 +83,8 @@ def check_config_grid(
     if not all(_check):
         _missing = [item for item, b in zip(_req_fields, _check) if not b]
         logger.warning(
-            f"Info for the grid (raster) model was found, but not all. {_missing} was/ were missing"
+            f"Info for the grid (raster) model was found, but not all. \
+{_missing} was/ were missing"
         )
         return False
 
@@ -95,8 +96,7 @@ def check_global_crs(
     fname: str,
     fname_haz: str,
 ):
-    """_summary_"""
-
+    """_summary_."""
     if srs is None:
         logger.error("Could not infer the srs from '{}', nor from '{}'")
         logger.dead("Exiting...")
@@ -108,8 +108,7 @@ def check_grid_exact(
     haz,
     exp,
 ):
-    """_summary_"""
-
+    """_summary_."""
     if not check_vs_srs(
         haz.get_srs(),
         exp.get_srs(),
@@ -134,11 +133,11 @@ def check_internal_srs(
     fname: str,
     cfg_srs: osr.SpatialReference = None,
 ):
-    """_summary_"""
-
+    """_summary_."""
     if source_srs is None and cfg_srs is None:
         logger.error(
-            f"Coordinate reference system is unknown for '{fname}', cannot safely continue"
+            f"Coordinate reference system is unknown for '{fname}', \
+cannot safely continue"
         )
         logger.dead("Exiting...")
         sys.exit()
@@ -155,8 +154,7 @@ def check_geom_extent(
     gm_bounds: tuple | list,
     gr_bounds: tuple | list,
 ):
-    """_summary_"""
-
+    """_summary_."""
     _checks = (
         gm_bounds[0] > gr_bounds[0],
         gm_bounds[1] < gr_bounds[1],
@@ -173,8 +171,7 @@ def check_vs_srs(
     global_srs: osr.SpatialReference,
     source_srs: osr.SpatialReference,
 ):
-    """_summary_"""
-
+    """_summary_."""
     if not (
         global_srs.IsSame(source_srs)
         or global_srs.ExportToProj4() == source_srs.ExportToProj4()
@@ -191,8 +188,7 @@ def check_hazard_band_names(
     rp: list,
     count: int,
 ):
-    """_summary_"""
-
+    """_summary_."""
     if risk:
         return [f"{n}Y" for n in rp]
 
@@ -207,7 +203,7 @@ def check_hazard_rp_iden(
     rp_cfg: list,
     path: Path,
 ):
-    """_summary_"""
+    """_summary_."""
     l = len(bnames)
 
     bn_str = "\n".join(bnames).encode()
@@ -234,8 +230,7 @@ def check_hazard_subsets(
     sub: dict,
     path: Path,
 ):
-    """_summary_"""
-
+    """_summary_."""
     if sub is not None:
         keys = ", ".join(list(sub.keys()))
         logger.error(
@@ -250,8 +245,7 @@ multiple datasets (subsets)"""
 def check_exp_columns(
     columns: tuple | list,
 ):
-    """_summary_"""
-
+    """_summary_."""
     _man_columns = [
         "Object ID",
         "Ground Elevation",
@@ -286,7 +280,8 @@ def check_exp_columns(
     if not all(_check):
         _missing = [item for item, b in zip(dmg_suffix, _check) if not b]
         logger.warning(
-            f"No every damage function has a corresponding maximum potential damage: {_missing}"
+            f"No every damage function has a corresponding \
+maximum potential damage: {_missing}"
         )
 
 
@@ -294,8 +289,7 @@ def check_exp_grid_dmfs(
     exp: object,
     dmfs: tuple | list,
 ):
-    """_summary_"""
-
+    """_summary_."""
     _ef = [_i.get_metadata_item("damage_function") for _i in exp]
     _i = None
 

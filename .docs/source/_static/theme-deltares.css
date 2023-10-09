@@ -5,10 +5,10 @@ html[data-theme="light"] {
     background: white;
     /* NOTE: added after pydata v0.9 */
     --pst-color-primary: #080c80 !important;
-    
+
     /* hyperlinks */
     --pst-color-link: rgb(13, 56, 224);
-    
+
     /* panels */
     --pst-color-preformatted-border: #080c80 !important;
     --pst-color-panel-background: #f0f0f075;
@@ -19,7 +19,7 @@ html[data-theme="light"] {
     --pst-color-navbar-link-hover: #fff;
     --pst-color-navbar-link-active: #fff;
 
-    
+
     /* sphinx design */
     /* NOTE: does not work since v0.9 */
     --sd-color-card-border-hover: #080c80;
@@ -33,10 +33,10 @@ html[data-theme="dark"] {
     background: black;
     /* NOTE: added after pydata v0.9 */
     --pst-color-primary: rgb(237, 237, 255) !important;
-    
+
     /* hyperlinks */
     --pst-color-link: rgb(237, 237, 255);
-    
+
     /* panels */
     --pst-color-preformatted-border: rgb(237, 237, 255) !important;
     --pst-color-panel-background: #f0f0f075;
@@ -47,7 +47,7 @@ html[data-theme="dark"] {
     --pst-color-navbar-link-hover: #fff;
     --pst-color-navbar-link-active: #fff;
 
-    
+
     /* sphinx design */
     /* NOTE: does not work since v0.9 */
     --sd-color-card-border-hover: #080c80;
@@ -64,7 +64,7 @@ img.icon-link-image {
 @media (prefers-color-scheme: dark){
     img.icon-link-image {
         background-color: white;
-    } 
+    }
 }
 
 

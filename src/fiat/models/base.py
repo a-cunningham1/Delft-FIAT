@@ -1,3 +1,12 @@
+"""Base model of FIAT."""
+
+from abc import ABCMeta, abstractmethod
+from multiprocessing import Manager
+from os import cpu_count
+from pathlib import Path
+
+from osgeo import osr
+
 from fiat.check import (
     check_global_crs,
     check_hazard_band_names,
@@ -13,22 +22,17 @@ from fiat.log import spawn_logger
 from fiat.models.calc import calc_rp_coef
 from fiat.util import deter_dec
 
-from abc import ABCMeta, abstractmethod
-from os import cpu_count
-from multiprocessing import Manager
-from osgeo import osr
-from pathlib import Path
-
 logger = spawn_logger("fiat.model")
 
 
 class BaseModel(metaclass=ABCMeta):
+    """_summary_."""
+
     def __init__(
         self,
-        cfg: "ConfigReader",
+        cfg: object,
     ):
-        """_summary_"""
-
+        """_summary_."""
         self.cfg = cfg
         logger.info(f"Using settings from '{self.cfg.filepath}'")
 
@@ -68,8 +72,7 @@ class BaseModel(metaclass=ABCMeta):
         pass
 
     def _read_hazard_grid(self):
-        """_summary_"""
-
+        """_summary_."""
         path = self.cfg.get("hazard.file")
         logger.info(f"Reading hazard data ('{path.name}')")
         # Set the extra arguments from the settings file
@@ -105,8 +108,9 @@ from '{self.cfg.filepath.name}' ('{get_srs_repr(_int_srs)}')"
         # check if file srs is the same as the model srs
         if not check_vs_srs(self.srs, data.get_srs()):
             logger.warning(
-                f"Spatial reference of '{path.name}' ('{get_srs_repr(data.get_srs())}') \
-does not match the model spatial reference ('{get_srs_repr(self.srs)}')"
+                f"Spatial reference of '{path.name}' \
+('{get_srs_repr(data.get_srs())}') does not match the \
+model spatial reference ('{get_srs_repr(self.srs)}')"
             )
             logger.info(f"Reprojecting '{path.name}' to '{get_srs_repr(self.srs)}'")
             _resalg = 0
@@ -169,8 +173,7 @@ using a step size of: {self._vul_step_size}"
         self.vulnerability_data = data
 
     def _set_max_threads(self):
-        """_summary_"""
-
+        """_summary_."""
         self.max_threads = cpu_count()
         _max_threads = self.cfg.get("global.max_threads")
         if _max_threads is not None:
@@ -179,8 +182,7 @@ using a step size of: {self._vul_step_size}"
         logger.info(f"Maximum number of threads: {self.max_threads}")
 
     def _set_model_srs(self):
-        """_summary_"""
-
+        """_summary_."""
         _srs = self.cfg.get("global.crs")
         path = self.cfg.get("hazard.file")
         if _srs is not None:
@@ -215,4 +217,5 @@ using a step size of: {self._vul_step_size}"
 
     @abstractmethod
     def run():
+        """_summary_."""
         pass

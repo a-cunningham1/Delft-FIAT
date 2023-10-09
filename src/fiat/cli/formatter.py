@@ -1,9 +1,11 @@
-from argparse import _MutuallyExclusiveGroup, Action, HelpFormatter, PARSER
+"""Formatter for the cli."""
+
+from argparse import PARSER, Action, HelpFormatter, _MutuallyExclusiveGroup
 from collections.abc import Iterable
 
 
 class MainHelpFormatter(HelpFormatter):
-    """_summary_"""
+    """_summary_."""
 
     def add_usage(
         self,
@@ -12,9 +14,11 @@ class MainHelpFormatter(HelpFormatter):
         groups: Iterable[_MutuallyExclusiveGroup],
         prefix: str | None = None,
     ) -> None:
+        """_summary_."""
         return super().add_usage(usage, actions, groups, prefix)
 
-    # def _format_usage(self, usage: str | None, actions: Iterable[Action], groups: Iterable[_MutuallyExclusiveGroup], prefix: str | None) -> str:
+    # def _format_usage(self, usage: str | None, actions: Iterable[Action],
+    # groups: Iterable[_MutuallyExclusiveGroup], prefix: str | None) -> str:
     #     print(usage)
     #     return super()._format_usage(usage, actions, groups, prefix)
 
@@ -25,6 +29,7 @@ class MainHelpFormatter(HelpFormatter):
         return parts
 
     def start_section(self, heading):
+        """_summary_."""
         if heading == "options":
             heading = "Options"
         return super().start_section(heading)
