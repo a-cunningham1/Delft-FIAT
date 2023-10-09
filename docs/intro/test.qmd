@@ -1,0 +1,10 @@
+---
+filters:
+  - section-bibliographies
+section-bibs-bibliography: references.bib
+bibliography: references.bib
+nocite: |
+  @hess-*
+---
+
+test @hess-19-2911-2015

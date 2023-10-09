@@ -1,0 +1,32 @@
+---
+title: "User guide"
+---
+
+::: column-page-inset-right
+{{< include /_static/listing_code.html >}}
+```{=html}
+
+<ul id="index-chooser" class="nav nav-tabs" role="tablist">
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" href="info/requirements.html">
+      <i class="bi bi-file-bar-graph"></i>Data
+    </a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" href="running.html">
+      <i class="bi bi-graph-up"></i>Examples
+    </a>
+  </li>
+  <li class="nav-item" role="presentation">
+    <a class="nav-link" href="advanced.html">
+      <i class="bi bi-person-gear"></i>Advanced options
+    </a>
+  </li>
+</ul>
+
+```
+:::
+
+## General info concerning this topic
+
+write some general stuff here for the reader

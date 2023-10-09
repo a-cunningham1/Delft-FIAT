@@ -1,0 +1,7 @@
+---
+title: Advanced options
+---
+
+# List more advanced user options
+
+some stuf..

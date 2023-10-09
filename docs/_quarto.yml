@@ -1,0 +1,85 @@
+project:
+  type: website
+
+website:
+  title: "Delft FIAT"
+  favicon: _static/logo.png
+  navbar:
+    logo: _static/logo.png
+    search: false
+    pinned: true
+    left:
+      - getting_started/index.qmd
+      - setup_guide/index.qmd
+      - user_guide/index.qmd
+      - api/index.qmd
+      - developments/index.qmd
+    right:
+      - icon: github
+        href: https://github.com/Deltares/Delft-FIAT
+        aria-label: GitHub
+
+  sidebar:
+    - title: "Getting started"
+      collapse-level: 3
+      contents:
+        - getting_started/index.qmd
+        - getting_started/faq.qmd
+    - title: "Setup guide"
+      collapse-level: 3
+      contents:
+        - setup_guide/index.qmd
+        - section: "General setup"
+          contents:
+            - "setup_guide/general/conda.qmd"
+        - section: "FIAT kernel/ package"
+          contents:
+            - setup_guide/kernel/installation.qmd
+            - setup_guide/kernel/application.qmd
+            - setup_guide/kernel/linux.qmd
+    - title: "User guide"
+      collapse-level: 3
+      contents:
+        - user_guide/index.qmd
+        - section: "Data"
+          contents:
+            - user_guide/data/settings.qmd
+            - user_guide/data/hazard.qmd
+            - user_guide/data/exposure.qmd
+            - user_guide/data/vulnerability.qmd
+        - section: "Examples"
+          contents:
+            - user_guide/examples.qmd
+        - user_guide/advanced.qmd
+    - title: "API Reference"
+      collapse-level: 3
+      contents:
+        - api/index.qmd
+    - title: "Developments"
+      collapse-level: 3
+      contents:
+        - developments/index.qmd
+        - developments/changelog.qmd
+        - developments/roadmap.qmd
+        - developments/guide.qmd
+        - developments/env.qmd
+
+format:
+  html:
+    theme:
+      light: [cosmo, _static/theme-light.scss]
+      dark: [cosmo, _static/theme-dark.scss]
+    css: _static/styles.css
+    toc: true
+
+# bibliography: references.bib
+# citeproc: false
+
+number-sections: false
+
+filters:
+   - include-code-files
+  #  - section-bibliographies
+
+execute:
+  freeze: auto
