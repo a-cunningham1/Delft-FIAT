@@ -1,5 +1,6 @@
 from fiat.log import Log
 
+import copy
 import gc
 import math
 import os
@@ -212,6 +213,7 @@ def create_exposure_grid():
     for x, y in product(oneD, oneD):
         data[x, y] = 2000 + ((x + y) * 100)
     band.WriteArray(data)
+    band.SetMetadataItem("damage_function", "struct_1")
 
     band.FlushCache()
     src.FlushCache()
@@ -320,13 +322,11 @@ def create_settings():
             "elevation_reference": "DEM",
         },
         "exposure": {
-            "grid": {
-                "file": "exposure/spatial.nc",
-                "crs": "EPSG:4326",
+            "csv": {
+                "file": "exposure/spatial.csv",
             },
             "geom": {
                 "file1": "exposure/spatial.gpkg",
-                "csv": "exposure/spatial.csv",
                 "crs": "EPSG:4326",
             },
         },
@@ -345,20 +345,58 @@ def create_settings():
     with open(Path(p, "settings.toml"), "wb") as f:
         tomli_w.dump(doc, f)
 
-    doc["output"]["path"] = "output/event_2g"
-    doc["output"]["geom"]["name2"] = "spatial2.gpkg"
-    doc["exposure"]["geom"]["file2"] = "exposure/spatial2.gpkg"
+    doc2g = copy.deepcopy(doc)
+    doc2g["output"]["path"] = "output/event_2g"
+    doc2g["output"]["geom"]["name2"] = "spatial2.gpkg"
+    doc2g["exposure"]["geom"]["file2"] = "exposure/spatial2.gpkg"
 
     with open(Path(p, "settings_2g.toml"), "wb") as f:
-        tomli_w.dump(doc, f)
+        tomli_w.dump(doc2g, f)
 
-    doc["output"]["path"] = "output/event_missing"
-    del doc["output"]["geom"]["name2"]
-    del doc["exposure"]["geom"]["file2"]
-    doc["output"]["geom"]["name1"] = "spatial_missing.gpkg"
-    doc["exposure"]["geom"]["file1"] = "exposure/spatial_missing.gpkg"
+    doc_m = copy.deepcopy(doc)
+    doc_m["output"]["path"] = "output/event_missing"
+    doc_m["output"]["geom"]["name1"] = "spatial_missing.gpkg"
+    doc_m["exposure"]["geom"]["file1"] = "exposure/spatial_missing.gpkg"
 
     with open(Path(p, "settings_missing.toml"), "wb") as f:
+        tomli_w.dump(doc_m, f)
+
+
+def create_settings_grid():
+    doc = {
+        "global": {
+            "crs": "EPSG:4326",
+            "keep_temp_files": True,
+        },
+        "output": {
+            "path": "output/event",
+            "grid": {"name": "output.nc"},
+        },
+        "hazard": {
+            "file": "hazard/event_map.nc",
+            "crs": "EPSG:4326",
+            "risk": False,
+            "elevation_reference": "DEM",
+        },
+        "exposure": {
+            "grid": {
+                "file": "exposure/spatial.nc",
+                "crs": "EPSG:4326",
+            },
+        },
+        "vulnerability": {
+            "file": "vulnerability/vulnerability_curves.csv",
+            "step_size": 0.01,
+        },
+        "categorical_bins": {
+            "low": 0.25,
+            "medium-low": 0.5,
+            "medium-high": 0.75,
+            "high": 1,
+        },
+    }
+
+    with open(Path(p, "settings_grid.toml"), "wb") as f:
         tomli_w.dump(doc, f)
 
 
@@ -387,13 +425,11 @@ def create_settings_risk():
             },
         },
         "exposure": {
-            "grid": {
-                "file": "exposure/spatial.nc",
-                "crs": "EPSG:4326",
+            "csv": {
+                "file": "exposure/spatial.csv",
             },
             "geom": {
                 "file1": "exposure/spatial.gpkg",
-                "csv": "exposure/spatial.csv",
                 "crs": "EPSG:4326",
             },
         },
@@ -449,6 +485,7 @@ if __name__ == "__main__":
     create_hazard_map()
     create_risk_map()
     create_settings()
+    create_settings_grid()
     create_settings_risk()
     create_vulnerability()
     gc.collect()

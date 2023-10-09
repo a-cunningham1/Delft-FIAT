@@ -1,6 +1,7 @@
 from fiat.log import spawn_logger, setup_default_log
 from fiat.util import NEWLINE_CHAR, deter_type, generic_path_check
 
+import fnmatch
 import sys
 from osgeo import gdal
 from osgeo import osr
@@ -38,6 +39,57 @@ def check_config_entries(
         sys.exit()
 
 
+def check_config_geom(
+    cfg: "ConfigReader",
+):
+    """_summary_"""
+
+    _req_fields = [
+        "exposure.csv.file",
+        "exposure.geom.crs",
+        "exposure.geom.file1",
+    ]
+    _all_geom = [
+        item for item in cfg if item.startswith(("exposure.geom", "exposure.csv"))
+    ]
+    if len(_all_geom) == 0:
+        return False
+
+    _check = [item in _all_geom for item in _req_fields]
+    if not all(_check):
+        _missing = [item for item, b in zip(_req_fields, _check) if not b]
+        logger.warning(
+            f"Info for the geometry model was found, but not all. {_missing} was/ were missing"
+        )
+        return False
+
+    return True
+
+
+def check_config_grid(
+    cfg: "ConfigReader",
+):
+    """_summary_"""
+
+    _req_fields = [
+        "exposure.grid.crs",
+        "exposure.grid.file",
+    ]
+    _all_grid = [item for item in cfg if item.startswith("exposure.grid")]
+    if len(_all_grid) == 0:
+        return False
+
+    _check = [item in _all_grid for item in _req_fields]
+    if not all(_check):
+        _missing = [item for item, b in zip(_req_fields, _check) if not b]
+        logger.warning(
+            f"Info for the grid (raster) model was found, but not all. {_missing} was/ were missing"
+        )
+        return False
+
+    return True
+
+
 def check_global_crs(
     srs: osr.SpatialReference,
     fname: str,
@@ -52,6 +104,31 @@ def check_global_crs(
 
 
 ## GIS
+def check_grid_exact(
+    haz,
+    exp,
+):
+    """_summary_"""
+
+    if not check_vs_srs(
+        haz.get_srs(),
+        exp.get_srs(),
+    ):
+        logger.error("")
+        sys.exit()
+
+    gtf1 = [round(_n, 2) for _n in haz.get_geotransform()]
+    gtf2 = [round(_n, 2) for _n in exp.get_geotransform()]
+
+    if gtf1 != gtf2:
+        logger.error("")
+        sys.exit()
+
+    if haz.shape != exp.shape:
+        logger.error("")
+        sys.exit()
+
+
 def check_internal_srs(
     source_srs: osr.SpatialReference,
     fname: str,
@@ -170,6 +247,65 @@ multiple datasets (subsets)"""
 
 
 ## Exposure
+def check_exp_columns(
+    columns: tuple | list,
+):
+    """_summary_"""
+
+    _man_columns = [
+        "Object ID",
+        "Ground Elevation",
+        "Ground Floor Height",
+    ]
+
+    _check = [item in columns for item in _man_columns]
+    if not all(_check):
+        _missing = [item for item, b in zip(_man_columns, _check) if not b]
+        logger.error(f"Missing mandatory exposure columns: {_missing}")
+        sys.exit()
+
+    dmg = fnmatch.filter(columns, "Damage Function: *")
+    dmg_suffix = [item.split(":")[1].strip() for item in dmg]
+    mpd = fnmatch.filter(columns, "Max Potential Damage: *")
+    mpd_suffix = [item.split(":")[1].strip() for item in mpd]
+
+    if not dmg:
+        logger.error("No damage function were given in ")
+        sys.exit()
+
+    if not mpd:
+        logger.error("No maximum potential damages were given in ")
+        sys.exit()
+
+    _check = [item in mpd_suffix for item in dmg_suffix]
+    if not any(_check):
+        logger.error(
+            "Damage function and maximum potential damage do not have a single match"
+        )
+        sys.exit()
+    if not all(_check):
+        _missing = [item for item, b in zip(dmg_suffix, _check) if not b]
+        logger.warning(
+            f"No every damage function has a corresponding maximum potential damage: {_missing}"
+        )
+
+
+def check_exp_grid_dmfs(
+    exp: object,
+    dmfs: tuple | list,
+):
+    """_summary_"""
+
+    _ef = [_i.get_metadata_item("damage_function") for _i in exp]
+    _i = None
+
+    _check = [item in dmfs for item in _ef]
+    if not all(_check):
+        _missing = [item for item, b in zip(_ef, _check) if not b]
+        logger.error(
+            f"Incorrect damage function identifier found in exposure grid: {_missing}",
+        )
+        sys.exit()
 
 
 ## Vulnerability

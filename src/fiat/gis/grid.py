@@ -6,6 +6,26 @@ from osgeo import gdal, osr
 from pathlib import Path
 
 
+def clip(
+    band: gdal.Band,
+    gtf: tuple,
+    idx: tuple,
+):
+    """_summary_
+
+    Parameters
+    ----------
+    band : gdal.Band
+        _description_
+    gtf : tuple
+        _description_
+    idx : tuple
+        _description_
+    """
+
+    pass
+
+
 def reproject(
     gs: "GridSource",
     crs: str,

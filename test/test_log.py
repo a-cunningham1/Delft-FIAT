@@ -1,7 +1,6 @@
 from fiat.log import CHandler, Log, MessageFormatter, spawn_logger
 
 import io
-import pytest
 from pathlib import Path
 
 

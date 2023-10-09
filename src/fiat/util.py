@@ -174,6 +174,15 @@ def _text_chunk_gen(
         yield _nlines, sd
 
 
+class DoNotCall(type):
+    def __call__(
+        self,
+        *args,
+        **kwargs,
+    ):
+        raise AttributeError("Cannot initialize directly, needs a contructor")
+
+
 def replace_empty(l: list):
     """_summary_"""
 

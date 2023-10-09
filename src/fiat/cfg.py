@@ -1,4 +1,8 @@
-from fiat.check import check_config_entries
+from fiat.check import (
+    check_config_entries,
+    check_config_geom,
+    check_config_grid,
+)
 from fiat.util import (
     Path,
     create_hidden_folder,
@@ -9,13 +13,24 @@ from fiat.util import (
 
 import os
 import tomli
+from osgeo import gdal
+from typing import Any
 
 
 class ConfigReader(dict):
     def __init__(
         self,
         file: str,
+        extra: dict = None,
     ):
+        """_summary_"""
+
+        # container for extra
+        self._build = True
+        self._extra = {}
+        if extra is not None:
+            self._extra.update(extra)
+
         # Set the root directory
         self.filepath = Path(file)
         self.path = self.filepath.parent
@@ -38,6 +53,13 @@ class ConfigReader(dict):
         # Create the hidden temporary folder
         self._create_temp_dir()
 
+        # Set the cache size per GDAL object
+        _cache_size = self.get("global.gdal_cache")
+        if _cache_size is not None:
+            gdal.SetCacheMax(_cache_size * 1024**2)
+        else:
+            gdal.SetCacheMax(50 * 1024**2)
+
         # Do some checking concerning the file paths in the settings file
         for key, item in self.items():
             if key.endswith(("file", "csv")) or key.rsplit(".", 1)[1].startswith(
@@ -52,8 +74,26 @@ class ConfigReader(dict):
                 if isinstance(item, str):
                     self[key] = item.lower()
 
+        self._build = False
+
+        # (Re)set the extra values
+        self.update(self._extra)
+
     def __repr__(self):
         return f"<ConfigReader object file='{self.filepath}'>"
+
+    def __reduce__(self):
+        """_summary_"""
+
+        return self.__class__, (
+            self.filepath,
+            self._extra,
+        )
+
+    def __setitem__(self, __key: Any, __value: Any):
+        if not self._build:
+            self._extra[__key] = __value
+        super().__setitem__(__key, __value)
 
     def _create_output_dir(
         self,
@@ -81,10 +121,14 @@ class ConfigReader(dict):
     ):
         """_Summary_"""
 
-        if "exposure.geom_file" in self:
-            return 0
-        else:
-            return 1
+        _models = [False, False]
+
+        if check_config_geom(self):
+            _models[0] = True
+        if check_config_grid(self):
+            _models[1] = True
+
+        return _models
 
     def get_path(
         self,

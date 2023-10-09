@@ -1,10 +1,11 @@
-from typing import Any
 from fiat.error import DriverNotFoundError
 from fiat.util import (
+    DoNotCall,
     GEOM_DRIVER_MAP,
     GRID_DRIVER_MAP,
     Path,
     deter_type,
+    replace_empty,
     _dtypes_from_string,
     _dtypes_reversed,
     _pat,
@@ -16,13 +17,16 @@ from fiat.util import (
 import atexit
 import gc
 import os
+import time
 import weakref
 from abc import ABCMeta, abstractmethod
 from io import BufferedReader, BufferedWriter, FileIO, TextIOWrapper
+from itertools import product
 from math import nan, floor, log10
-from numpy import arange, array, column_stack, interp, ndarray
+from numpy import arange, array, column_stack, interp, ndarray, where
 from osgeo import gdal, ogr
 from osgeo import osr
+from typing import Any
 
 _IOS = weakref.WeakValueDictionary()
 _IOS_COUNT = 1
@@ -53,20 +57,25 @@ class _BaseIO(metaclass=ABCMeta):
         "w": 1,
     }
 
+    _closed = False
+    _path = None
+    path = None
+    src = None
+
     def __init__(
         self,
-        file: str,
+        file: str = None,
         mode: str = "r",
     ):
         """_summary_"""
 
+        if file is not None:
+            self.path = Path(file)
+            self._path = Path(file)
+
         if not mode in _BaseIO._mode_map:
             raise ValueError("")
 
-        self.path = Path(file)
-        self._path = Path(file)
-
-        self._closed = False
         self._mode = _BaseIO._mode_map[mode]
         self._mode_str = mode
 
@@ -508,6 +517,179 @@ class CSVParser:
 
 
 ## Structs
+class Grid(
+    _BaseIO,
+    _BaseStruct,
+):
+    def __init__(
+        self,
+        band: gdal.Band,
+        chunk: tuple = None,
+        mode: str = "r",
+    ):
+        """_summary_"""
+
+        _BaseIO.__init__(self, mode=mode)
+
+        self.src = band
+        self._x = band.XSize
+        self._y = band.YSize
+        self._l = 0
+        self._u = 0
+        self.nodata = band.GetNoDataValue()
+        self.dtype = band.DataType
+        self.dtype_name = gdal.GetDataTypeName(self.dtype)
+        self.dtype_size = gdal.GetDataTypeSize(self.dtype)
+
+        self._last_chunk = None
+
+        if chunk is None:
+            self._chunk = self.shape
+        elif len(chunk) == 2:
+            self._chunk = chunk
+        else:
+            ValueError("")
+
+        self.create_windows()
+
+    def __iter__(self):
+        self.flush()
+        self._reset_chunking()
+        return self
+
+    def __next__(self):
+        if self._u > self._y:
+            self.flush()
+            raise StopIteration
+
+        w = min(self._chunk[0], self._x - self._l)
+        h = min(self._chunk[1], self._y - self._u)
+
+        window = (
+            self._l,
+            self._u,
+            w,
+            h,
+        )
+        chunk = self[window]
+
+        self._l += self._chunk[0]
+        if self._l > self._x:
+            self._l = 0
+            self._u += self._chunk[1]
+
+        return window, chunk
+
+        # for l, u in self._windows:
+        #     s = time.time()
+
+        #     if self._last_chunk is not None:
+        #         self._last_chunk = None
+
+        #     w = min(self._chunk[0], self._x - l)
+        #     h = min(self._chunk[1], self._y - u)
+
+        #     chunk = self[l, u, w, h]
+        #     self._last_chunk = chunk
+
+        #     e = time.time() - s
+        #     print(f"{e} seconds! (iter)")
+
+        # return (l, u, w, h), chunk
+
+    def __getitem__(
+        self,
+        window: tuple,
+    ):
+        chunk = self.src.ReadAsArray(*window)
+        return chunk
+
+    def _reset_chunking(self):
+        self._l = 0
+        self._u = 0
+
+    def close(self):
+        _BaseIO.close(self)
+        self.src = None
+        gc.collect()
+
+    def flush(self):
+        if self.src is not None:
+            self.src.FlushCache()
+
+    @property
+    def chunk(self):
+        return self._chunk
+
+    @property
+    def shape(self):
+        return self._x, self._y
+
+    def create_windows(self):
+        _lu = tuple(
+            product(
+                range(0, self._x, self._chunk[0]),
+                range(0, self._y, self._chunk[1]),
+            ),
+        )
+        for _l, _u in _lu:
+            w = min(self._chunk[0], self._x - _l)
+            h = min(self._chunk[1], self._y - _u)
+            yield (
+                _l,
+                _u,
+                w,
+                h,
+            )
+
+    def get_metadata_item(
+        self,
+        entry: str,
+    ):
+        """_summary_"""
+
+        return self.src.GetMetadataItem(entry)
+
+    def set_chunk_size(
+        self,
+        chunk: tuple,
+    ):
+        """_summary_"""
+
+        self._chunk = chunk
+
+    @_BaseIO._check_mode
+    def write(
+        self,
+        data: array,
+    ):
+        """_summary_
+
+        Parameters
+        ----------
+        data : array
+            _description_
+        """
+
+        pass
+
+    @_BaseIO._check_mode
+    def write_chunk(
+        self,
+        chunk: array,
+        upper_left: tuple | list,
+    ):
+        """_summary_
+
+        Parameters
+        ----------
+        chunk : array
+            _description_
+        """
+
+        self.src.WriteArray(chunk, *upper_left)
+
+
 class GeomSource(_BaseIO, _BaseStruct):
     _type_map = {
         "int": ogr.OFTInteger64,
@@ -523,10 +705,6 @@ class GeomSource(_BaseIO, _BaseStruct):
         """_summary_"""
 
         obj = object.__new__(cls)
-        obj.__init__(
-            file,
-            mode,
-        )
 
         return obj
 
@@ -622,14 +800,17 @@ class GeomSource(_BaseIO, _BaseStruct):
     #     return self.layer.GetFeatureCount()
 
     def flush(self):
-        self.src.FlushCache()
+        if self.src is not None:
+            self.src.FlushCache()
 
     def reopen(self):
         """_summary_"""
 
         if not self._closed:
             return self
-        return GeomSource.__new__(GeomSource, self.path)
+        obj = GeomSource.__new__(GeomSource, self.path)
+        obj.__init__(self.path)
+        return obj
 
     @property
     @_BaseIO._check_state
@@ -637,6 +818,19 @@ class GeomSource(_BaseIO, _BaseStruct):
         """_summary_"""
 
         return self.layer.GetExtent()
+
+    @property
+    @_BaseIO._check_state
+    def fields(self):
+        """_summary_"""
+
+        if self.layer is not None:
+            _flds = self.layer.GetLayerDefn()
+            fh = [
+                _flds.GetFieldDefn(_i).GetName() for _i in range(_flds.GetFieldCount())
+            ]
+            _flds = None
+            return fh
 
     @_BaseIO._check_mode
     @_BaseIO._check_state
@@ -791,6 +985,7 @@ class GridSource(_BaseIO, _BaseStruct):
     def __new__(
         cls,
         file: str,
+        chunk: tuple = None,
         subset: str = None,
         var_as_band: bool = False,
         mode: str = "r",
@@ -798,13 +993,13 @@ class GridSource(_BaseIO, _BaseStruct):
         """_summary_"""
 
         obj = object.__new__(cls)
-        obj.__init__(file, subset, var_as_band, mode)
 
         return obj
 
     def __init__(
         self,
         file: str,
+        chunk: tuple = None,
         subset: str = None,
         var_as_band: bool = False,
         mode: str = "r",
@@ -815,11 +1010,14 @@ class GridSource(_BaseIO, _BaseStruct):
         ----------
         file : str
             _description_
-
-        Returns
-        -------
-        object
-            _description_
+        chunk : tuple, optional
+            _description_, by default None
+        subset : str, optional
+            _description_, by default None
+        var_as_band : bool, optional
+            _description_, by default False
+        mode : str, optional
+            _description_, by default "r"
 
         Raises
         ------
@@ -856,6 +1054,8 @@ class GridSource(_BaseIO, _BaseStruct):
         self._driver = gdal.GetDriverByName(driver)
 
         self.src = None
+        self._chunk = None
+        self._dtype = None
         self.subset_dict = None
         self.count = 0
         self._cur_index = 1
@@ -863,6 +1063,13 @@ class GridSource(_BaseIO, _BaseStruct):
         if not self._mode:
             self.src = gdal.OpenEx(str(self._path), open_options=_open_options)
             self.count = self.src.RasterCount
+
+            if chunk is None:
+                self._chunk = self.shape
+            elif len(chunk) == 2:
+                self._chunk = chunk
+            else:
+                ValueError("")
 
             if self.count == 0:
                 self.subset_dict = _read_gridsrouce_layers(
@@ -875,7 +1082,7 @@ class GridSource(_BaseIO, _BaseStruct):
 
     def __next__(self):
         if self._cur_index < self.count + 1:
-            r = self.src.GetRasterBand(self._cur_index)
+            r = self[self._cur_index]
             self._cur_index += 1
             return r
         else:
@@ -885,11 +1092,16 @@ class GridSource(_BaseIO, _BaseStruct):
         self,
         oid: int,
     ):
-        return self.src.GetRasterBand(oid)
+        return Grid(
+            self.src.GetRasterBand(oid),
+            chunk=self.chunk,
+            mode=self._mode_str,
+        )
 
     def __reduce__(self):
         return self.__class__, (
             self.path,
+            self.chunk,
             self.subset,
             self._var_as_band,
             self._mode_str,
@@ -904,19 +1116,23 @@ class GridSource(_BaseIO, _BaseStruct):
         gc.collect()
 
     def flush(self):
-        self.src.FlushCache()
+        if self.src is not None:
+            self.src.FlushCache()
 
     def reopen(self):
         """_summary_"""
 
         if not self._closed:
             return self
-        return GridSource.__new__(
+        obj = GridSource.__new__(
             GridSource,
             self.path,
+            self.chunk,
             self.subset,
             self._var_as_band,
         )
+        obj.__init__(self.path, self._chunk, self.subset, self._var_as_band)
+        return obj
 
     @property
     @_BaseIO._check_state
@@ -931,6 +1147,50 @@ class GridSource(_BaseIO, _BaseStruct):
             _gtf[3],
         )
 
+    @property
+    def chunk(self):
+        """_summary_"""
+
+        return self._chunk
+
+    @property
+    @_BaseIO._check_state
+    def dtype(self):
+        if not self._dtype:
+            _b = self[1]
+            self._dtype = _b.dtype
+            del _b
+        return self._dtype
+
+    @property
+    @_BaseIO._check_state
+    def shape(self):
+        return (
+            self.src.RasterXSize,
+            self.src.RasterYSize,
+        )
+
+    @_BaseIO._check_mode
+    @_BaseIO._check_state
+    def create(
+        self,
+        shape: tuple,
+        nb: int,
+        type: int,
+        options: list = [],
+    ):
+        """_summary_"""
+
+        self.src = self._driver.Create(
+            str(self.path),
+            *shape,
+            nb,
+            type,
+            options=options,
+        )
+
+        self.count = nb
+
     @_BaseIO._check_mode
     @_BaseIO._check_state
     def create_band(
@@ -940,24 +1200,6 @@ class GridSource(_BaseIO, _BaseStruct):
 
         self.src.AddBand()
         self.count += 1
-
-    @_BaseIO._check_mode
-    @_BaseIO._check_state
-    def create_source(
-        self,
-        shape: tuple,
-        nb: int,
-        type: int,
-        srs: osr.SpatialReference,
-    ):
-        """_summary_"""
-
-        self.src = self._driver.Create(
-            str(self.path), shape[0], shape[1], nb, GridSource._type_map[type]
-        )
-
-        self.src.SetSpatialRef(srs)
-        self.count = nb
 
     @_BaseIO._check_state
     def deter_band_names(
@@ -979,8 +1221,8 @@ class GridSource(_BaseIO, _BaseStruct):
     def get_band_name(self, n: int):
         """_summary_"""
 
-        _desc = self[n].GetDescription()
-        _meta = self[n].GetMetadata()
+        _desc = self[n].src.GetDescription()
+        _meta = self[n].src.GetMetadata()
 
         if _desc:
             return _desc
@@ -1231,7 +1473,7 @@ class Table(_Table):
             cols.remove(index_col)
 
         for c in cols:
-            _f.append([dtypes[c](item.decode()) for item in _d[c::ncol]])
+            _f.append([dtypes[c](item) for item in replace_empty(_d[c::ncol])])
 
         self.data = column_stack((*_f,))
 
@@ -1580,6 +1822,7 @@ def open_geom(
 
 def open_grid(
     file: str,
+    chunk: tuple = None,
     subset: str = None,
     var_as_band: bool = False,
     mode: str = "r",
@@ -1588,6 +1831,7 @@ def open_grid(
 
     return GridSource(
         file,
+        chunk,
         subset,
         var_as_band,
         mode,

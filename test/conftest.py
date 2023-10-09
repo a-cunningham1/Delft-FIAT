@@ -12,6 +12,11 @@ def settings_toml_event():
 
 
 @pytest.fixture
+def settings_toml_grid():
+    return Path(Path.cwd(), ".testdata", "settings_grid.toml")
+
+
+@pytest.fixture
 def settings_toml_risk():
     return Path(Path.cwd(), ".testdata", "settings_risk.toml")
 
@@ -23,9 +28,15 @@ def cfg_event(settings_toml_event):
 
 
 @pytest.fixture
-def mis_event():
+def cfg_event_mis():
     p = Path(Path.cwd(), ".testdata", "settings_missing.toml")
     return ConfigReader(p)
+
+
+@pytest.fixture
+def cfg_grid(settings_toml_grid):
+    c = ConfigReader(settings_toml_grid)
+    return c
 
 
 @pytest.fixture

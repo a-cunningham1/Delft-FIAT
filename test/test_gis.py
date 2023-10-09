@@ -1,6 +1,5 @@
 from fiat.gis import overlay, geom, grid
 
-import pytest
 from numpy import mean
 
 

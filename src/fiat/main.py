@@ -1,8 +1,10 @@
 from fiat.cfg import ConfigReader
-from fiat.log import Log
+from fiat.log import spawn_logger
 from fiat.models import GeomModel, GridModel
 
 from pathlib import Path
+
+logger = spawn_logger("fiat.main")
 
 
 class FIAT:
@@ -34,8 +36,15 @@ class FIAT:
     def run(self):
         """_summary_"""
 
-        model = GeomModel(self.cfg)
-        model.run()
+        _models = self.cfg.get_model_type()
+        if _models[0]:
+            logger.info("Setting up geom model..")
+            model = GeomModel(self.cfg)
+            model.run()
+        if _models[1]:
+            logger.info("Setting up grid model..")
+            model = GridModel(self.cfg)
+            model.run()
 
 
 if __name__ == "__main__":

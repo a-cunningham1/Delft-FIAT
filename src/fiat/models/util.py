@@ -1,17 +1,19 @@
 from fiat.gis import geom, overlay
-from fiat.io import BufferTextHandler
+from fiat.io import BufferTextHandler, GridSource
 from fiat.log import LogItem, Sender
 from fiat.models.calc import calc_haz
 from fiat.util import NEWLINE_CHAR, _pat, replace_empty
 
 from math import isnan
+from numpy import full, ravel, unravel_index, where
+from osgeo import gdal, osr
 from pathlib import Path
 
 
 def geom_worker(
     cfg: "ConfigReader",
     queue: "queue.Queue",
-    haz: "GridSource",
+    haz: GridSource,
     idx: int,
     vul: "Table",
     exp: "TableLazy",
@@ -19,6 +21,8 @@ def geom_worker(
 ):
     """_summary_"""
 
+    # Extract the hazard band as an object
+    band = haz[idx]
     # Setup some metadata
     _band_name = cfg["hazard.band_names"][idx - 1]
     _ref = cfg.get("hazard.elevation_reference")
@@ -63,11 +67,9 @@ def geom_worker(
 
             # Get the hazard data from the exposure geometrie
             if ft_info[exp._columns["Extraction Method"]].lower() == "area":
-                res = overlay.clip(haz[idx], haz.get_srs(), haz.get_geotransform(), ft)
+                res = overlay.clip(band, haz.get_srs(), haz.get_geotransform(), ft)
             else:
-                res = overlay.pin(
-                    haz[idx], haz.get_geotransform(), geom.point_in_geom(ft)
-                )
+                res = overlay.pin(band, haz.get_geotransform(), geom.point_in_geom(ft))
 
             # Calculate the inundation
             inun, redf = calc_haz(
@@ -103,9 +105,141 @@ def geom_worker(
     writer = None
 
 
-def grid_worker(
+def grid_worker_exact(
     cfg: "ConfigReader",
+    haz: GridSource,
+    idx: int,
+    vul: "Table",
+    exp: GridSource,
 ):
+    """_summary_"""
+
+    # Set some variables for the calculations
+    exp_bands = []
+    write_bands = []
+    exp_nds = []
+    dmfs = []
+
+    # Extract the hazard band as an object
+    haz_band = haz[idx]
+    # Set the output directory
+    _out = cfg.get("output.path")
+    if cfg.get("hazard.risk"):
+        _out = cfg.get("hazard.path.risk")
+
+    # Create the outgoing netcdf containing every exposure damages
+    out_src = GridSource(
+        Path(_out, "output.nc"),
+        mode="w",
+    )
+    out_src.create(
+        exp.shape,
+        exp.count,
+        exp.dtype,
+        options=["FORMAT=NC4", "COMPRESS=DEFLATE"],
+    )
+    out_src.set_srs(exp.get_srs())
+    out_src.set_geotransform(exp.get_geotransform())
+    # Create the outgoing total damage grid
+    td_out = GridSource(
+        Path(
+            _out,
+            "total_damages.nc",
+        ),
+        mode="w",
+    )
+    td_out.create(
+        exp.shape,
+        1,
+        exp.dtype,
+        options=["FORMAT=NC4", "COMPRESS=DEFLATE"],
+    )
+    # Set the neccesary attributes
+    td_out.set_geotransform(exp.get_geotransform())
+    td_out.set_srs(exp.get_srs())
+    td_band = td_out[1]
+    td_noval = -0.5 * 2**128
+    td_band.src.SetNoDataValue(td_noval)
+
+    # Prepare some stuff for looping
+    for idx in range(exp.count):
+        exp_bands.append(exp[idx + 1])
+        write_bands.append(out_src[idx + 1])
+        exp_nds.append(exp_bands[idx].nodata)
+        write_bands[idx].src.SetNoDataValue(exp_nds[idx])
+        dmfs.append(exp_bands[idx].get_metadata_item("damage_function"))
+
+    # Going trough the chunks
+    for _w, h_ch in haz_band:
+        td_ch = td_band[_w]
+
+        # Per exposure band
+        for idx, exp_band in enumerate(exp_bands):
+            e_ch = exp_band[_w]
+
+            # See if there is any exposure data
+            out_ch = full(e_ch.shape, exp_nds[idx])
+            e_ch = ravel(e_ch)
+            _coords = where(e_ch != exp_nds[idx])[0]
+            if len(_coords) == 0:
+                write_bands[idx].src.WriteArray(out_ch, *_w[:2])
+                continue
+
+            # See if there is overlap with the hazard data
+            e_ch = e_ch[_coords]
+            h_1d = ravel(h_ch)
+            h_1d = h_1d[_coords]
+            _hcoords = where(h_1d != haz_band.nodata)[0]
+
+            if len(_hcoords) == 0:
+                write_bands[idx].src.WriteArray(out_ch, *_w[:2])
+                continue
+
+            # Do the calculations
+            _coords = _coords[_hcoords]
+            e_ch = e_ch[_hcoords]
+            h_1d = h_1d[_hcoords]
+            h_1d.clip(min(vul.index), max(vul.index))
+
+            dmm = [vul[round(float(n), 2), dmfs[idx]] for n in h_1d]
+            e_ch = e_ch * dmm
+
+            idx2d = unravel_index(_coords, *[exp._chunk])
+            out_ch[idx2d] = e_ch
+
+            # Write it to the band in the outgoing file
+            write_bands[idx].write_chunk(out_ch, _w[:2])
+
+            # Doing the total damages part
+            # Checking whether it has values or not
+            td_1d = td_ch[idx2d]
+            td_1d[where(td_1d == td_noval)] = 0
+            td_1d += e_ch
+            td_ch[idx2d] = td_1d
+
+        # Write the total damages chunk
+        td_band.write_chunk(td_ch, _w[:2])
+
+    # Flush the cache and dereference
+    for _w in write_bands[:]:
+        w = _w
+        write_bands.remove(_w)
+        w.flush()
+        w = None
+
+    # Flush and close all
+    exp_bands = None
+    td_band.flush()
+    td_band = None
+    td_out = None
+
+    out_src.flush()
+    out_src = None
+
+    haz_band = None
+
+
+def grid_worker_loose():
     """_summary_"""
 
     pass

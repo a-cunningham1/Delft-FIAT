@@ -1,7 +1,5 @@
 from fiat.models.calc import calc_rp_coef, calc_risk
 
-import pytest
-
 
 def test_calc_risk():
     rps = [1, 2, 5, 25, 50, 100]
