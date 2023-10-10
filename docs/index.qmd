@@ -9,3 +9,4 @@ FIAT is a free, pyhton-based **Fast Impact Assessment Tool**, designed and conti
 FIAT works with an easy for exposed assets, consisting of information on the location, exposed value, ground floor height, and associated depth-damage function, which can be modified by the user. A simple configuration file specifies the location of depth-damage functions and flood maps, as well as return periods of flood maps if calculating risk.
 
 Thanks to its flexible character, FIAT **integrates** with various software applications such as flood modeling or GIS software and, can be called multiple times to e.g. assess uncertainty in damage estimates, or run for numerous flood scenarios. 
+
