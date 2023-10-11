@@ -1,3 +1,27 @@
 ---
 title: "Exposure data"
 ---
+
+The exposure data serves to describe the assets within the affected region that the user intends to assess. This data file should be made available in either CSV or netCDF format and must be located in the 'exposure' folder, following the prescribed naming convention, which includes 'exposure.csv' or 'exposure.nc. It is recommended to render an additional vector file of the exposed objects (e.g. points, building footbprints) with an index column, carrying the same name as the index column of the exposure.csv to allow for merging of the exposure files (optional). The name of the vector file should be descriptive of the objects it represents (e.g. 'buildings.gpkg','road.gpkg') and must be specified in the *settings.toml* configuration file. The advantage of providing this extra file is that FIAT offers the **FIAT Toolbox** application to post-process the model results and visualize them in GIS software applications. 
+
+The exposure data CSV file contains information about each object in the area of interest that is needed for the damage calculation. Each row represents an object, such as a building, road segment, or utility, and each column represents an attribute of the object, such as its location, elevation or maximum potential damage value. 
+For users who would want to create their own exposure data, or modify existing exposure data, Table 1 provides a description of the default fields (columns) in the exposure data CSV. 
+
+***exposure.csv** (required & optional fields):* 
+
+| Field                                  | Description                                                                                | Required                                 | Example                    |
+|----------------------------------------|--------------------------------------------------------------------------------------------|------------------------------------------|----------------------------|
+| Object ID                              | Unique numerical indentifier of the object                                                 | Yes                                      | 1                          |
+| Object Name                            | Unique name of the object                                                                  | No                                       | fp_1                       |
+| Primary Object Type                    | Object type                                                                                | No                                       | RES1_1SNB                  |
+| Secondary Object Type                  | More specification about object type                                                       | No                                       | Res 1,1 Story no basement  |
+| Extraction Method                      | Method to extract water depth                                                              | Yes                                      | option: 'centroid', 'area' |
+| Damage Function: Structure             | Damage function for the structure                                                          | at least one Damage Function of any kind | struct_2                   |
+| Damage Function: Content               | Damage function for the content                                                            | at least one Damage Function of any kind | cont_62                    |
+| Damage Function: Other                 | Damage function other (e.g. roads)                                                         | at least one Damage Function of any kind |                            |
+| Ground Floor Height                    | Elevation of the finished floor above ground level. Units must be coherent with hazard map | Yes                                      | 4                          |
+| Ground Elevation                       | Ground elevation at location of object. Units must be coherent with hazard map             | Yes, if water level map as hazard input  |                            |
+| Max Potential Damage: Structure        | Maximum potential structural damage                                                        | at least one Max Potential Damage        |                            |
+| Max Potential Damage: Content          | Maximum potential content damage                                                           | at least one Max Potential Damage        |                            |
+| Max Potential Damage: Other            | Maximum potential other damage (e.g. roads)                                                | at least one Max Potential Damage        |                            |
+| Aggregation Level: <e.g., Census Tract> | Aggregation label for Census Tract                                                         | No                                       | 1205                       |

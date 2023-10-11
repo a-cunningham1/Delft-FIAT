@@ -1,13 +1,13 @@
 ---
 title: "Settings file"
 ---
-The model settings are configured in a *settings.toml* file. The configuration file consists of important core information and can be extended with a range of optional input. The following structure shows all information, some mandatory other optional, that can be included in the settings:
+The model settings are configured in a *settings.toml* file. The configuration file consists of important core information and can be extended with a range of optional input:
 
 > *Note: File paths in the settings can be relative to the settings.toml file or absolute.*
 
 ***Settings.toml** (required & optional fields):* 
 
-| Attribute                    | Example                                  | Mandatory                           | Note                                                                                                          |
+| Attribute                    | Example                                  | Required                           | Note                                                                                                          |
 |------------------------------|------------------------------------------|-------------------------------------|---------------------------------------------------------------------------------------------------------------|
 | **[global]**                 |                                          |                                     |                                                                                                               |
 | crs                          | 'EPSG:32617'                             | No                                  | Projection                                                                                                    |
