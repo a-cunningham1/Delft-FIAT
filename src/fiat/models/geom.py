@@ -165,7 +165,7 @@ the model spatial reference ('{get_srs_repr(self.srs)}')"
             _d = None
 
         # Loop over all the geometry source files
-        for key, gm in self.exposure_data.items():
+        for key, gm in self.exposure_geoms.items():
             _add = key[-1]
 
             # Define outgoing dataset
