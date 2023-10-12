@@ -1,11 +1,29 @@
 ---
 title: "Home"
+include-in-header:
+  - text: |
+      <style>figure { padding: 3em 0 0em 0; }</style>
 ---
 
-## Getting to Know FIAT
+## Getting to Know Delft-FIAT
 
-FIAT is a free, pyhton-based **Fast Impact Assessment Tool**, designed and continuously improved by Deltares. It is configured to run quick, consistent, and well-founded **flood damage** and **risk calculations** on the basis of flood maps, and additional inputs such as depth-damage functions, asset locations and their maximum potential damages. FIAT allows rapid assessment of the direct **economic** and **monetary impacts** to buildings, utilities, and roads for input for specified flood events and return periods. Fast impact modeling removes bottlenecks in **climate adaptation planning**, allowing for the large numbers of calculations needed to understand the effectiveness of adaptation strategies and the
+**Delft-FIAT**  is a free, pyhton-based **Fast Impact Assessment Tool**, designed and continuously improved by Deltares. It is configured to run quick, consistent, and well-founded **flood damage** and **risk calculations** on the basis of flood maps, and additional inputs such as depth-damage functions, asset locations and their maximum potential damages. Delft-FIAT allows rapid assessment of the direct **economic** and **monetary impacts** to buildings, utilities, and roads for input for specified flood events and return periods. Fast impact modeling removes bottlenecks in **climate adaptation planning**, allowing for the large numbers of calculations needed to understand the effectiveness of adaptation strategies and the changes in damage and risk as climate and socio-economic conditions change. In the further documentation Delft-FIAT will be refered to simply **FIAT**.
 
-FIAT works with an easy for exposed assets, consisting of information on the location, exposed value, ground floor height, and associated depth-damage function, which can be modified by the user. A simple configuration file specifies the location of depth-damage functions and flood maps, as well as return periods of flood maps if calculating risk.
+**FIAT** works with an easy format for exposed assets, consisting of information on the location, exposed value, ground floor height, and associated depth-damage function, which can be modified by the user. A simple configuration file specifies the location of depth-damage functions and flood maps, as well as return periods of flood maps if calculating risk (@fig-FIAT).
 
-Thanks to its flexible character, FIAT **integrates** with various software applications such as flood modeling or GIS software and, can be called multiple times to e.g. assess uncertainty in damage estimates, or run for numerous flood scenarios.
+Thanks to its flexible character, FIAT **integrates** with various software applications such as flood modeling or GIS software and can be called multiple times to e.g. assess uncertainty in damage estimates, or run for numerous flood scenarios.
+
+
+:::{.column-page}
+![FIAT Model Overview](FIAT_Scheme2.png){#fig-FIAT}
+:::
+
+
+|   | Field            | Description                                                                        |
+|---|------------------|-----------------------------------------------------------------------------|
+| 1 | Flood maps       | Hazard input: Selected per damage simulation                                |
+| 2 | Damage functions | Vulnerability input: Perpared in set-up phase, coupled to exposure objects  |
+| 3 | Exposure data    | Exposure input: Prepared in set-up phase, object details and metadata       |
+| 4 | Delft-FIAT       | Fast Impact Assesment Tool coupled with FIAT Toolbox for post-processing    |
+| 5 | Flood damages    | Object + aggregated level of monetary and economic damages                  |
+: {.striped .hover}

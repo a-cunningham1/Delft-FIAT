@@ -1,5 +1,8 @@
 ---
 title: "Exposure data"
+include-in-header:
+  - text: |
+      <style>figure { padding: 3em 0 3em 0; }</style>
 
 ---
 
