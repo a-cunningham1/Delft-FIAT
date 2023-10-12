@@ -48,10 +48,10 @@ The model settings are configured in a *settings.toml* file. The configuration f
 | step_size                    | 0.01                                     | No                                  | Interpolation scale for the vulnerability curves                                                              |
 : Settings.toml input (required and optional fields) {#tbl-toml .striped .hover}
 
-Below an example of what a *settings.toml* could look like considering required fields only: 
+Below an example of what a *settings.toml* could look like considering required fields only:
 
-***Mini settings.toml** (soley required fields):* 
-```html 
+***Mini settings.toml** (soley required fields):*
+```html
 [output]
 path = "output"
 
