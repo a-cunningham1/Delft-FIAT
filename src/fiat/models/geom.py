@@ -130,7 +130,6 @@ the model spatial reference ('{get_srs_repr(self.srs)}')"
         """_summary_."""
         # Setup some local referenced datasets and metadata
         _exp = self.exposure_data
-        _gm = self.exposure_geoms
         _risk = self.cfg.get("hazard.risk")
         _rp_coef = self.cfg.get("hazard.rp_coefficients")
         # Reverse the _rp_coef to let them coincide with the acquired
@@ -166,7 +165,7 @@ the model spatial reference ('{get_srs_repr(self.srs)}')"
             _d = None
 
         # Loop over all the geometry source files
-        for key, gm in _gm.items():
+        for key, gm in self.exposure_data.items():
             _add = key[-1]
 
             # Define outgoing dataset
