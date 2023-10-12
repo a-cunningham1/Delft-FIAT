@@ -1,10 +1,9 @@
 ---
 title: "Exposure data"
-crossref:
-  sec-labels: roman  # (this doesnt work yet)
+
 ---
 
-The **exposure data** serves to describe the assets within the affected region that the user intends to assess. This data file should be made available in either **CSV format or raster file** (list of acceptable file types @sec-file_types) and must be located in the 'exposure' folder, following the prescribed naming convention e.g 'exposure.csv' or 'exposure.nc.
+The **exposure data** serves to describe the assets within the affected region that the user intends to assess. This data file should be made available in either **CSV format or raster file** ([<ins><h14>*exposure file types*</h14></ins>]) and must be located in the 'exposure' folder, following the prescribed naming convention e.g 'exposure.csv' or 'exposure.nc.
 
  > *Warning! : Assets cannot be outside the area of the hazard map input! Assets that fully fall out of the hazard extend are automatically removed by FIAT. BUT any asset that partially falls outside the flood map extent must be removed manually by the user.*
 
@@ -31,12 +30,12 @@ For users who would want to create their own exposure data, or modify existing e
 | Damage Function: Content               | Damage function for the content                                                            | at least one Damage Function of any kind | cont_62                    |
 | Damage Function: Other                 | Damage function other (e.g. roads)                                                         | at least one Damage Function of any kind |                            |
 | Ground Floor Height                    | Elevation of the finished floor above ground level. Units must be coherent with hazard map | Yes                                      | 4                          |
-| Ground Elevation                       | Ground elevation at location of object. Units must be coherent with hazard map             | Yes, if water level map as hazard input  |                            |
-| Max Potential Damage: Structure        | Maximum potential structural damage                                                        | at least one Max Potential Damage        |                            |
-| Max Potential Damage: Content          | Maximum potential content damage                                                           | at least one Max Potential Damage        |                            |
+| Ground Elevation                       | Ground elevation at location of object. Units must be coherent with hazard map             | Yes, if water level map as hazard input  | 10.11                      |
+| Max Potential Damage: Structure        | Maximum potential structural damage                                                        | at least one Max Potential Damage        | 193457.00                  |
+| Max Potential Damage: Content          | Maximum potential content damage                                                           | at least one Max Potential Damage        | 386984.00                  |
 | Max Potential Damage: Other            | Maximum potential other damage (e.g. roads)                                                | at least one Max Potential Damage        |                            |
-| Aggregation Level: <e.g., Census Tract> | Aggregation label for Census Tract                                                         | No                                       | 1205                       |
-: exposure.csv input {#tbl-exposure .striped .hover}
+| Aggregation Level:<e.g., Census Tract> | Aggregation label for Census Tract                                                         | No                                       | 1205                       |
+: exposure.csv input {#tbl-exposure .striped .hover .column-page-inset-right}
 
 A more detailed description of the data fields in the *exposure.csv* can be found below;
 
@@ -75,5 +74,5 @@ If the user wishes to add aggregation zones via vector file, **FIAT Toolbox** of
 An aggregation variable is similar to an aggregation label, except that it can take continuous values instead of discrete labels, and the summation of damages occurs over ‘bins’. For example, one can include the social vulnerability index (SVI) as an aggregation variable. The column name in the exposure data should then be “Aggregation Variable: SVI”. The damages for objects that fall within an SVI class, for example between 0 and 0.2, will be added together to return the damages for different SVI classes. These classes are specified in the configuration file (see Section 4.4).
 
 
-###### File types {#sec-file_types}
+###### <ins><h14>*exposure file types*</h14></ins>
     {acceptable exposure file types:'.fits': 'FITS', '.pix': 'PCIDSK', '.nc': 'netCDF', '.xml': 'PDS4', '.pdf': 'PDF', '.mbtiles': 'MBTiles', '.bag': 'BAG', '.shp': 'ESRI Shapefile', '.mid': 'MapInfo File', '.000': 'S57', '.dgn': 'DGN', '.csv': 'CSV', '.gml': 'GML', '.gpx': 'GPX', '.kmz': 'LIBKML', '.kml': 'KML', '.geojson': 'GeoJSON', '.geojsons': 'GeoJSONSeq', '.gmt': 'OGR_GMT', '.gpkg': 'GPKG', '.sqlite': 'SQLite', '.map': 'WAsP', '.gdb': 'OpenFileGDB', '.dxf': 'DXF', '.dwg': 'CAD', '.fgb': 'FlatGeobuf', '.txt': 'Geoconcept', '.sql': 'PGDUMP', '.igc': 'GPSBabel', '.ods': 'ODS', '.xlsx': 'XLSX', '.jml': 'JML', '.x10': 'VDV', '.mvt': 'MVT', '': 'Memory'}
