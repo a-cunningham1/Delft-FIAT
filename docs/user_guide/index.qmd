@@ -38,5 +38,5 @@ For each asset specified in the exposure dataset, the water depth or elevation i
 To calculate the flood extent, FIAT extracts either the average or maximum water depth and the fraction of the building that is flooded. The **inundation depth** within buildings is obtained by subtracting the **ground floor height** from the **water depth**. FIAT derives the damage fraction for each asset using its inundation depth and interpolating over its depth-damage curve. Thereafter, the damage to the asset is calculated as the product of the maximum potential damage and the damage fraction. In case an asset is only partially flooded, the damages will be reduced by the dry fraction of the building. Instead of single events, the user can also provide return-period flood maps as input. Hence, FIAT calculates and integrates the associated return-period damages to derive the expected annual damages.
 
 
-![**FIAT Workflow.**  
+![**FIAT Workflow.**
 The damage of the flood **water level** in each object is determined by flood depth-damage functions, which relate the water level to the maximum potential damage of an asset, returning a **damage fraction**. The damage fraction is multiplied with the **max. potential damage** to obtain a monetary **damage per object**.](FIAT_Scheme.png){#fig-fiat}
