@@ -15,7 +15,7 @@ Thanks to its flexible character, FIAT **integrates** with various software appl
 
 
 :::{.column-page}
-![FIAT Model Overview](FIAT_Scheme2.png){#fig-FIAT}
+![FIAT Model Overview](_static/FIAT_Scheme2.png){#fig-FIAT}
 :::
 
 
