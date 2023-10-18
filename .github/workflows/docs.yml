@@ -41,7 +41,7 @@ jobs:
           chmod +x tmp/quarto.deb
 
       - name: Install quarto
-        run: sudo gdebi tmp/quarto.deb
+        run: sudo gdebi -n tmp/quarto.deb
 
       - name: Setup Miniforge
         uses: conda-incubator/setup-miniconda@v2
