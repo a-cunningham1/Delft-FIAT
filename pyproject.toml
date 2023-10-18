@@ -87,6 +87,9 @@ dev = [
     "fiat[all,docs,extra,test]",
 ]
 docs = [
+    "jupyter",
+    "matplotlib",
+    "pandas",
     "quartodoc",
     "fiat[all]",
 ]
