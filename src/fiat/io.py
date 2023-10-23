@@ -461,10 +461,18 @@ class CSVParser:
             if line.startswith("#"):
                 t = line.strip().split("=")
                 if len(t) == 1:
-                    lst = t[0].split(",")
-                    _entry = lst[0].strip().replace("#", "").lower()
-                    _val = [item.strip() for item in lst[1:]]
-                    self.meta[_entry] = _val
+                    tl = t[0].split(":")
+                    if len(tl) > 1:
+                        lst = tl[1].split(",")
+                        _entry = tl[0].strip().replace("#", "").lower()
+                        _val = [item.strip() for item in lst]
+                        self.meta[_entry] = _val
+                    else:
+                        lst = t[0].split(",")
+                        _entry = lst[0].strip().replace("#", "").lower()
+                        _val = [item.strip() for item in lst[1:]]
+                        self.meta[_entry] = _val
+                        # raise ValueError("Supplied metadata in unknown format..")
                 else:
                     key, item = t
                     self.meta[key.strip().replace("#", "").lower()] = item.strip()
