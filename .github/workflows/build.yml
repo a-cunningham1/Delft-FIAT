@@ -53,11 +53,11 @@ jobs:
           chmod +x .build/linux64.sh
           .build/linux64.sh
 
-      - name: Activate fiat_build env
-        run: conda activte fiat_build
+      - name: Create Testdata
+        run: |
+          conda activate fiat_build
+          python .testdata/create_test_data.py
+          conda deactivate
 
-      - name: Create testdata
-        run: python .testdata/create_test_data.py
-
-      - name: Test binary
+      - name: Test Binary
         run: ./bin/Release/fiat run .testdata/settings.toml
