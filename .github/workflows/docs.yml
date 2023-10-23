@@ -32,7 +32,7 @@ jobs:
       - name: Install ubuntu packages
         run: |
           sudo apt install -y curl
-          sudo apt install -y gdebi-core 
+          sudo apt install -y gdebi-core
           mkdir tmp
 
       - name: Download quarto
@@ -53,16 +53,12 @@ jobs:
           use-mamba: true
 
       - name: Generate env yaml
-        run: python make_env.py docs --py-version ${{ matrix.python-version }}
-    
+        run: python make_env.py docs --py-version ${{ matrix.python-version }}.*
+
       - name: Update environment
         run: mamba env update -f environment.yml
 
       - name: Generate docs
-        run: | 
+        run: |
           quarto render docs/
-          echo "DOC_VERSION=$(mamba run -n hydromt python -c 'from hydromt import __version__ as v; print("dev" if "dev" in v else "v"+v.replace(".dev",""))')" >> $GITHUB_ENV
-
-      
-
-        
+          echo "DOC_VERSION=$(mamba run -n hydromt python -c 'from fiat import __version__ as v; print("dev" if "dev" in v else "v"+v.replace(".dev",""))')" >> $GITHUB_ENV
