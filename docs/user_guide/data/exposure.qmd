@@ -8,7 +8,9 @@ include-in-header:
 
 The **exposure data** serves to describe the assets within the affected region that the user intends to assess. This data file should be made available in either **CSV format or raster file** ([<ins><h14>*exposure file types*</h14></ins>]) and must be located in the 'exposure' folder, following the prescribed naming convention e.g 'exposure.csv' or 'exposure.nc.
 
- > *Warning! : Assets cannot be outside the area of the hazard map input! Assets that fully fall out of the hazard extend are automatically removed by FIAT. BUT any asset that partially falls outside the flood map extent must be removed manually by the user.*
+::: {.callout-warning}
+ Assets cannot be outside the area of the hazard map input! Assets that fully fall out of the hazard extend are automatically removed by FIAT. BUT any asset that partially falls outside the flood map extent must be removed manually by the user.
+:::
 
 
 #### Raster Data
@@ -48,12 +50,16 @@ A more detailed description of the data fields in the *exposure.csv* can be foun
 **Primary/Secondary object type**
 The primary object type describes the category of the asset (e.g. residential or commercial). The secondary object type allows for a more detailed profile of the object (e.g. single-story home, or grocery store). The developer of the exposure dataset is free to set their own categories of object types. (*Exception: FIAT requires **roads** to be assigned as **primary object type = ‘road**’, to summarize road damages separately from buildings and utilities*.)
 
->*Note: Defining primary/secondary object types facilitates the assignment of damage functions to the objects for the user by creating automatic look-up tables.*
+::: {.callout-note}
+ Defining primary/secondary object types facilitates the assignment of damage functions to the objects for the user by creating automatic look-up tables.
+:::
 
 **Extraction Method**
 The extraction method refers to which water level or water depth is selected over an object. The options are (1) centroid, which selects the water level or depth at the center of the object, or (2) area, which considers the water level or depth over the entire polygon and takes either an average or maximum; this latter choice is selected in the setting file.
 
->*Note: In case the user selects 'area' as extraction method, the user must provide an Object-Location vector file, which contains the areal polygons of the objects.*
+::: {.callout-important}
+ In case the user selects 'area' as extraction method, the user must provide an Object-Location vector file, which contains the areal polygons of the objects.
+:::
 
 **Damage Functions**
 
