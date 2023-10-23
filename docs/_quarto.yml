@@ -41,9 +41,10 @@ website:
       collapse-level: 3
       contents:
         - user_guide/index.qmd
+        - user_guide/data/settings.qmd
+        - user_guide/data/folder_structure.qmd
         - section: "Data"
           contents:
-            - user_guide/data/settings.qmd
             - user_guide/data/hazard.qmd
             - user_guide/data/exposure.qmd
             - user_guide/data/vulnerability.qmd
