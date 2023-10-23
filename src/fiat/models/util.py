@@ -120,17 +120,22 @@ def grid_worker_exact(
     write_bands = []
     exp_nds = []
     dmfs = []
+    band_n = ""
+
+    # Check the band names
+    if haz.count > 1:
+        band_n = "_" + cfg.get("hazard.band_names")[idx - 1]
 
     # Extract the hazard band as an object
     haz_band = haz[idx]
     # Set the output directory
     _out = cfg.get("output.path")
     if cfg.get("hazard.risk"):
-        _out = cfg.get("hazard.path.risk")
+        _out = cfg.get("output.path.risk")
 
     # Create the outgoing netcdf containing every exposure damages
     out_src = GridSource(
-        Path(_out, "output.nc"),
+        Path(_out, f"output{band_n}.nc"),
         mode="w",
     )
     out_src.create(
@@ -145,7 +150,7 @@ def grid_worker_exact(
     td_out = GridSource(
         Path(
             _out,
-            "total_damages.nc",
+            f"total_damages{band_n}.nc",
         ),
         mode="w",
     )
@@ -200,7 +205,7 @@ def grid_worker_exact(
             _coords = _coords[_hcoords]
             e_ch = e_ch[_hcoords]
             h_1d = h_1d[_hcoords]
-            h_1d.clip(min(vul.index), max(vul.index))
+            h_1d = h_1d.clip(min(vul.index), max(vul.index))
 
             dmm = [vul[round(float(n), 2), dmfs[idx]] for n in h_1d]
             e_ch = e_ch * dmm
@@ -223,18 +228,17 @@ def grid_worker_exact(
 
     # Flush the cache and dereference
     for _w in write_bands[:]:
-        w = _w
         write_bands.remove(_w)
-        w.flush()
-        w = None
+        _w.close()
+        _w = None
 
     # Flush and close all
     exp_bands = None
-    td_band.flush()
+    td_band.close()
     td_band = None
     td_out = None
 
-    out_src.flush()
+    out_src.close()
     out_src = None
 
     haz_band = None
