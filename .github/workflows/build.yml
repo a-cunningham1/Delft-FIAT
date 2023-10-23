@@ -1,5 +1,5 @@
 ---
-name: Build binary
+name: Build
 
 on:
   push:

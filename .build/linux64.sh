@@ -15,4 +15,4 @@ source $conda_base_dir/etc/profile.d/conda.sh
 echo "Build stuff.."
 conda activate fiat_build
 export PROJ_LIB=/usr/share/proj
-pyinstaller "$SCRIPTPATH/linux64.spec" --distpath $SCRIPTPATH/../bin --workpath $SCRIPTPATH/../bin/intermediates
+pyinstaller "$SCRIPTPATH/build.spec" --distpath $SCRIPTPATH/../bin --workpath $SCRIPTPATH/../bin/intermediates

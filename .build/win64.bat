@@ -5,6 +5,6 @@ set CUR_DIR=%~dp0
 
 REM Execute building
 call activate fiat_build
-pyinstaller "%CUR_DIR%/win64.spec" --distpath %CUR_DIR%../bin --workpath %CUR_DIR%../bin/intermediates
+pyinstaller "%CUR_DIR%/build.spec" --distpath %CUR_DIR%../bin --workpath %CUR_DIR%../bin/intermediates
 
 pause
