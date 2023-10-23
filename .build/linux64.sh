@@ -1,3 +1,10 @@
+echo "Setup paths relative to this script"
+#!/usr/bin/bash
+# Absolute path to this script, e.g. /home/user/bin/foo.sh
+SCRIPT=$(readlink -f "$0")
+# Absolute path this script is in, thus /home/user/bin
+SCRIPTPATH=$(dirname "$SCRIPT")
+
 # Setting up..
 echo "Locating conda.."
 conda_executable=$(which conda)
@@ -8,4 +15,4 @@ source $conda_base_dir/etc/profile.d/conda.sh
 echo "Build stuff.."
 conda activate fiat_build
 export PROJ_LIB=/usr/share/proj
-pyinstaller "linux64.spec" --distpath ../bin --workpath ../bin/intermediates
+pyinstaller "$(SCRIPTPATH)/linux64.spec" --distpath $(SCRIPTPATH)/../bin --workpath $(SCRIPTPATH)/../bin/intermediates
