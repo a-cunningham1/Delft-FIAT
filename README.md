@@ -89,4 +89,4 @@ That's it.
 FIAT will be located in the {root}/bin/core/Release folder.
 
 ## License
-[MIT](https://github.com/Deltares/Delft-FIAT/blob/master/LICENSE)
+[GPLv3](https://github.com/Deltares/Delft-FIAT/blob/master/LICENSE)
