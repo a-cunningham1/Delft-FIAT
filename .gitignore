@@ -19,6 +19,7 @@ __pycache__/
 *$py.class
 
 # Local documentation and temporary files (calculation etc.)
+.cov/
 .docs/
 tmp/
 whl/
@@ -72,11 +73,6 @@ cover/
 # Scrapy stuff:
 .scrapy
 
-# Sphinx documentation
-.docs/_build/
-.docs/source/_generated/
-.docs/_examples/
-
 # PyBuilder
 .pybuilder/
 target/
@@ -112,3 +108,7 @@ environment.yml
 
 # Cython debug symbols
 cython_debug/
+
+# example output data
+docs/examples/example_output
+docs/PDF_Documentation_files
