@@ -10,7 +10,7 @@ jobs:
   clear-cache:
     uses: ./.github/workflows/purge_cache.yml
 
-  rebuild-test-cache:
+  test-cache:
     needs: clear-cache
     defaults:
       run:
@@ -63,7 +63,7 @@ jobs:
           key: test-py${{ matrix.python-version }}-${{ hashFiles('environment.yml')  }}
         id: test-cache
 
-  rebuild-docs-cache:
+  docs-cache:
     needs: clear-cache
     defaults:
       run:
