@@ -46,6 +46,7 @@ jobs:
           python make_env.py test -p ${{ matrix.python-version}}.*
           mamba env create -f environment.yml
           mamba run -n fiat_test pip install -e .
+          mamba run -n fiat_test python .testdata/create_test_data.py
 
       # run tests first so that we can also cache all of the artefacts
       - name: Test
