@@ -1,4 +1,4 @@
-name: purge cache
+name: Purge cache
 on:
   workflow_dispatch:
   workflow_call:

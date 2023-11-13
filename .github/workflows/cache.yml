@@ -1,5 +1,5 @@
 
-name: Refrech CI cache
+name: Create cache
 
 on:
   schedule:
