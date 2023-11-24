@@ -12,7 +12,7 @@ version = {attr = "fiat.version.__version__"}
 
 ## Project related stuff
 [project]
-name = "fiat"
+name = "delft_fiat"
 dynamic = ['version']
 
 authors = [
