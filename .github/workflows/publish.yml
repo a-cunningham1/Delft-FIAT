@@ -12,7 +12,9 @@ on:
 
 jobs:
   build-distributions:
+
     runs-on: ubuntu-latest
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -41,10 +43,22 @@ jobs:
 
   test-built-dist:
     needs: build-distributions
-    runs-on: ubuntu-latest
+
     defaults:
       run:
         shell: bash -l {0}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest" ] #, "macos-latest", "windows-latest"]
+        python-version: ["3.11"] # fix tests to support older versions
+        include:
+          - os: ubuntu-latest
+            label: linux-64
+            prefix: /usr/share/miniconda3/envs/fiat_min
+    runs-on: ${{ matrix.os }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
@@ -59,19 +73,48 @@ jobs:
           ls -ltrh
           ls -ltrh dist
 
-      - uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
+      - name: Generate env yaml
+        run: pip install tomli && python make_env.py min -p ${{ matrix.python-version }}.*
 
-      # - name: Verify the built dist/wheel is valid
-      #   run: |
-      #     python -m pip install dist/delft_fiat*.whl
-      #     fiat --help
+      - name: load from cache
+        id: cache
+        uses: actions/cache/restore@v3
+        with:
+          path: |
+            /usr/share/miniconda3
+            ~/pycache
+          # the below two settings mean we'll alway srestore the cache
+          # but the cache hit output can tell us if we have to update afterwards
+          key: min-py${{ matrix.python-version }}-${{ hashFiles('environment.yml')  }}
+          restore-keys: |
+            min-py${{ matrix.python-version }}
+
+      - name: Fail on no cache restore
+        if: steps.cache.outputs.cache-matched-key == ''
+        run: |
+          echo "Failed to restore any cache. exiting..."
+          exit 1
+
+      - name: Conda info
+        run: |
+          export PATH=/usr/share/miniconda3/bin:$PATH
+          conda info
+          conda list -n fiat_min
+
+      - name: Verify the built dist/wheel is valid
+        run: |
+          export PATH=/usr/share/miniconda3/bin:$PATH
+          source /usr/share/miniconda3/etc/profile.d/conda.sh
+          conda activate fiat_min
+          python -m pip install dist/delft_fiat*.whl
+          fiat --help
 
   upload-to-test-pypi:
     needs: test-built-dist
     if: github.event_name == 'push'
+
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/download-artifact@v3
         with:
@@ -89,7 +132,9 @@ jobs:
   upload-to-pypi:
     needs: test-built-dist
     if: ${{ github.event_name == 'release' && !github.event.act  }}
+
     runs-on: ubuntu-latest
+
     steps:
       - uses: actions/download-artifact@v3
         with:
