@@ -85,9 +85,9 @@ jobs:
             ~/pycache
           # the below two settings mean we'll alway srestore the cache
           # but the cache hit output can tell us if we have to update afterwards
-          key: min-py${{ matrix.python-version }}-${{ hashFiles('environment.yml')  }}
+          key: min-${{ hashFiles('environment.yml')  }}
           restore-keys: |
-            min-py${{ matrix.python-version }}
+            min
 
       - name: Fail on no cache restore
         if: steps.cache.outputs.cache-matched-key == ''
