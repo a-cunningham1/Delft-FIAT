@@ -1,8 +1,9 @@
 # Delft-FIAT: Fast Impact Assessment Tool
 [![PyPI Latest Release](https://img.shields.io/pypi/v/delft_fiat.svg)](https://pypi.org/project/Delft-FIAT/) [![Conda Latest Release](https://anaconda.org/conda-forge/delft_fiat/badges/version.svg)](https://anaconda.org/conda-forge/delft_fiat) [![Coverage](https://app.codecov.io/github/Deltares/Delft-FIAT/coverage.svg?branch=master)](https://codecov.io/gh/pandas-dev/pandas)
+
 Combined assessment for spatial (raster) and object (vector).
 
-A python packge for quickly estimating damages as a result of hazard.
+A python package for quickly estimating damages as a result of hazards.
 This can be done for both vector based data and raster based data.
 
 ## Information
