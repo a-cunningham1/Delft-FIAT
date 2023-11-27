@@ -78,3 +78,5 @@ jobs:
 
       - name: Upload code coverage
         uses: codecov/codecov-action@v3
+        with:
+          files: ./.cov/*
