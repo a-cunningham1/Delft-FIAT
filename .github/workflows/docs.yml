@@ -68,10 +68,29 @@ jobs:
           chmod +x tmp/quarto.deb
           sudo gdebi -n tmp/quarto.deb
 
+      - name: Setup api & testdata
+        run: |
+          export PATH=/usr/share/miniconda3/bin:$PATH
+          mamba run -n fiat_docs python -m pip install tomli-w
+          mamba run -n fiat_docs python .testdata/create_test_data.py
+          cd docs
+          mamba run -n fiat_docs python api.py
+          mamba run -n fiat_docs python -m quartodoc interlinks
+
       - name: Generate docs
         run: |
           export PATH=/usr/share/miniconda3/bin:$PATH
           source /usr/share/miniconda3/etc/profile.d/conda.sh
           conda activate fiat_docs
-          quarto render docs/
+          quarto render docs/ --execute
           echo "DOC_VERSION=$(mamba run -n fiat_docs python -c 'from fiat import __version__ as v; print("dev" if "dev" in v else "v"+v.replace(".dev",""))')" >> $GITHUB_ENV
+
+      - name: Upload to GitHub Pages
+        if: ${{ github.event_name != 'pull_request' && !github.event.act }}
+        uses: peaceiris/actions-gh-pages@v3.9.3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./docs/_site
+          destination_dir: ./${{ env.DOC_VERSION }}
+          keep_files: false
+          full_commit_message: Deploy ${{ env.DOC_VERSION }} to GitHub Pages

@@ -6,6 +6,7 @@ from concurrent.futures import ProcessPoolExecutor, wait
 from multiprocessing import Process
 from pathlib import Path
 
+from fiat.cfg import ConfigReader
 from fiat.check import (
     check_duplicate_columns,
     check_exp_columns,
@@ -32,7 +33,18 @@ logger = spawn_logger("fiat.model.geom")
 
 
 class GeomModel(BaseModel):
-    """_summary_."""
+    """Geometry model.
+
+    Needs the following settings in order to be run: \n
+    - exposure.csv.file
+    - exposure.geom.file1
+    - output.geom.file1
+
+    Parameters
+    ----------
+    cfg : ConfigReader
+        ConfigReader object containing the settings.
+    """
 
     _method = {
         "area": overlay.clip,
@@ -41,9 +53,8 @@ class GeomModel(BaseModel):
 
     def __init__(
         self,
-        cfg: object,
+        cfg: ConfigReader | dict,
     ):
-        """_summary_."""
         super().__init__(cfg)
 
         self._read_exposure_data()
@@ -136,7 +147,13 @@ the model spatial reference ('{get_srs_repr(self.srs)}')"
     def resolve(
         self,
     ):
-        """_summary_."""
+        """Create permanent output.
+
+        This is done but reading, loading and sorting the temporary output within
+        the `.tmp` folder within the output folder. \n
+
+        - This method might become private.
+        """
         # Setup some local referenced datasets and metadata
         _exp = self.exposure_data
         _risk = self.cfg.get("hazard.risk")
@@ -249,13 +266,16 @@ the model spatial reference ('{get_srs_repr(self.srs)}')"
     def run(
         self,
     ):
-        """_summary_."""
+        """Run the geometry model with provided settings.
+
+        Generates output in the specified `output.path` directory.
+        """
         # Get band names for logging
         _nms = self.cfg.get("hazard.band_names")
 
         # Setup the mp logger for missing stuff
         _receiver = setup_mp_log(
-            self._queue, "missing", log_level=2, dst=self.cfg.get("output.path")
+            self._queue, "missing", level=2, dst=self.cfg.get("output.path")
         )
 
         logger.info("Starting the calculations")
