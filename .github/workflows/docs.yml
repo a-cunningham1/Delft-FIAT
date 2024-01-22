@@ -96,15 +96,10 @@ jobs:
           keep_files: false
           full_commit_message: Deploy ${{ env.DOC_VERSION }} to GitHub Pages
 
-      - name: Trigger updated docs dispatch
+      - name: Trigger Dispatch
         if: ${{ github.event_name != 'pull_request' && !github.event.act }}
-        uses: actions/github-script@v5
+        uses: peter-evans/repository-dispatch@v2
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const repo = context.repo;
-            await github.repos.createDispatchEvent({
-              owner: repo.owner,
-              repo: repo.repo,
-              event_type: 'docs-updated',
-            });
+          token: ${{ secrets.GITHUB_TOKEN }}
+          repository: Deltares/Delft-FIAT
+          event-type: docs-updated
