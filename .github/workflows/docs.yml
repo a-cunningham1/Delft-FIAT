@@ -101,5 +101,5 @@ jobs:
         uses: peter-evans/repository-dispatch@v2
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
-          repository: Deltares/Delft-FIAT
+          repository: ${{ github.repository }}
           event-type: docs-updated
