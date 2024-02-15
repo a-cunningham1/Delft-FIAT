@@ -36,20 +36,27 @@ class BaseModel(metaclass=ABCMeta):
         self.cfg = cfg
         logger.info(f"Using settings from '{self.cfg.filepath}'")
 
-        # Declarations
+        ## Declarations
+        # Model data
         self.srs = None
         self.exposure_data = None
         self.exposure_geoms = None
         self.exposure_grid = None
         self.hazard_grid = None
         self.vulnerability_data = None
+        # Vulnerability data
         self._vul_step_size = 0.01
         self._rounding = 2
         self.cfg["vulnerability.round"] = self._rounding
-        self._outhandler = None
+        # Temporay files
         self._keep_temp = False
+        # Threading stuff
         self._mp_manager = Manager()
-        self._out_meta = {}
+        self.max_threads = 1
+        self.nthreads = 1
+        self.chunk = None
+        self.chunks = []
+        self.nchunk = 0
 
         self._set_max_threads()
         self._set_model_srs()
@@ -175,7 +182,7 @@ using a step size of: {self._vul_step_size}"
     def _set_max_threads(self):
         """_summary_."""
         self.max_threads = cpu_count()
-        _max_threads = self.cfg.get("global.max_threads")
+        _max_threads = self.cfg.get("global.threads")
         if _max_threads is not None:
             self.max_threads = min(self.max_threads, _max_threads)
 
@@ -210,12 +217,23 @@ using a step size of: {self._vul_step_size}"
             self.cfg.filepath.name,
             path.name,
         )
+        # Set crs for later use
+        self.cfg["global.crs"] = get_srs_repr(self.srs)
 
         logger.info(f"Model srs set to: '{get_srs_repr(self.srs)}'")
         # Clean up
         gm = None
 
     @abstractmethod
-    def run():
+    def _set_num_threads(
+        self,
+    ):
         """_summary_."""
-        pass
+        raise NotImplementedError("Method needs to be implemented.")
+
+    @abstractmethod
+    def run(
+        self,
+    ):
+        """_summary_."""
+        raise NotImplementedError("Method needs to be implemented.")

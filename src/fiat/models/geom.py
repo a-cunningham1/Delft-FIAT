@@ -17,17 +17,21 @@ from fiat.check import (
 from fiat.gis import geom, overlay
 from fiat.gis.crs import get_srs_repr
 from fiat.io import (
-    BufferTextHandler,
-    GeomMemFileHandler,
-    open_csv,
     open_exp,
     open_geom,
 )
 from fiat.log import setup_mp_log, spawn_logger
 from fiat.models.base import BaseModel
-from fiat.models.calc import calc_risk
-from fiat.models.util import geom_worker
-from fiat.util import NEWLINE_CHAR
+from fiat.models.util import (
+    GEOM_MIN_CHUNK,
+    GEOM_MIN_WRITE_CHUNK,
+    csv_def_file,
+    csv_temp_file,
+    geom_resolve,
+    geom_threads,
+    geom_worker,
+)
+from fiat.util import create_1d_chunk
 
 logger = spawn_logger("fiat.model.geom")
 
@@ -57,8 +61,11 @@ class GeomModel(BaseModel):
     ):
         super().__init__(cfg)
 
+        # Setup the geometry model
         self._read_exposure_data()
         self._read_exposure_geoms()
+        self._set_chunking()
+        self._set_num_threads()
         self._queue = self._mp_manager.Queue(maxsize=10000)
 
     def __del__(self):
@@ -144,6 +151,50 @@ the model spatial reference ('{get_srs_repr(self.srs)}')"
         # When all is done, add it
         self.exposure_geoms = _d
 
+    def _set_chunking(self):
+        """_summary_."""
+        # Determine maximum geometry dataset size
+        max_geom_size = max(
+            [item.count for item in self.exposure_geoms.values()],
+        )
+        # Set calculations chunk size
+        self.chunk = max_geom_size
+        _chunk = self.cfg.get("global.geom.chunk")
+        if _chunk is not None:
+            self.chunk = max(GEOM_MIN_CHUNK, _chunk)
+
+        # Set cache size for outgoing data
+        _out_chunk = self.cfg.get("output.geom.settings.chunk")
+        if _out_chunk is None:
+            _out_chunk = GEOM_MIN_WRITE_CHUNK
+        self.cfg["output.geom.settings.chunk"] = _out_chunk
+
+        # Determine amount of threads
+        self.nchunk = max_geom_size // self.chunk
+        if self.nchunk == 0:
+            self.nchunk = 1
+        # Constrain by max threads
+        if self.max_threads < self.nchunk:
+            logger.warning(
+                f"Less threads ({self.max_threads}) available than \
+calculated chunks ({self.nchunk})"
+            )
+            self.nchunk = self.max_threads
+
+        # Set the 1D chunks
+        self.chunks = create_1d_chunk(
+            max_geom_size,
+            self.nchunk,
+        )
+
+    def _set_num_threads(self):
+        """_summary_."""
+        self.nthreads = geom_threads(
+            self.max_threads,
+            self.hazard_grid.count,
+            self.nchunk,
+        )
+
     def resolve(
         self,
     ):
@@ -154,114 +205,68 @@ the model spatial reference ('{get_srs_repr(self.srs)}')"
 
         - This method might become private.
         """
-        # Setup some local referenced datasets and metadata
-        _exp = self.exposure_data
-        _risk = self.cfg.get("hazard.risk")
-        _rp_coef = self.cfg.get("hazard.rp_coefficients")
-        # Reverse the _rp_coef to let them coincide with the acquired
-        # values from the temporary files
-        if _rp_coef:
-            _rp_coef.reverse()
-        _new_cols = self.cfg["output.new_columns"]
-        _files = {}
-
         # Define the outgoing file
         out_csv = "output.csv"
         if "output.csv.name" in self.cfg:
             out_csv = self.cfg["output.csv.name"]
+        self.cfg["output.csv.name"] = out_csv
 
-        # Setup the write and write the header of the file
-        writer = BufferTextHandler(
+        # Create an empty csv file for the separate thread to till
+        csv_def_file(
             Path(self.cfg["output.path"], out_csv),
-            buffer_size=100000,
+            self.exposure_data.columns + tuple(self.cfg["output.new_columns"]),
         )
-        header = b""
-        header += ",".join(_exp.columns).encode() + b","
-        header += ",".join(_new_cols).encode()
-        header += NEWLINE_CHAR.encode()
-        writer.write(header)
 
-        # Get all the temporary data paths
-        _paths = Path(self.cfg.get("output.path.tmp")).glob("*.dat")
-
-        # Open the temporary files lazy
-        for p in sorted(_paths):
-            _d = open_csv(p, index=_exp.meta["index_name"], large=True)
-            _files[p.stem] = _d
-            _d = None
-
-        # Loop over all the geometry source files
-        for key, gm in self.exposure_geoms.items():
+        # Do the same for the geometry files
+        for key in self.exposure_geoms.keys():
             _add = key[-1]
-
             # Define outgoing dataset
             out_geom = f"spatial{_add}.gpkg"
             if f"output.geom.name{_add}" in self.cfg:
                 out_geom = self.cfg[f"output.geom.name{_add}"]
+            self.cfg[f"output.geom.name{_add}"] = out_geom
+            with open_geom(
+                Path(self.cfg.get("output.path"), out_geom), mode="w", overwrite=True
+            ) as _w:
+                pass
 
-            # Setup the geometry writer
-            geom_writer = GeomMemFileHandler(
-                Path(self.cfg["output.path"], out_geom),
-                self.srs,
-                gm.layer.GetLayerDefn(),
+        # If more than one thread, start a pool
+        if self.nthreads > 1:
+            futures = []
+            with ProcessPoolExecutor(max_workers=self.nthreads) as Pool:
+                csv_lock = self._mp_manager.Lock()
+                geom_lock = self._mp_manager.Lock()
+                for chunk in self.chunks:
+                    # Submit the all chunks
+                    fs = Pool.submit(
+                        geom_resolve,
+                        self.cfg,
+                        self.exposure_data,
+                        self.exposure_geoms,
+                        chunk,
+                        csv_lock,
+                        geom_lock,
+                    )
+                    futures.append(fs)
+            wait(futures)
+
+        # When there is only 1 thread neccessary
+        # just use process directly
+        else:
+            p = Process(
+                target=geom_resolve,
+                args=(
+                    self.cfg,
+                    self.exposure_data,
+                    self.exposure_geoms,
+                    self.chunks[0],
+                    None,
+                    None,
+                ),
             )
-            geom_writer.create_fields(zip(_new_cols, ["float"] * len(_new_cols)))
-
-            # Loop again over all the geometries
-            for ft in gm:
-                row = b""
-
-                oid = ft.GetField(0)
-                ft_info = _exp[oid]
-
-                # If no data is found in the temporary files, write None values
-                if ft_info is None:
-                    geom_writer.add_feature(
-                        ft,
-                        dict(zip(_new_cols, [None] * len(_new_cols))),
-                    )
-                    row += f"{oid}".encode()
-                    row += b"," * (len(_exp.columns) - 1)
-                    row += NEWLINE_CHAR.encode()
-                    writer.write(row)
-                    continue
-
-                row += ft_info.strip()
-                vals = []
-
-                # Loop over all the temporary files (loaded) to
-                # get the damage per object
-                for item in _files.values():
-                    row += b","
-                    _data = item[oid].strip().split(b",", 1)[1]
-                    row += _data
-                    _val = [float(num.decode()) for num in _data.split(b",")]
-                    vals += _val
-
-                if _risk:
-                    ead = round(
-                        calc_risk(_rp_coef, vals[-1 :: -_exp._dat_len]),
-                        self._rounding,
-                    )
-                    row += f",{ead}".encode()
-                    vals.append(ead)
-                row += NEWLINE_CHAR.encode()
-                writer.write(row)
-                geom_writer.add_feature(
-                    ft,
-                    dict(zip(_new_cols, vals)),
-                )
-
-            geom_writer.dump2drive()
-            geom_writer = None
-
-        writer.flush()
-        writer = None
-
-        # Clean up the opened temporary files
-        for _d in _files.keys():
-            _files[_d] = None
-        _files = None
+            p.start()
+            logger.info("Busy...")
+            p.join()
 
     def run(
         self,
@@ -270,6 +275,9 @@ the model spatial reference ('{get_srs_repr(self.srs)}')"
 
         Generates output in the specified `output.path` directory.
         """
+        # Setup lock list for refs
+        locks = []
+
         # Get band names for logging
         _nms = self.cfg.get("hazard.band_names")
 
@@ -283,40 +291,68 @@ the model spatial reference ('{get_srs_repr(self.srs)}')"
         # Start the receiver (which is in a seperate thread)
         _receiver.start()
 
+        logger.info(f"Using number of threads: {self.nthreads}")
+
         # If there are more than a hazard band in the dataset
         # Use a pool to execute the calculations
-        if self.hazard_grid.count > 1:
-            pcount = min(self.max_threads, self.hazard_grid.count)
+        if self.nthreads > 1:
             futures = []
-            with ProcessPoolExecutor(max_workers=pcount) as Pool:
+            with ProcessPoolExecutor(max_workers=self.nthreads) as Pool:
                 _s = time.time()
                 for idx in range(self.hazard_grid.count):
+                    # Create a lock
+                    nlock = self._mp_manager.Lock()
+                    locks.append(nlock)
+
+                    # Log for the current hazard map
                     logger.info(
-                        f"Submitting a job for the calculations \
+                        f"Submitting jobs for the calculations \
 in regards to band: '{_nms[idx]}'"
                     )
-                    fs = Pool.submit(
-                        geom_worker,
-                        self.cfg,
-                        self._queue,
-                        self.hazard_grid,
+
+                    # Create the temp file plus header
+                    csv_temp_file(
+                        self.cfg["output.path.tmp"],
                         idx + 1,
-                        self.vulnerability_data,
-                        self.exposure_data,
-                        self.exposure_geoms,
+                        self.exposure_data.meta["index_name"],
+                        self.exposure_data.create_specific_columns(_nms[idx]),
                     )
-                    futures.append(fs)
+
+                    # Loop through all the chunks
+                    for chunk in self.chunks:
+                        fs = Pool.submit(
+                            geom_worker,
+                            self.cfg,
+                            self._queue,
+                            self.hazard_grid,
+                            idx + 1,
+                            self.vulnerability_data,
+                            self.exposure_data,
+                            self.exposure_geoms,
+                            chunk,
+                            nlock,
+                        )
+                        futures.append(fs)
             logger.info("Busy...")
+
             # Wait for the children to finish their calculations
             wait(futures)
-            # for p in p_s:
-            #     p.join()
 
         # If there is only one hazard band present, call Process directly
         # No need for the extra overhead the Pool provides
         else:
             logger.info("Submitting a job for the calculations in a seperate process")
             _s = time.time()
+
+            # Create the temp file plus header
+            csv_temp_file(
+                self.cfg["output.path.tmp"],
+                1,
+                self.exposure_data.meta["index_name"],
+                self.exposure_data.create_specific_columns(_nms[0]),
+            )
+
+            # Start the calculations
             p = Process(
                 target=geom_worker,
                 args=(
@@ -327,6 +363,8 @@ in regards to band: '{_nms[idx]}'"
                     self.vulnerability_data,
                     self.exposure_data,
                     self.exposure_geoms,
+                    self.chunks[0],
+                    None,
                 ),
             )
             p.start()

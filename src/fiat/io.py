@@ -5,18 +5,21 @@ import gc
 import os
 import weakref
 from abc import ABCMeta, abstractmethod
-from io import BufferedReader, BufferedWriter, FileIO, TextIOWrapper
+from io import BufferedReader, BytesIO, FileIO, TextIOWrapper
 from math import floor, log10
+from multiprocessing.synchronize import Lock
 from pathlib import Path
 from typing import Any
 
 from numpy import arange, array, column_stack, interp, ndarray
 from osgeo import gdal, ogr, osr
+from osgeo_utils.ogrmerge import process as ogr_merge
 
 from fiat.error import DriverNotFoundError
 from fiat.util import (
     GEOM_DRIVER_MAP,
     GRID_DRIVER_MAP,
+    DummyLock,
     _dtypes_from_string,
     _dtypes_reversed,
     _read_gridsrouce_layers,
@@ -118,7 +121,7 @@ class _BaseIO(metaclass=ABCMeta):
 
     @abstractmethod
     def flush(self):
-        pass
+        raise NotImplementedError("Method needs to be implemented.")
 
 
 class _BaseHandler(metaclass=ABCMeta):
@@ -141,7 +144,7 @@ class _BaseHandler(metaclass=ABCMeta):
 
     @abstractmethod
     def __repr__(self):
-        pass
+        raise NotImplementedError("Dunder method needs to be implemented.")
 
     def __enter__(self):
         return super().__enter__()
@@ -150,13 +153,6 @@ class _BaseHandler(metaclass=ABCMeta):
         self.flush()
         self.seek(self.skip)
         return False
-
-    def read_line_once(self):
-        """_summary_."""
-        line = self.readline()
-        self._skip += len(line)
-        self.flush()
-        return line
 
 
 class _BaseStruct(metaclass=ABCMeta):
@@ -167,7 +163,7 @@ class _BaseStruct(metaclass=ABCMeta):
 
     @abstractmethod
     def __del__(self):
-        pass
+        raise NotImplementedError("Dunder method needs to be implemented.")
 
     def __repr__(self):
         _mem_loc = f"{id(self):#018x}".upper()
@@ -217,80 +213,92 @@ class BufferHandler(_BaseHandler, BufferedReader):
         return self.__class__, (self.path, self.skip)
 
 
-class BufferTextHandler(BufferedWriter):
+class BufferedGeomWriter:
     """_summary_."""
 
     def __init__(
         self,
-        file: str,
-        buffer_size: int = 100000,
-        mode: str = "wb",
-    ):
-        self._file_stream = FileIO(file, mode=mode)
-        self.path = file
-        self._b_size = buffer_size
-
-        BufferedWriter.__init__(
-            self,
-            self._file_stream,
-            buffer_size=buffer_size,
-        )
-
-    def __del__(self):
-        self.flush()
-        self.close()
-        self._file_stream.close()
-
-    def __repr__(self):
-        return f"<{self.__class__.__name__} file='{self.path}'>"
-
-    def __reduce__(self):
-        return self.__class__, (self.path, self._b_size, self.mode)
-
-
-class GeomMemFileHandler:
-    """_summary_."""
-
-    def __init__(
-        self,
-        file: str or Path,
+        file: str | Path,
         srs: osr.SpatialReference,
         layer_meta: ogr.FeatureDefn,
+        buffer_size: int = 20000,  # geometries
+        lock: Lock = None,
     ):
         """_summary_.
 
+        _extended_summary_
+
         Parameters
         ----------
-        file : strorPath
+        file : str | Path
             _description_
         srs : osr.SpatialReference
             _description_
         layer_meta : ogr.FeatureDefn
             _description_
-        field_meta : dict
-            _description_
+        buffer_size : int, optional
+            _description_, by default 20000
         """
-        self._memory = open_geom("memset", "w")
-        self._memory.create_layer(
+        # Ensure pathlib.Path
+        file = Path(file)
+        self.file = file
+
+        # Set the lock
+        self.lock = lock
+        if lock is None:
+            self.lock = DummyLock()
+
+        # Set for unique layer id's
+        self.pid = os.getpid()
+
+        # Set for later use
+        self.srs = srs
+        self.in_layer_meta = layer_meta
+        self.flds = {}
+        self.n = 1
+
+        # Create the buffer
+        self.buffer = open_geom(f"/vsimem/{file.stem}.gpkg", "w")
+        self.buffer.create_layer(
             srs,
             layer_meta.GetGeomType(),
         )
-        self._memory.set_layer_from_defn(
+        self.buffer.set_layer_from_defn(
             layer_meta,
         )
-
-        self._drive = open_geom(file, "w")
+        # Set some check vars
+        # TODO: do this based om memory foodprint
+        # Needs some reseach into ogr's memory tracking
+        self.max_size = buffer_size
+        self.size = 0
 
     def __del__(self):
         self._clear_cache()
-        self._memory = None
-        self._drive = None
+        self.buffer = None
 
     def __reduce__(self) -> str | tuple[Any, ...]:
         pass
 
     def _clear_cache(self):
-        self._memory.src.DeleteLayer("memset")
+        self.buffer.src.DeleteLayer(f"{self.file.stem}")
+        self.buffer._driver.DeleteDataSource(f"/vsimem/{self.file.stem}.gpkg")
+
+    def _reset_buffer(self):
+        # Delete
+        self.buffer.src.DeleteLayer(f"{self.file.stem}")
+
+        # Re-create
+        self.buffer.create_layer(
+            self.srs,
+            self.in_layer_meta.GetGeomType(),
+        )
+        self.buffer.set_layer_from_defn(
+            self.in_layer_meta,
+        )
+        self.create_fields(self.flds)
+
+        # Reset current size
+        self.size = 0
 
     def add_feature(
         self,
@@ -298,7 +306,7 @@ class GeomMemFileHandler:
         fmap: dict,
     ):
         """_summary_."""
-        _local_ft = ogr.Feature(self._memory.layer.GetLayerDefn())
+        _local_ft = ogr.Feature(self.buffer.layer.GetLayerDefn())
         _local_ft.SetFID(ft.GetFID())
         _local_ft.SetGeometry(ft.GetGeometryRef())
         for num in range(ft.GetFieldCount()):
@@ -313,7 +321,11 @@ class GeomMemFileHandler:
                 item,
             )
 
-        self._memory.layer.CreateFeature(_local_ft)
+        if self.size + 1 > self.max_size:
+            self.to_drive()
+
+        self.buffer.layer.CreateFeature(_local_ft)
+        self.size += 1
         _local_ft = None
 
     def create_fields(
@@ -321,31 +333,88 @@ class GeomMemFileHandler:
         flds: zip,
     ):
         """_summary_."""
-        self._memory.create_fields(
-            dict(flds),
+        _new = dict(flds)
+        self.flds.update(_new)
+
+        self.buffer.create_fields(
+            _new,
         )
 
-    def dump2drive(self):
+    def to_drive(self):
         """_summary_."""
-        self._drive.create_layer_from_copy(self._memory.layer)
-        self._drive.flush()
+        # Block while writing to the drive
+        self.lock.acquire()
+        merge_geom_layers(
+            self.file.as_posix(),
+            f"/vsimem/{self.file.stem}.gpkg",
+            out_layer_name=self.file.stem,
+        )
+        self.lock.release()
 
-    # def set_fields(
-    #     self,
-    #     fid: int,
-    #     fmap: dict,
-    # ):
-    #     """_summary_"""
+        self._reset_buffer()
 
-    #     _local_ft = self._memory[fid]
-    #     for key, item in fmap.items():
-    #         _local_ft.SetField(
-    #             key,
-    #             item,
-    #         )
 
-    #     self._memory.layer.UpdateFeature(_local_ft)
-    #     _local_ft = None
+class BufferedTextWriter(BytesIO):
+    """_summary_."""
+
+    def __init__(
+        self,
+        file: Path | str,
+        mode: str = "wb",
+        buffer_size: int = 524288,  # 512 kB
+        lock: Lock = None,
+    ):
+        # Set the lock
+        self.lock = lock
+        if lock is None:
+            self.lock = DummyLock()
+
+        BytesIO.__init__(self)
+
+        # Set object specific stuff
+        self.stream = FileIO(
+            file=file,
+            mode=mode,
+        )
+        self.max_size = buffer_size
+
+    def close(self):
+        """_summary_."""
+        # Flush on last time
+        self.to_drive()
+        self.stream.close()
+
+        # Close the buffer
+        BytesIO.close(self)
+
+    def to_drive(self):
+        """_summary_."""
+        self.seek(0)
+
+        # Push data to the file
+        self.lock.acquire()
+        self.stream.write(self.read())
+        self.stream.flush()
+        os.fsync(self.stream)
+        self.lock.release()
+
+        # Reset the buffer
+        self.truncate(0)
+        self.seek(0)
+
+    def write(self, b):
+        """_summary_.
+
+        _extended_summary_
+
+        Parameters
+        ----------
+        b : _type_
+            _description_
+        """
+        if self.__sizeof__() + len(b) > self.max_size:
+            self.to_drive()
+        BytesIO.write(self, b)
 
 
 class TextHandler(_BaseHandler, TextIOWrapper):
@@ -706,7 +775,7 @@ class Grid(
         data : array
             _description_
         """
-        pass
+        raise NotImplementedError("Method not yet implemented")
 
     @_BaseIO._check_mode
     def write_chunk(
@@ -740,6 +809,8 @@ class GeomSource(_BaseIO, _BaseStruct):
         Path to a file.
     mode : str, optional
         The I/O mode. Either `r` for reading or `w` for writing.
+    overwrite : bool, optional
+        Whether or not to overwrite an existing dataset.
 
     Examples
     --------
@@ -763,6 +834,7 @@ class GeomSource(_BaseIO, _BaseStruct):
         cls,
         file: str,
         mode: str = "r",
+        overwrite: bool = False,
     ):
         """_summary_."""
         obj = object.__new__(cls)
@@ -773,6 +845,7 @@ class GeomSource(_BaseIO, _BaseStruct):
         self,
         file: str,
         mode: str = "r",
+        overwrite: bool = False,
     ):
         _BaseIO.__init__(self, file, mode)
 
@@ -783,12 +856,12 @@ class GeomSource(_BaseIO, _BaseStruct):
 
         self._driver = ogr.GetDriverByName(driver)
 
-        if self.path.exists():
-            self.src = self._driver.Open(str(self.path), self._mode)
+        if self.path.exists() and not overwrite:
+            self.src = self._driver.Open(self.path.as_posix(), self._mode)
         else:
             if not self._mode:
                 raise OSError("")
-            self.src = self._driver.CreateDataSource(str(self.path))
+            self.src = self._driver.CreateDataSource(self.path.as_posix())
 
         self.count = 0
         self._cur_index = 0
@@ -840,6 +913,33 @@ class GeomSource(_BaseIO, _BaseStruct):
         """
         if self.src is not None:
             self.src.FlushCache()
+
+    def reduced_iter(
+        self,
+        si: int,
+        ei: int,
+    ):
+        """Yield items on an interval.
+
+        Creates a python generator.
+
+        Parameters
+        ----------
+        si : int
+            Starting index.
+        ei : int
+            Ending index.
+
+        Yields
+        ------
+        ogr.Feature
+            Features from the vector layer.
+        """
+        _c = 1
+        for ft in self.layer:
+            if si <= _c <= ei:
+                yield ft
+            _c += 1
 
     def reopen(self):
         """Reopen a closed GeomSource."""
@@ -1016,16 +1116,30 @@ class GeomSource(_BaseIO, _BaseStruct):
             layer, self.path.stem, [f"OVERWRITE={_ow[overwrite]}"]
         )
 
-    def get_bbox(self):
-        """Get the bouding box.
+    def copy_layer(
+        self,
+        layer: ogr.Layer,
+        layer_fn: str,
+    ):
+        """Copy a layer to an existing dataset.
 
-        Call <object>.bounds instead.
+        Bit of a spoof off of `create_layer_from_copy`.
+        This method is a bit more forcing and allows to set it's own variable as
+        layer name.
+        Only in write (`'w'`) mode.
+
+        Parameters
+        ----------
+        layer : ogr.Layer
+            _description_
+        layer_fn : str
+            _description_
         """
-        return self.layer.GetExtent()
+        self.layer = self.src.CopyLayer(layer, layer_fn, ["OVERWRITE=YES"])
 
     def _get_layer(self, l_id):
         """_summary_."""
-        pass
+        raise NotImplementedError("Method not yet implemented.")
 
     @_BaseIO._check_state
     def get_srs(self):
@@ -1130,7 +1244,9 @@ multiple variables.
         self.subset = subset
 
         if subset is not None and not var_as_band:
-            self._path = f"{driver.upper()}:" + f'"{file}"' + f":{subset}"
+            self._path = Path(
+                f"{driver.upper()}:" + f'"{file}"' + f":{subset}",
+            )
 
         if var_as_band:
             _open_options.append("VARIABLES_AS_BANDS=YES")
@@ -1146,7 +1262,7 @@ multiple variables.
         self._cur_index = 1
 
         if not self._mode:
-            self.src = gdal.OpenEx(str(self._path), open_options=_open_options)
+            self.src = gdal.OpenEx(self._path.as_posix(), open_options=_open_options)
             self.count = self.src.RasterCount
 
             if chunk is None:
@@ -1325,7 +1441,7 @@ multiple variables.
             Additional arguments.
         """
         self.src = self._driver.Create(
-            str(self.path),
+            self.path.as_posix(),
             *shape,
             nb,
             type,
@@ -1405,26 +1521,6 @@ multiple variables.
         return _names
 
     @_BaseIO._check_state
-    def get_bbox(self):
-        """Return the bounding box of the grid.
-
-        Returns
-        -------
-        tuple
-            The bounding box. Take the form of [left, right, top, bottom].
-        """
-        gtf = self.src.GetGeoTransform()
-        bbox = (
-            gtf[0],
-            gtf[0] + gtf[1] * self.src.RasterXSize,
-            gtf[3] + gtf[5] * self.src.RasterYSize,
-            gtf[3],
-        )
-        gtf = None
-
-        return bbox
-
-    @_BaseIO._check_state
     def get_geotransform(self):
         """Return the geo transform of the grid."""
         return self.src.GetGeoTransform()
@@ -1485,7 +1581,7 @@ multiple variables.
         band: int,
     ):
         """_summary_."""
-        pass
+        raise NotImplementedError("Method not yet implemented.")
 
 
 class _Table(_BaseStruct, metaclass=ABCMeta):
@@ -1542,7 +1638,7 @@ class _Table(_BaseStruct, metaclass=ABCMeta):
 
     @abstractmethod
     def __getitem__(self):
-        pass
+        raise NotImplementedError("Dunder method needs to be implemented.")
 
     # @abstractmethod
     # def __iter__(self):
@@ -1616,10 +1712,10 @@ class Table(_Table):
         )
 
     def __iter__(self):
-        pass
+        raise NotImplementedError("Dunder method needs to be implemented.")
 
     def __next__(self):
-        pass
+        raise NotImplementedError("Dunder method needs to be implemented.")
 
     def __getitem__(self, keys):
         """_summary_."""
@@ -1637,7 +1733,7 @@ class Table(_Table):
         self.data[key] = value
 
     def __eq__(self):
-        pass
+        raise NotImplementedError("Dunder method needs to be implemented.")
 
     def __str__(self):
         if len(self.columns) > 6:
@@ -1694,7 +1790,8 @@ class Table(_Table):
         self,
         data: dict,
     ):
-        pass
+        """_summary_."""
+        raise NotImplementedError("Method not yet implemented.")
 
     def _build_from_list(
         self,
@@ -1705,11 +1802,11 @@ class Table(_Table):
 
     def mean():
         """_summary_."""
-        pass
+        raise NotImplementedError("Method not yet implemented.")
 
     def max():
         """_summary_."""
-        pass
+        raise NotImplementedError("Method not yet implemented.")
 
     def upscale(
         self,
@@ -1790,7 +1887,7 @@ class TableLazy(_Table):
     def __init__(
         self,
         data: BufferHandler,
-        index: str or tuple = None,
+        index: str | tuple = None,
         columns: list = None,
         **kwargs,
     ) -> object:
@@ -1818,10 +1915,10 @@ class TableLazy(_Table):
         )
 
     def __iter__(self):
-        pass
+        raise NotImplementedError("Dunder method needs to be implemented.")
 
     def __next__(self):
-        pass
+        raise NotImplementedError("Dunder method needs to be implemented.")
 
     def __getitem__(
         self,
@@ -1838,7 +1935,7 @@ class TableLazy(_Table):
         return self.data.readline().strip()
 
     def _build_lazy(self):
-        pass
+        raise NotImplementedError("Method not yet implemented.")
 
     def get(
         self,
@@ -1910,7 +2007,7 @@ class ExposureTable(TableLazy):
     def __init__(
         self,
         data: BufferHandler,
-        index: str or tuple = None,
+        index: str | tuple = None,
         columns: list = None,
         **kwargs,
     ):
@@ -2007,6 +2104,65 @@ class ExposureTable(TableLazy):
         return ",".join(["float"] * self._dat_len).encode()
 
 
+## I/O mutating methods
+def merge_geom_layers(
+    out_fn: Path | str,
+    in_fn: Path | str,
+    driver: str = None,
+    append: bool = True,
+    overwrite: bool = False,
+    single_layer: bool = False,
+    out_layer_name: str = None,
+):
+    """Merge multiple vector layers into one file.
+
+    Either in one layer or multiple within the new file.
+    Also usefull for appending datasets.
+
+    Essentially a python friendly function of the ogr2ogr merge functionality.
+
+    Parameters
+    ----------
+    out_fn : Path | str
+        The resulting file name/ path.
+    in_fn : Path | str
+        The input file(s).
+    driver : str, optional
+        The driver to be used for the resulting file.
+    append : bool, optional
+        Whether to append an existing file.
+    overwrite : bool, optional
+        Whether to overwrite the resulting dataset.
+    single_layer : bool, optional
+        Output in a single layer.
+    out_layer_name : str, optional
+        The name of the resulting single layer.
+    """
+    # Create pathlib.Path objects
+    out_fn = Path(out_fn)
+    in_fn = Path(in_fn)
+
+    # Sort the arguments
+    args = []
+    if not append and driver is not None:
+        args += ["-f", driver]
+    if append:
+        args += ["-append"]
+    if overwrite:
+        args += ["-overwrite_ds"]
+    if single_layer:
+        args += ["-single"]
+    args += ["-o", str(out_fn)]
+    if out_layer_name is not None:
+        args += ["-nln", out_layer_name]
+    if "vsimem" in str(in_fn):
+        in_fn = in_fn.as_posix()
+    args += [str(in_fn)]
+
+    # Execute the merging
+    ogr_merge([*args])
+
+
 ## Open
 def open_csv(
     file: Path | str,
@@ -2088,6 +2244,7 @@ def open_exp(
 def open_geom(
     file: Path | str,
     mode: str = "r",
+    overwrite: bool = False,
 ):
     """Open a geometry source file.
 
@@ -2099,6 +2256,8 @@ def open_geom(
         Path to the file.
     mode : str, optional
         Open in `read` or `write` mode.
+    overwrite : bool, optional
+        Whether or not to overwrite an existing dataset.
 
     Returns
     -------
@@ -2108,6 +2267,7 @@ def open_geom(
     return GeomSource(
         file,
         mode,
+        overwrite,
     )
 
 
