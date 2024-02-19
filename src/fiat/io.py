@@ -17,8 +17,12 @@ from osgeo_utils.ogrmerge import process as ogr_merge
 
 from fiat.error import DriverNotFoundError
 from fiat.util import (
+    DD_NEED_IMPLEMENTED,
+    DD_NOT_IMPLEMENTED,
     GEOM_DRIVER_MAP,
     GRID_DRIVER_MAP,
+    NEED_IMPLEMENTED,
+    NOT_IMPLEMENTED,
     DummyLock,
     _dtypes_from_string,
     _dtypes_reversed,
@@ -121,7 +125,7 @@ class _BaseIO(metaclass=ABCMeta):
 
     @abstractmethod
     def flush(self):
-        raise NotImplementedError("Method needs to be implemented.")
+        raise NotImplementedError(NEED_IMPLEMENTED)
 
 
 class _BaseHandler(metaclass=ABCMeta):
@@ -144,7 +148,7 @@ class _BaseHandler(metaclass=ABCMeta):
 
     @abstractmethod
     def __repr__(self):
-        raise NotImplementedError("Dunder method needs to be implemented.")
+        raise NotImplementedError(DD_NEED_IMPLEMENTED)
 
     def __enter__(self):
         return super().__enter__()
@@ -163,7 +167,7 @@ class _BaseStruct(metaclass=ABCMeta):
 
     @abstractmethod
     def __del__(self):
-        raise NotImplementedError("Dunder method needs to be implemented.")
+        raise NotImplementedError(DD_NEED_IMPLEMENTED)
 
     def __repr__(self):
         _mem_loc = f"{id(self):#018x}".upper()
@@ -649,7 +653,7 @@ class Grid(
         elif len(chunk) == 2:
             self._chunk = chunk
         else:
-            ValueError("")
+            raise ValueError(f"Incorrect chunking set: {chunk}")
 
     def __iter__(self):
         self.flush()
@@ -775,7 +779,7 @@ class Grid(
         data : array
             _description_
         """
-        raise NotImplementedError("Method not yet implemented")
+        raise NotImplementedError(NOT_IMPLEMENTED)
 
     @_BaseIO._check_mode
     def write_chunk(
@@ -1139,7 +1143,7 @@ class GeomSource(_BaseIO, _BaseStruct):
 
     def _get_layer(self, l_id):
         """_summary_."""
-        raise NotImplementedError("Method not yet implemented.")
+        raise NotImplementedError(NOT_IMPLEMENTED)
 
     @_BaseIO._check_state
     def get_srs(self):
@@ -1270,7 +1274,7 @@ multiple variables.
             elif len(chunk) == 2:
                 self._chunk = chunk
             else:
-                ValueError("")
+                raise ValueError(f"Incorrect chunking set: {chunk}")
 
             if self.count == 0:
                 self.subset_dict = _read_gridsrouce_layers(
@@ -1581,7 +1585,7 @@ multiple variables.
         band: int,
     ):
         """_summary_."""
-        raise NotImplementedError("Method not yet implemented.")
+        raise NotImplementedError(NOT_IMPLEMENTED)
 
 
 class _Table(_BaseStruct, metaclass=ABCMeta):
@@ -1637,8 +1641,8 @@ class _Table(_BaseStruct, metaclass=ABCMeta):
         return self.meta["nrow"]
 
     @abstractmethod
-    def __getitem__(self):
-        raise NotImplementedError("Dunder method needs to be implemented.")
+    def __getitem__(self, key):
+        raise NotImplementedError(DD_NEED_IMPLEMENTED)
 
     # @abstractmethod
     # def __iter__(self):
@@ -1712,10 +1716,10 @@ class Table(_Table):
         )
 
     def __iter__(self):
-        raise NotImplementedError("Dunder method needs to be implemented.")
+        raise NotImplementedError(DD_NOT_IMPLEMENTED)
 
     def __next__(self):
-        raise NotImplementedError("Dunder method needs to be implemented.")
+        raise NotImplementedError(DD_NOT_IMPLEMENTED)
 
     def __getitem__(self, keys):
         """_summary_."""
@@ -1732,8 +1736,8 @@ class Table(_Table):
     def __setitem__(self, key, value):
         self.data[key] = value
 
-    def __eq__(self):
-        raise NotImplementedError("Dunder method needs to be implemented.")
+    def __eq__(self, other):
+        return NotImplemented
 
     def __str__(self):
         if len(self.columns) > 6:
@@ -1791,7 +1795,7 @@ class Table(_Table):
         data: dict,
     ):
         """_summary_."""
-        raise NotImplementedError("Method not yet implemented.")
+        raise NotImplementedError(NOT_IMPLEMENTED)
 
     def _build_from_list(
         self,
@@ -1800,13 +1804,13 @@ class Table(_Table):
         """_summary_."""
         self.data = array(data, dtype=object)
 
-    def mean():
+    def mean(self):
         """_summary_."""
-        raise NotImplementedError("Method not yet implemented.")
+        raise NotImplementedError(NOT_IMPLEMENTED)
 
-    def max():
+    def max(self):
         """_summary_."""
-        raise NotImplementedError("Method not yet implemented.")
+        raise NotImplementedError(NOT_IMPLEMENTED)
 
     def upscale(
         self,
@@ -1915,10 +1919,10 @@ class TableLazy(_Table):
         )
 
     def __iter__(self):
-        raise NotImplementedError("Dunder method needs to be implemented.")
+        raise NotImplementedError(DD_NOT_IMPLEMENTED)
 
     def __next__(self):
-        raise NotImplementedError("Dunder method needs to be implemented.")
+        raise NotImplementedError(DD_NOT_IMPLEMENTED)
 
     def __getitem__(
         self,
@@ -1935,7 +1939,7 @@ class TableLazy(_Table):
         return self.data.readline().strip()
 
     def _build_lazy(self):
-        raise NotImplementedError("Method not yet implemented.")
+        raise NotImplementedError(NOT_IMPLEMENTED)
 
     def get(
         self,
@@ -1968,13 +1972,14 @@ class TableLazy(_Table):
         if key == self.index_col:
             return
 
+        _pat_multi = regex_pattern(self.delim, multi=True)
         idx = self.header_index[key]
         new_index = [None] * self.handler.size
 
         with self.handler as h:
             c = 0
 
-            for _nlines, sd in _text_chunk_gen(h):
+            for _nlines, sd in _text_chunk_gen(h, _pat_multi):
                 new_index[c:_nlines] = [
                     *map(
                         self.dtypes[idx],
