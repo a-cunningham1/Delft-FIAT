@@ -11,7 +11,7 @@ from fiat.check import (
 from fiat.io import open_grid
 from fiat.log import spawn_logger
 from fiat.models.base import BaseModel
-from fiat.models.util import grid_worker_exact, grid_worker_risk
+from fiat.models.worker import grid_worker_exact, grid_worker_risk
 
 logger = spawn_logger("fiat.model.grid")
 
@@ -35,7 +35,7 @@ class GridModel(BaseModel):
     ):
         super().__init__(cfg)
 
-        self._read_exposure_grid()
+        self.read_exposure_grid()
 
     def __del__(self):
         BaseModel.__del__(self)
@@ -43,7 +43,7 @@ class GridModel(BaseModel):
     def _clean_up(self):
         pass
 
-    def _read_exposure_grid(self):
+    def read_exposure_grid(self):
         """_summary_."""
         file = self.cfg.get("exposure.grid.file")
         logger.info(f"Reading exposure grid ('{file.name}')")
@@ -69,6 +69,9 @@ class GridModel(BaseModel):
         self.exposure_grid = data
 
     def _set_num_threads(self):
+        pass
+
+    def _setup_output_files(self):
         pass
 
     def resolve(self):
@@ -101,14 +104,14 @@ class GridModel(BaseModel):
         if self.hazard_grid.count > 1:
             pcount = min(self.max_threads, self.hazard_grid.count)
             futures = []
-            with ProcessPoolExecutor(max_workers=pcount) as Pool:
+            with ProcessPoolExecutor(max_workers=pcount) as pool:
                 _s = time.time()
                 for idx in range(self.hazard_grid.count):
                     logger.info(
                         f"Submitting a job for the calculations \
 in regards to band: '{_nms[idx]}'"
                     )
-                    fs = Pool.submit(
+                    fs = pool.submit(
                         grid_worker_exact,
                         self.cfg,
                         self.hazard_grid,

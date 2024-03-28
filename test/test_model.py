@@ -1,47 +1,53 @@
 from pathlib import Path
 
+from fiat import FIAT
 from fiat.io import open_csv
-from fiat.models import GeomModel, GridModel
 from osgeo import gdal
 
 
-def test_geom_model(tmpdir, cfg_geom_event):
-    cfg_geom_event.set_output_dir(str(tmpdir))
-    model = GeomModel(cfg_geom_event)
-    model.run()
+def run_model(cfg, tmpdir):
+    # Execute
+    cfg.set_output_dir(str(tmpdir))
+    mod = FIAT(cfg)
+    mod.run()
 
-    # check the output
+
+def test_geom_event(tmpdir, configs):
+    # run the model
+    run_model(configs["geom_event"], tmpdir)
+
+    # Check the output for this specific case
     out = open_csv(Path(str(tmpdir), "output.csv"), index="Object ID")
-    assert float(out[2, "Total Damage"]) == 740
-    assert float(out[3, "Total Damage"]) == 1038
+    assert int(float(out[2, "Total Damage"])) == 740
+    assert int(float(out[3, "Total Damage"])) == 1038
 
 
-def test_geom_missing(tmpdir, cfg_geom_event_mis):
-    cfg_geom_event_mis.set_output_dir(str(tmpdir))
-    model = GeomModel(cfg_geom_event_mis)
-    model.run()
+def test_geom_missing(tmpdir, configs):
+    # run the model
+    run_model(configs["geom_event_missing"], tmpdir)
 
+    # Check the output for this specific case
     assert Path(str(tmpdir), "missing.log").exists()
     missing = open(Path(str(tmpdir), "missing.log"), "r")
     assert sum(1 for _ in missing) == 1
 
 
-def test_geom_risk(tmpdir, cfg_geom_risk):
-    cfg_geom_risk.set_output_dir(str(tmpdir))
-    model = GeomModel(cfg_geom_risk)
-    model.run()
+def test_geom_risk(tmpdir, configs):
+    # run the model
+    run_model(configs["geom_risk"], tmpdir)
 
+    # Check the output for this specific case
     out = open_csv(Path(str(tmpdir), "output.csv"), index="Object ID")
-    assert float(out[2, "Damage: Structure (5Y)"]) == 1804
-    assert float(out[4, "Total Damage (10Y)"]) == 3840
-    assert float(out[3, "Risk (EAD)"]) == 1022.47
+    assert int(float(out[2, "Damage: Structure (5Y)"])) == 1804
+    assert int(float(out[4, "Total Damage (10Y)"])) == 3840
+    assert int(float(out[3, "Risk (EAD)"]) * 100) == 102247
 
 
-def test_grid_model(tmpdir, cfg_grid_event):
-    cfg_grid_event.set_output_dir(str(tmpdir))
-    model = GridModel(cfg_grid_event)
-    model.run()
+def test_grid_event(tmpdir, configs):
+    # run the model
+    run_model(configs["grid_event"], tmpdir)
 
+    # Check the output for this specific case
     src = gdal.OpenEx(
         str(Path(str(tmpdir), "output.nc")),
     )
@@ -59,11 +65,11 @@ def test_grid_model(tmpdir, cfg_grid_event):
     assert int(arr[7, 3] * 10) == 8700
 
 
-def test_grid_risk(tmpdir, cfg_grid_risk):
-    cfg_grid_risk.set_output_dir(str(tmpdir))
-    model = GridModel(cfg_grid_risk)
-    model.run()
+def test_grid_risk(tmpdir, configs):
+    # run the model
+    run_model(configs["grid_risk"], tmpdir)
 
+    # Check the output for this specific case
     src = gdal.OpenEx(
         str(Path(str(tmpdir), "ead.nc")),
     )
