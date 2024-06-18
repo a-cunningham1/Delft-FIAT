@@ -108,7 +108,7 @@ jobs:
         if: always()
         with:
           path: |
-            $CONDA
+            /home/runner/miniconda3
             ~/pycache
           key: docs-${{ hashFiles('environment.yml')  }}
         id: docs-cache
