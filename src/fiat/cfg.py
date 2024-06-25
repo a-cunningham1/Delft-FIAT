@@ -1,6 +1,5 @@
 """The config interpreter of FIAT."""
 
-import os
 from pathlib import Path
 from typing import Any
 
@@ -67,9 +66,9 @@ class ConfigReader(dict):
 
         # Do some checking concerning the file paths in the settings file
         for key, item in self.items():
-            if key.endswith(("file", "csv")) or key.rsplit(".", 1)[1].startswith(
-                "file"
-            ):
+            if (
+                key.endswith(("file",)) or key.rsplit(".", 1)[1].startswith("file")
+            ) and item:
                 path = generic_path_check(
                     item,
                     self.path,
@@ -79,14 +78,14 @@ class ConfigReader(dict):
                 if isinstance(item, str):
                     self[key] = item.lower()
 
-        # Ensure the output directory is there
-        self._create_model_dirs(self.get("output.path"))
-
         # Switch the build flag off
         self._build = False
 
         # (Re)set the extra values
         self.update(self._extra_args)
+
+        # Ensure the output directory is there
+        self._create_model_dirs(self.get("output.path"))
 
     def __repr__(self):
         return f"<ConfigReader object file='{self.filepath}'>"
@@ -135,7 +134,7 @@ class ConfigReader(dict):
         _p = self._create_dir(
             self.get("output.path"),
             ".tmp",
-            hidden=True,
+            hidden=False,
         )
         self.set("output.tmp.path", _p)
 
@@ -242,14 +241,4 @@ the bool is set to True.
         path : Path | str
             A Path to the new directory.
         """
-        if self.get("output.damages.path") is not None:
-            if not any(self.get("output.damages.path").iterdir()):
-                os.rmdir(self.get("output.damages.path"))
-
-        if not any(self.get("output.tmp.path").iterdir()):
-            os.rmdir(self.get("output.tmp.path"))
-
-        if not any(self.get("output.path").iterdir()):
-            os.rmdir(self.get("output.path"))
-
         self._create_model_dirs(path)
