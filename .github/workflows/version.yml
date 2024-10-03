@@ -1,0 +1,52 @@
+
+---
+name: Versioning
+
+on:
+  repository_dispatch:
+      types: [ docs-updated ]
+  workflow_dispatch:
+
+jobs:
+  Versioning:
+    defaults:
+      run:
+        shell: bash -l {0}
+
+    strategy:
+      fail-fast: false
+      matrix:
+        os: ["ubuntu-latest"]
+        python-version: ["3.12"]
+        include:
+          - os: ubuntu-latest
+            label: linux-64
+
+    name: ${{ matrix.os }} - py${{ matrix.python-version }}
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+            ref: gh-pages
+
+      - name: Run versioning script
+        id: check
+        run: |
+          python .scripts/version.py
+        continue-on-error: true
+
+      - name: Adjust stable symbolic link
+        if: ${{ steps.check.outcome == 'success' }}
+        run: |
+          ln -sfn ${{ env.NEW_STABLE_VERSION }} stable
+
+      - name: Commit and push changes
+        if: ${{ steps.check.outcome == 'success' }}
+        run: |
+            git config --local user.email "action@github.com"
+            git config --local user.name "GitHub Action"
+            git add .
+            git commit -m "Added version ${{ env.NEW_STABLE_VERSION }}"
+            git push
