@@ -6,10 +6,54 @@ from multiprocessing.context import SpawnContext
 from pathlib import Path
 from typing import Callable, Generator
 
-from fiat.util import NEWLINE_CHAR
+from osgeo import ogr
 
-GEOM_MIN_CHUNK = 50000
-GEOM_MIN_WRITE_CHUNK = 20000
+from fiat.io import TableLazy
+from fiat.util import NEWLINE_CHAR, replace_empty
+
+GEOM_DEFAULT_CHUNK = 50000
+GRID_PREFER = {
+    False: "hazard",
+    True: "exposure",
+}
+
+
+def exposure_from_geom(
+    ft: ogr.Feature,
+    exp: TableLazy,
+    oid: int,
+    idxs_haz: list | tuple,
+    pattern: object,
+):
+    """_summary_."""
+    method = ft.GetField("extract_method")
+    haz = [ft.GetField(idx) for idx in idxs_haz]
+    return ft, method, haz
+
+
+def exposure_from_csv(
+    ft: ogr.Feature,
+    exp: TableLazy,
+    oid: int,
+    idxs_haz: list | tuple,
+    pattern: object,
+):
+    """_summary_."""
+    ft_info_raw = exp[ft.GetField(oid)]
+    if ft_info_raw is None:
+        return None, None, None
+
+    ft_info = replace_empty(pattern.split(ft_info_raw))
+    ft_info = [x(y) for x, y in zip(exp.dtypes, ft_info)]
+    method = ft_info[exp._columns["extract_method"]].lower()
+    haz = [ft_info[idx] for idx in idxs_haz]
+    return ft_info, method, haz
+
+
+EXPOSURE_FIELDS = {
+    True: exposure_from_geom,
+    False: exposure_from_csv,
+}
 
 
 def csv_temp_file(
@@ -47,7 +91,6 @@ def csv_def_file(
 
 def geom_threads(
     cpu_count: int,
-    haz_layers: int,
     chunks: int,
 ):
     """_summary_.
@@ -57,7 +100,7 @@ def geom_threads(
     n = 1
     if chunks == 0:
         chunks = 1
-    n = chunks * haz_layers
+    n = chunks
     n = min(cpu_count, n)
 
     return n

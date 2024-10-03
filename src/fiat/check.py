@@ -1,6 +1,5 @@
 """Checks for the data of FIAT."""
 
-import fnmatch
 from pathlib import Path
 
 from osgeo import osr
@@ -41,7 +40,6 @@ def check_config_geom(
 ):
     """_summary_."""
     _req_fields = [
-        "exposure.csv.file",
         "exposure.geom.crs",
         "exposure.geom.file1",
     ]
@@ -121,7 +119,8 @@ def check_grid_exact(
     ):
         msg = f"CRS of hazard data ({get_srs_repr(haz.get_srs())}) does not match the \
 CRS of the exposure data ({get_srs_repr(exp.get_srs())})"
-        raise FIATDataError(msg)
+        logger.warning(msg)
+        return False
 
     gtf1 = [round(_n, 2) for _n in haz.get_geotransform()]
     gtf2 = [round(_n, 2) for _n in exp.get_geotransform()]
@@ -129,12 +128,16 @@ CRS of the exposure data ({get_srs_repr(exp.get_srs())})"
     if gtf1 != gtf2:
         msg = f"Geotransform of hazard data ({gtf1}) does not match geotransform of \
 exposure data ({gtf2})"
-        raise FIATDataError(msg)
+        logger.warning(msg)
+        return False
 
     if haz.shape != exp.shape:
         msg = f"Shape of hazard ({haz.shape}) does not match shape of \
 exposure data ({exp.shape})"
-        raise FIATDataError(msg)
+        logger.warning(msg)
+        return False
+
+    return True
 
 
 def check_internal_srs(
@@ -196,7 +199,7 @@ def check_hazard_band_names(
 ):
     """_summary_."""
     if risk:
-        return [f"{n}Y" for n in rp]
+        return [f"{n}y" for n in rp]
 
     if count == 1:
         return [""]
@@ -243,13 +246,12 @@ multiple datasets (subsets). Chose one of the following subsets: {keys}"
 ## Exposure
 def check_exp_columns(
     columns: tuple | list,
+    specific_columns: tuple | list = [],
 ):
     """_summary_."""
     _man_columns = [
-        "Object ID",
-        "Ground Elevation",
-        "Ground Floor Height",
-    ]
+        "object_id",
+    ] + specific_columns
 
     _check = [item in columns for item in _man_columns]
     if not all(_check):
@@ -257,29 +259,24 @@ def check_exp_columns(
         msg = f"Missing mandatory exposure columns: {_missing}"
         raise FIATDataError(msg)
 
-    dmg = fnmatch.filter(columns, "Damage Function: *")
-    dmg_suffix = [item.split(":")[1].strip() for item in dmg]
-    mpd = fnmatch.filter(columns, "Max Potential Damage: *")
-    mpd_suffix = [item.split(":")[1].strip() for item in mpd]
 
-    if not dmg:
-        msg = "No damage function were given in exposure data."
+def check_exp_derived_types(
+    type: str,
+    found: tuple | list,
+    missing: tuple | list,
+):
+    """_summary_."""
+    # Error when no columns are found for vulnerability type
+    if not found:
+        msg = f"For type: '{type}' no matching columns were found for \
+fn_{type}_* and max_{type}_* columns."
         raise FIATDataError(msg)
 
-    if not mpd:
-        msg = "No maximum potential damages were given in exposure data"
-        raise FIATDataError(msg)
-
-    _check = [item in mpd_suffix for item in dmg_suffix]
-    if not any(_check):
-        msg = "Damage function and maximum potential damage do not have a single match"
-        raise FIATDataError(msg)
-
-    if not all(_check):
-        _missing = [item for item, b in zip(dmg_suffix, _check) if not b]
+    # Log when combination of fn and max is missing
+    if missing:
         logger.warning(
             f"No every damage function has a corresponding \
-maximum potential damage: {_missing}"
+    maximum potential damage: {missing}"
         )
 
 
@@ -288,7 +285,7 @@ def check_exp_grid_dmfs(
     dmfs: tuple | list,
 ):
     """_summary_."""
-    _ef = [_i.get_metadata_item("damage_function") for _i in exp]
+    _ef = [_i.get_metadata_item("fn_damage") for _i in exp]
     _i = None
 
     _check = [item in dmfs for item in _ef]
@@ -296,6 +293,15 @@ def check_exp_grid_dmfs(
         _missing = [item for item, b in zip(_ef, _check) if not b]
         msg = f"Incorrect damage function identifier found in exposure grid: {_missing}"
         raise FIATDataError(msg)
+
+
+def check_exp_index_col(
+    obj: object,
+    index_col: type,
+):
+    """_summary_."""
+    if index_col not in obj.columns:
+        raise FIATDataError(f"Index column ('{index_col}') not found in {obj.path}")
 
 
 ## Vulnerability

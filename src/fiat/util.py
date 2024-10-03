@@ -1,6 +1,7 @@
 """Base FIAT utility."""
 
 import ctypes
+import fnmatch
 import math
 import os
 import platform
@@ -13,7 +14,7 @@ from pathlib import Path
 from types import FunctionType, ModuleType
 
 import regex
-from osgeo import gdal
+from osgeo import gdal, ogr
 
 # Define the variables for FIAT
 BLACKLIST = type, ModuleType, FunctionType
@@ -43,6 +44,12 @@ _dtypes_from_string = {
     "float": float,
     "int": int,
     "str": str,
+}
+
+_fields_type_map = {
+    "int": ogr.OFTInteger64,
+    "float": ogr.OFTReal,
+    "str": ogr.OFTString,
 }
 
 
@@ -152,9 +159,69 @@ def flatten_dict(d: MutableMapping, parent_key: str = "", sep: str = "."):
 
 
 # Exposure specific utility
-def gen_new_columns():
+def discover_exp_columns(
+    columns: dict,
+    type: str,
+):
     """_summary_."""
-    pass
+    dmg_idx = {}
+
+    # Get column values
+    column_vals = list(columns.keys())
+
+    # Filter the current columns
+    dmg = fnmatch.filter(column_vals, f"fn_{type}_*")
+    dmg_suffix = [item.split("_")[-1].strip() for item in dmg]
+    mpd = fnmatch.filter(column_vals, f"max_{type}_*")
+    mpd_suffix = [item.split("_")[-1].strip() for item in mpd]
+
+    # Check the overlap
+    _check = [item in mpd_suffix for item in dmg_suffix]
+
+    # Determine the missing values
+    missing = [item for item, b in zip(dmg_suffix, _check) if not b]
+    for item in missing:
+        dmg_suffix.remove(item)
+
+    fn = {}
+    maxv = {}
+    for val in dmg_suffix:
+        fn.update({val: columns[f"fn_{type}_{val}"]})
+        maxv.update({val: columns[f"max_{type}_{val}"]})
+    dmg_idx.update({"fn": fn, "max": maxv})
+
+    return dmg_suffix, dmg_idx, missing
+
+
+def generate_output_columns(
+    specific_columns: tuple | list,
+    exposure_types: dict,
+    extra: tuple | list = [],
+    suffix: tuple | list = [""],
+):
+    """_summary_."""
+    default = specific_columns + ["red_fact"]
+    total_idx = []
+
+    # Loop over the exposure types
+    for key, value in exposure_types.items():
+        default += [f"{key}_{item}" for item in value["fn"].keys()]
+        total_idx.append(len(default))
+        default += [f"total_{key}"]
+
+    total_idx = [item - len(default) for item in total_idx]
+
+    out = []
+    if len(suffix) == 1 and not suffix[0]:
+        out = default
+    else:
+        for name in suffix:
+            add = [f"{item}_{name}" for item in default]
+            out += add
+
+    out += [f"{x}_{y}" for x, y in product(extra, exposure_types.keys())]
+
+    return out, len(default), total_idx
 
 
 # GIS related utility
@@ -201,7 +268,9 @@ def _read_gridsource_layers_from_info(
     pass
 
 
-def _create_geom_driver_map():
+def _create_geom_driver_map(
+    write: bool = False,
+):
     """_summary_."""
     geom_drivers = {}
     _c = gdal.GetDriverCount()
@@ -209,6 +278,9 @@ def _create_geom_driver_map():
     for idx in range(_c):
         dr = gdal.GetDriver(idx)
         if dr.GetMetadataItem(gdal.DCAP_VECTOR):
+            edit = dr.GetMetadataItem(gdal.DCAP_DELETE_FIELD)
+            if write and edit is None:
+                continue
             if dr.GetMetadataItem(gdal.DCAP_CREATE) or dr.GetMetadataItem(
                 gdal.DCAP_CREATE_LAYER
             ):
@@ -230,8 +302,9 @@ def _create_geom_driver_map():
     return geom_drivers
 
 
-GEOM_DRIVER_MAP = _create_geom_driver_map()
-GEOM_DRIVER_MAP[""] = "Memory"
+GEOM_READ_DRIVER_MAP = _create_geom_driver_map()
+GEOM_WRITE_DRIVER_MAP = _create_geom_driver_map(write=True)
+GEOM_WRITE_DRIVER_MAP[""] = "Memory"
 
 
 def _create_grid_driver_map():
@@ -339,7 +412,48 @@ def generic_path_check(
     return path
 
 
+# Logging utility
+def progressbar(
+    iteration: int,
+    total: int,
+    prefix: str = "",
+    suffix: str = "",
+    decimals: int = 1,
+    bar_length: int = 50,
+):
+    """Call in a loop to create terminal progress bar.
+
+    @params:
+        iteration   - Required  : current iteration (Int)
+        total       - Required  : total iterations (Int)
+        prefix      - Optional  : prefix string (Str)
+        suffix      - Optional  : suffix string (Str)
+        decimals    - Optional  : positive number of decimals in percent complete (Int)
+        bar_length  - Optional  : character length of bar (Int)
+    """
+    str_format = "{0:." + str(decimals) + "f}"
+    percents = str_format.format(100 * (iteration / float(total)))
+    filled_length = int(round(bar_length * iteration / float(total)))
+    bar = "█" * filled_length + "-" * (bar_length - filled_length)
+
+    (sys.stdout.write("\r%s |%s| %s%s %s" % (prefix, bar, percents, "%", suffix)),)
+
+    if iteration == total:
+        sys.stdout.write("\n")
+    sys.stdout.flush()
+
+
 # Misc.
+def find_duplicates(elements: tuple | list):
+    """Find duplicate elements in an iterable object."""
+    uni = list(set(elements))
+    counts = [elements.count(elem) for elem in uni]
+    dup = [elem for _i, elem in enumerate(uni) if counts[_i] > 1]
+    if not dup:
+        return None
+    return dup
+
+
 def object_size(obj):
     """Calculate the actual size of an object (bit overestimated).
 
@@ -389,6 +503,25 @@ class DummyLock:
 
     def release(self):
         """Call dummy release."""
+        pass
+
+
+class DummyWriter:
+    """Mimic the behaviour of an object that is capable of writing."""
+
+    def __init__(self, *args, **kwargs):
+        pass
+
+    def close(self):
+        """Call dummy close."""
+        pass
+
+    def write(self, *args):
+        """Call dummy write."""
+        pass
+
+    def write_iterable(self, *args):
+        """Call dummy write iterable."""
         pass
 
 

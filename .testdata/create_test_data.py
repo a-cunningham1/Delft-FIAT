@@ -31,8 +31,8 @@ def create_dbase_stucture():
 def create_exposure_dbase():
     """_summary_."""
     with open(Path(p, "exposure", "spatial.csv"), "w") as f:
-        f.write("Object ID,Extraction Method,Ground Floor Height,Ground Elevation,")
-        f.write("Damage Function: Structure,Max Potential Damage: Structure\n")
+        f.write("object_id,extract_method,ground_flht,ground_elevtn,")
+        f.write("fn_damage_structure,max_damage_structure\n")
         for n in range(5):
             if (n + 1) % 2 != 0:
                 dmc = "struct_1"
@@ -63,13 +63,13 @@ def create_exposure_geoms():
     )
 
     field = ogr.FieldDefn(
-        "Object ID",
+        "object_id",
         ogr.OFTInteger,
     )
     layer.CreateField(field)
 
     field = ogr.FieldDefn(
-        "ObjectName",
+        "object_name",
         ogr.OFTString,
     )
     field.SetWidth(50)
@@ -78,8 +78,8 @@ def create_exposure_geoms():
     for idx, geom in enumerate(geoms):
         geom = ogr.CreateGeometryFromWkt(geom)
         ft = ogr.Feature(layer.GetLayerDefn())
-        ft.SetField("Object ID", idx + 1)
-        ft.SetField("ObjectName", f"fp_{idx+1}")
+        ft.SetField("object_id", idx + 1)
+        ft.SetField("object_name", f"fp_{idx+1}")
         ft.SetGeometry(geom)
 
         layer.CreateFeature(ft)
@@ -110,13 +110,13 @@ def create_exposure_geoms_2():
     )
 
     field = ogr.FieldDefn(
-        "Object ID",
+        "object_id",
         ogr.OFTInteger,
     )
     layer.CreateField(field)
 
     field = ogr.FieldDefn(
-        "ObjectName",
+        "object_name",
         ogr.OFTString,
     )
     field.SetWidth(50)
@@ -124,8 +124,8 @@ def create_exposure_geoms_2():
 
     geom = ogr.CreateGeometryFromWkt(geoms[0])
     ft = ogr.Feature(layer.GetLayerDefn())
-    ft.SetField("Object ID", 5)
-    ft.SetField("ObjectName", f"fp_{5}")
+    ft.SetField("object_id", 5)
+    ft.SetField("object_name", f"fp_{5}")
     ft.SetGeometry(geom)
 
     layer.CreateFeature(ft)
@@ -158,13 +158,13 @@ def create_exposure_geoms_3():
     )
 
     field = ogr.FieldDefn(
-        "Object ID",
+        "object_id",
         ogr.OFTInteger,
     )
     layer.CreateField(field)
 
     field = ogr.FieldDefn(
-        "ObjectName",
+        "object_name",
         ogr.OFTString,
     )
     field.SetWidth(50)
@@ -172,8 +172,8 @@ def create_exposure_geoms_3():
 
     geom = ogr.CreateGeometryFromWkt(geoms[0])
     ft = ogr.Feature(layer.GetLayerDefn())
-    ft.SetField("Object ID", 5)
-    ft.SetField("ObjectName", f"fp_{5}")
+    ft.SetField("object_id", 5)
+    ft.SetField("object_name", f"fp_{5}")
     ft.SetGeometry(geom)
 
     layer.CreateFeature(ft)
@@ -182,8 +182,8 @@ def create_exposure_geoms_3():
 
     geom = ogr.CreateGeometryFromWkt(geoms[1])
     ft = ogr.Feature(layer.GetLayerDefn())
-    ft.SetField("Object ID", 6)
-    ft.SetField("ObjectName", f"fp_{6}")
+    ft.SetField("object_id", 6)
+    ft.SetField("object_name", f"fp_{6}")
     ft.SetGeometry(geom)
 
     layer.CreateFeature(ft)
@@ -226,7 +226,7 @@ def create_exposure_grid():
     for x, y in product(oneD, oneD):
         data[x, y] = 2000 + ((x + y) * 100)
     band.WriteArray(data)
-    band.SetMetadataItem("damage_function", "struct_1")
+    band.SetMetadataItem("fn_damage", "struct_1")
 
     band.FlushCache()
     src.FlushCache()
@@ -325,7 +325,6 @@ def create_settings_geom():
     doc = {
         "global": {
             "crs": "EPSG:4326",
-            "keep_temp_files": True,
         },
         "output": {
             "path": "output/geom_event",
@@ -403,7 +402,6 @@ def create_settings_grid():
     doc = {
         "global": {
             "crs": "EPSG:4326",
-            "keep_temp_files": True,
         },
         "output": {
             "path": "output/grid_event",

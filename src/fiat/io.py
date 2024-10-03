@@ -19,9 +19,11 @@ from fiat.error import DriverNotFoundError
 from fiat.util import (
     DD_NEED_IMPLEMENTED,
     DD_NOT_IMPLEMENTED,
-    GEOM_DRIVER_MAP,
+    GEOM_READ_DRIVER_MAP,
+    GEOM_WRITE_DRIVER_MAP,
     GRID_DRIVER_MAP,
     NEED_IMPLEMENTED,
+    NEWLINE_CHAR,
     NOT_IMPLEMENTED,
     DummyLock,
     _dtypes_from_string,
@@ -29,6 +31,7 @@ from fiat.util import (
     _read_gridsrouce_layers,
     _text_chunk_gen,
     deter_type,
+    find_duplicates,
     regex_pattern,
     replace_empty,
 )
@@ -220,8 +223,8 @@ class BufferedGeomWriter:
         self,
         file: str | Path,
         srs: osr.SpatialReference,
-        layer_meta: ogr.FeatureDefn,
-        buffer_size: int = 20000,  # geometries
+        layer_defn: ogr.FeatureDefn = None,
+        buffer_size: int = 100000,  # geometries
         lock: Lock = None,
     ):
         """_summary_.
@@ -253,18 +256,23 @@ class BufferedGeomWriter:
 
         # Set for later use
         self.srs = srs
-        self.in_layer_meta = layer_meta
         self.flds = {}
         self.n = 1
+
+        if layer_defn is None:
+            with open_geom(self.file, mode="r") as _r:
+                layer_defn = _r.layer.GetLayerDefn()
+            _r = None
+        self.layer_defn = layer_defn
 
         # Create the buffer
         self.buffer = open_geom(f"/vsimem/{file.stem}.gpkg", "w")
         self.buffer.create_layer(
             srs,
-            layer_meta.GetGeomType(),
+            layer_defn.GetGeomType(),
         )
         self.buffer.set_layer_from_defn(
-            layer_meta,
+            layer_defn,
         )
         # Set some check vars
         # TODO: do this based om memory foodprint
@@ -274,6 +282,7 @@ class BufferedGeomWriter:
 
     def __del__(self):
         self.buffer = None
+        self.layer_defn = None
 
     def __reduce__(self) -> str | tuple[Any, ...]:
         pass
@@ -289,10 +298,10 @@ class BufferedGeomWriter:
         # Re-create
         self.buffer.create_layer(
             self.srs,
-            self.in_layer_meta.GetGeomType(),
+            self.layer_defn.GetGeomType(),
         )
         self.buffer.set_layer_from_defn(
-            self.in_layer_meta,
+            self.layer_defn,
         )
         self.create_fields(self.flds)
 
@@ -306,33 +315,21 @@ class BufferedGeomWriter:
         self._clear_cache()
         self.buffer.close()
 
-    def add_feature(
+    def add_feature_with_map(
         self,
         ft: ogr.Feature,
         fmap: dict,
     ):
         """_summary_."""
-        _local_ft = ogr.Feature(self.buffer.layer.GetLayerDefn())
-        _local_ft.SetFID(ft.GetFID())
-        _local_ft.SetGeometry(ft.GetGeometryRef())
-        for num in range(ft.GetFieldCount()):
-            _local_ft.SetField(
-                num,
-                ft.GetField(num),
-            )
-
-        for key, item in fmap.items():
-            _local_ft.SetField(
-                key,
-                item,
-            )
+        self.buffer.add_feature_with_map(
+            ft,
+            fmap=fmap,
+        )
 
         if self.size + 1 > self.max_size:
             self.to_drive()
 
-        self.buffer.layer.CreateFeature(_local_ft)
         self.size += 1
-        _local_ft = None
 
     def create_fields(
         self,
@@ -349,6 +346,7 @@ class BufferedGeomWriter:
     def to_drive(self):
         """_summary_."""
         # Block while writing to the drive
+        # self.buffer.close()
         self.lock.acquire()
         merge_geom_layers(
             self.file.as_posix(),
@@ -357,6 +355,7 @@ class BufferedGeomWriter:
         )
         self.lock.release()
 
+        # self.buffer = self.buffer.reopen(mode="w")
         self._reset_buffer()
 
 
@@ -422,6 +421,18 @@ class BufferedTextWriter(BytesIO):
             self.to_drive()
         BytesIO.write(self, b)
 
+    def write_iterable(self, *args):
+        """_summary_.
+
+        _extended_summary_
+        """
+        by = b""
+        for arg in args:
+            by += ("," + "{}," * len(arg)).format(*arg).rstrip(",").encode()
+        by = by.lstrip(b",")
+        by += NEWLINE_CHAR.encode()
+        self.write(by)
+
 
 ## Parsing
 class CSVParser:
@@ -441,6 +452,7 @@ class CSVParser:
         self.meta["index_col"] = -1
         self.meta["index_name"] = None
         self.meta["delimiter"] = delimiter
+        self.meta["dup_cols"] = None
         self.index = None
         self.columns = None
         self._nrow = self.data.size
@@ -541,6 +553,7 @@ class CSVParser:
                 break
 
             self.columns = [item.strip() for item in line.split(self.delim)]
+            self.meta["dup_cols"] = find_duplicates(self.columns)
             self._resolve_column_headers()
             self._ncol = len(self.columns)
             break
@@ -552,6 +565,17 @@ class CSVParser:
     def _resolve_column_headers(self):
         """_summary_."""
         _cols = self.columns
+        dup = self.meta["dup_cols"]
+        if dup is None:
+            dup = []
+        # Solve duplicate values first
+        count = dict(zip(dup, [0] * len(dup)))
+        for idx, item in enumerate(_cols):
+            if item in dup:
+                _cols[idx] += f"_{count[item]}"
+                count[item] += 1
+
+        # Solve unnamed column headers
         _cols = [_col if _col else f"Unnamed_{_i+1}" for _i, _col in enumerate(_cols)]
         self.columns = _cols
 
@@ -569,15 +593,6 @@ class CSVParser:
             )
 
         return Table(
-            data=self.data,
-            index=self.index,
-            columns=self.columns,
-            **self.meta,
-        )
-
-    def read_exp(self):
-        """_summary_."""
-        return ExposureTable(
             data=self.data,
             index=self.index,
             columns=self.columns,
@@ -805,12 +820,6 @@ class GeomSource(_BaseIO, _BaseStruct):
     ```
     """
 
-    _type_map = {
-        "int": ogr.OFTInteger64,
-        "float": ogr.OFTReal,
-        "str": ogr.OFTString,
-    }
-
     def __new__(
         cls,
         file: str,
@@ -831,20 +840,27 @@ class GeomSource(_BaseIO, _BaseStruct):
         _BaseStruct.__init__(self)
         _BaseIO.__init__(self, file, mode)
 
-        if self.path.suffix not in GEOM_DRIVER_MAP:
-            raise DriverNotFoundError("")
+        if mode == "r":
+            _map = GEOM_READ_DRIVER_MAP
+        else:
+            _map = GEOM_WRITE_DRIVER_MAP
 
-        driver = GEOM_DRIVER_MAP[self.path.suffix]
+        if self.path.suffix not in _map:
+            raise DriverNotFoundError(gog="Geometry", path=self.path)
+
+        driver = _map[self.path.suffix]
 
         self._driver = ogr.GetDriverByName(driver)
+        info = gdal.VSIStatL(self.path.as_posix())
 
-        if self.path.exists() and not overwrite:
+        if (self.path.exists() or info is not None) and not overwrite:
             self.src = self._driver.Open(self.path.as_posix(), self._mode)
         else:
             if not self._mode:
                 raise OSError(f"Cannot create {self.path} in 'read' mode.")
-            self.src = self._driver.CreateDataSource(self.path.as_posix())
+            self.create(self.path)
 
+        info = None
         self._count = 0
         self._cur_index = 0
 
@@ -933,12 +949,15 @@ class GeomSource(_BaseIO, _BaseStruct):
                 yield ft
             _c += 1
 
-    def reopen(self):
+    def reopen(
+        self,
+        mode: str = "r",
+    ):
         """Reopen a closed GeomSource."""
         if not self._closed:
             return self
-        obj = GeomSource.__new__(GeomSource, self.path)
-        obj.__init__(self.path)
+        obj = GeomSource.__new__(GeomSource, self.path, mode=mode)
+        obj.__init__(self.path, mode=mode)
         return obj
 
     @property
@@ -970,6 +989,16 @@ class GeomSource(_BaseIO, _BaseStruct):
 
     @property
     @_BaseIO._check_state
+    def dtypes(self):
+        """_summary_."""
+        if self.layer is not None:
+            _flds = self.layer.GetLayerDefn()
+            dt = [_flds.GetFieldDefn(_i).type for _i in range(_flds.GetFieldCount())]
+            _flds = None
+            return dt
+
+    @property
+    @_BaseIO._check_state
     def fields(self):
         """Return the names of the fields."""
         if self.layer is not None:
@@ -982,10 +1011,16 @@ class GeomSource(_BaseIO, _BaseStruct):
 
     @property
     @_BaseIO._check_state
+    def geom_type(self):
+        """Return the geometry type."""
+        return self.layer.GetGeomType()
+
+    @property
+    @_BaseIO._check_state
     def size(
         self,
     ):
-        """_summary_."""
+        """Return the size (geometry count)."""
         if self.layer is not None:
             count = self.layer.GetFeatureCount()
             self._count = count
@@ -1001,12 +1036,41 @@ class GeomSource(_BaseIO, _BaseStruct):
 
         Only in write (`'w'`) mode.
 
+        Note! Everything needs to already be compliant with the created/ edited
+        dataset.
+
         Parameters
         ----------
         ft : ogr.Feature
             A feature object defined by OGR.
         """
         self.layer.CreateFeature(ft)
+
+    @_BaseIO._check_mode
+    @_BaseIO._check_state
+    def add_feature_with_map(
+        self,
+        in_ft: ogr.Feature,
+        fmap: zip,
+    ):
+        """Add a feature with extra field data.
+
+        Parameters
+        ----------
+        in_ft : ogr.Feature
+            The feature to be added.
+        fmap : zip
+            Extra fields data, i.e. a zip object of fields id's
+            and the correspondingv alues
+        """
+        ft = ogr.Feature(self.layer.GetLayerDefn())
+        ft.SetFrom(in_ft)
+
+        for key, item in fmap:
+            ft.SetField(key, item)
+
+        self.layer.CreateFeature(ft)
+        ft = None
 
     @_BaseIO._check_mode
     @_BaseIO._check_state
@@ -1039,10 +1103,26 @@ class GeomSource(_BaseIO, _BaseStruct):
 
     @_BaseIO._check_mode
     @_BaseIO._check_state
+    def create(
+        self,
+        path: Path | str,
+    ):
+        """Create a data source.
+
+        Parameters
+        ----------
+        path : Path | str
+            Path to the data source.
+        """
+        self.src = None
+        self.src = self._driver.CreateDataSource(path.as_posix())
+
+    @_BaseIO._check_mode
+    @_BaseIO._check_state
     def create_field(
         self,
         name: str,
-        type: object,
+        type: int,
     ):
         """Add a new field.
 
@@ -1052,13 +1132,13 @@ class GeomSource(_BaseIO, _BaseStruct):
         ----------
         name : str
             Name of the new field.
-        type : object
+        type : int
             Type of the new field.
         """
         self.layer.CreateField(
             ogr.FieldDefn(
                 name,
-                GeomSource._type_map[type],
+                type,
             )
         )
         self._retrieve_columns()
@@ -1080,10 +1160,7 @@ class GeomSource(_BaseIO, _BaseStruct):
             are the data types of the new field.
         """
         self.layer.CreateFields(
-            [
-                ogr.FieldDefn(key, GeomSource._type_map[item])
-                for key, item in fmap.items()
-            ]
+            [ogr.FieldDefn(key, item) for key, item in fmap.items()]
         )
         self._retrieve_columns()
 
@@ -1435,10 +1512,7 @@ multiple variables.
     @property
     @_BaseIO._check_state
     def size(self):
-        """_summary_.
-
-        _extended_summary_
-        """
+        """Return the number of bands."""
         count = self.src.RasterCount
         self._count = count
         return self._count
@@ -1507,7 +1581,7 @@ multiple variables.
         for n in range(self.size):
             name = self.get_band_name(n + 1)
             if not name:
-                _names.append(f"Band{n+1}")
+                _names.append(f"band{n+1}")
                 continue
             _names.append(name)
 
@@ -1623,7 +1697,6 @@ class _Table(_BaseStruct, metaclass=ABCMeta):
     ) -> object:
         """_summary_."""
         # Declarations
-        self._dup_cols = None
         self.dtypes = ()
         self.meta = kwargs
         self.index_col = -1
@@ -1647,11 +1720,7 @@ class _Table(_BaseStruct, metaclass=ABCMeta):
             columns = [f"col_{num}" for num in range(kwargs["ncol"])]
 
         # Some checking in regards to duplicates in column headers
-        if len(set(columns)) != len(columns):
-            _set = list(set(columns))
-            _counts = [columns.count(elem) for elem in _set]
-            _dup = [elem for _i, elem in enumerate(_set) if _counts[_i] > 1]
-            self._dup_cols = _dup
+        self.columns_raw = columns
 
         # Create the column indexing
         self._columns = dict(zip(columns, range(kwargs["ncol"])))
@@ -1906,7 +1975,7 @@ class TableLazy(_Table):
     ----------
     data : BufferHandler
         A stream.
-    index : strortuple, optional
+    index : str | tuple, optional
         The index column used as row indices.
     columns : list, optional
         The column headers of the table.
@@ -2020,124 +2089,6 @@ class TableLazy(_Table):
         self.data = dict(zip(new_index, self.data.values()))
 
 
-class ExposureTable(TableLazy):
-    """Create a table just for exposure data.
-
-    Parameters
-    ----------
-    data : BufferHandler
-        A stream.
-    index : strortuple, optional
-        The index column used as row indices.
-    columns : list, optional
-        The column headers of the table.
-
-    Returns
-    -------
-    object
-        An object containing a connection via a stream to a file.
-    """
-
-    def __init__(
-        self,
-        data: BufferHandler,
-        index: str | tuple = None,
-        columns: list = None,
-        **kwargs,
-    ):
-        TableLazy.__init__(
-            self,
-            data,
-            index,
-            columns,
-            **kwargs,
-        )
-
-        _dc_cols = ["Damage Function:", "Max Potential Damage"]
-
-        for req in _dc_cols:
-            req_s = req.strip(":").lower().replace(" ", "_")
-            self.__setattr__(
-                req_s,
-                dict(
-                    [
-                        (item.split(":")[1].strip(), self._columns[item])
-                        for item in self.columns
-                        if item.startswith(req)
-                    ]
-                ),
-            )
-
-        self._blueprint_columns = (
-            ["Inundation Depth", "Reduction Factor"]
-            + [f"Damage: {item}" for item in self.damage_function.keys()]
-            + ["Total Damage"]
-        )
-
-        self._dat_len = len(self._blueprint_columns)
-
-    def create_specific_columns(self, name: str):
-        """Generate new columns for output data.
-
-        Parameters
-        ----------
-        name : str
-            Exposure identifier.
-
-        Returns
-        -------
-        list
-            A list containing new columns.
-        """
-        _out = []
-        if name:
-            name = f"({name})"
-        for bp in self._blueprint_columns:
-            # _parts = bp.split(":")
-
-            # if len(_parts) == 1:
-            #     bp += f" {name}"
-            #     _out.append(bp)
-            #     continue
-
-            bp += f" {name}"
-            _out.append(bp.strip())
-
-        return _out
-
-    def create_all_columns(
-        self,
-        names: list,
-        extra: list = None,
-    ):
-        """Append existing columns of exposure database.
-
-        Parameters
-        ----------
-        names : list
-            Exposure identifiers.
-        extra : list, optional
-            Extra specified columns.
-
-        Returns
-        -------
-        list
-            List containing all columns.
-        """
-        cols = []
-        for n in names:
-            cols += self.create_specific_columns(n)
-
-        if extra is not None:
-            cols += extra
-
-        return cols
-
-    def gen_dat_dtypes(self):
-        """Generate dtypes for the new columns."""
-        return ",".join(["float"] * self._dat_len).encode()
-
-
 ## I/O mutating methods
 def merge_geom_layers(
     out_fn: Path | str,
@@ -2237,42 +2188,6 @@ def open_csv(
     return parser.read(
         large=large,
     )
-
-
-def open_exp(
-    file: Path | str,
-    delimiter: str = ",",
-    header: bool = True,
-    index: str = None,
-):
-    """_summary_.
-
-    _extended_summary_
-
-    Parameters
-    ----------
-    file : str
-        _description_
-    header : bool, optional
-        _description_, by default True
-    index : str, optional
-        _description_, by default None
-
-    Returns
-    -------
-    _type_
-        _description_
-    """
-    _handler = BufferHandler(file)
-
-    parser = CSVParser(
-        _handler,
-        delimiter,
-        header,
-        index,
-    )
-
-    return parser.read_exp()
 
 
 def open_geom(
