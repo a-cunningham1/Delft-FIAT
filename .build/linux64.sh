@@ -58,7 +58,7 @@ fi
 # Setting up..
 echo "INFO: Locating $bin_var"
 paths=$(which -a $bin_var)
-executable=$(echo "$paths" | grep "^$HOME")
+executable=$(echo "$paths" | grep "^$HOME" | head -n 1)
 
 if [ -z "$executable" ] && [ $bin_var != "conda" ]; then
   echo "Cannot find binary for: $bin_var"
