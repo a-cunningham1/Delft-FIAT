@@ -7,7 +7,7 @@ from multiprocessing import freeze_support
 
 from fiat.cfg import ConfigReader
 from fiat.cli.formatter import MainHelpFormatter
-from fiat.cli.util import file_path_check, run_log
+from fiat.cli.util import file_path_check, run_log, run_profiler
 from fiat.log import check_loglevel, setup_default_log
 from fiat.main import FIAT
 from fiat.version import __version__
@@ -77,7 +77,10 @@ def run(args):
 
     # Kickstart the model
     obj = FIAT(cfg)
-    run_log(obj.run, logger=logger)
+    if args.profile is not None:
+        run_profiler(obj.run, profile=args.profile, cfg=cfg, logger=logger)
+    else:
+        run_log(obj.run, logger=logger)
 
 
 ## Constructing the arguments parser for FIAT.
@@ -156,6 +159,13 @@ def args_parser():
         help="Increase output verbosity",
         action="count",
         default=0,
+    )
+    run_parser.add_argument(
+        "-p",
+        "--profile",
+        help="Run profiler",
+        action="store_const",
+        const="profile",
     )
     run_parser.set_defaults(func=run)
     return parser

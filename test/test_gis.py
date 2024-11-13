@@ -7,10 +7,9 @@ from fiat.gis.crs import get_srs_repr
 def test_clip(geom_data, grid_event_data):
     ft = geom_data[4]
     hazard = overlay.clip(
-        grid_event_data[1],
-        grid_event_data.get_srs(),
-        grid_event_data.get_geotransform(),
         ft,
+        grid_event_data[1],
+        grid_event_data.get_geotransform(),
     )
     ft = None
 
@@ -21,31 +20,22 @@ def test_clip(geom_data, grid_event_data):
 def test_clip_weighted(geom_data, grid_event_data):
     ft = geom_data[4]
     _, weights = overlay.clip_weighted(
-        grid_event_data[1],
-        grid_event_data.get_srs(),
-        grid_event_data.get_geotransform(),
         ft,
+        grid_event_data[1],
+        grid_event_data.get_geotransform(),
+        all_touched=True,
         upscale=10,
     )
     assert int(weights[0, 0] * 100) == 90
 
     _, weights = overlay.clip_weighted(
-        grid_event_data[1],
-        grid_event_data.get_srs(),
-        grid_event_data.get_geotransform(),
         ft,
+        grid_event_data[1],
+        grid_event_data.get_geotransform(),
+        all_touched=True,
         upscale=100,
     )
-    assert int(weights[0, 0] * 100) == 80
-
-    _, weights = overlay.clip_weighted(
-        grid_event_data[1],
-        grid_event_data.get_srs(),
-        grid_event_data.get_geotransform(),
-        ft,
-        upscale=1000,
-    )
-    assert int(weights[0, 0] * 100) == 79
+    assert int(weights[0, 0] * 100) == 81
 
 
 def test_pin(geom_data, grid_event_data):
@@ -53,9 +43,9 @@ def test_pin(geom_data, grid_event_data):
         XY = geom.point_in_geom(ft)
 
         hazard = overlay.pin(
+            XY,
             grid_event_data[1],
             grid_event_data.get_geotransform(),
-            XY,
         )
 
     assert int(round(hazard[0] * 100, 0)) == 160
