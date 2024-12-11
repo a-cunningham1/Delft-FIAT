@@ -107,6 +107,122 @@ be used. Check input for these columns: {cols}"
 
 
 ## GIS
+########################### Print clipped exposure data: If exposure input is beyond the hazard extent it is clipped
+# def clip_exposure_to_hazard(hazard_ds, exposure_ds, output_path="clipped_exposure.tif"):
+#     """
+#     Clips the exposure grid to match the hazard grid extent.
+#
+#     Args:
+#         hazard_ds (gdal.Dataset): Hazard dataset.
+#         exposure_ds (gdal.Dataset): Exposure dataset.
+#         output_path (str): Path to save the clipped exposure grid.
+#
+#     Returns:
+#         gdal.Dataset: Clipped exposure dataset.
+#     """
+#     if not isinstance(hazard_ds, gdal.Dataset):
+#         raise ValueError("Hazard grid is not a valid GDAL Dataset.")
+#     if not isinstance(exposure_ds, gdal.Dataset):
+#         raise ValueError("Exposure grid is not a valid GDAL Dataset.")
+#
+#     # Extract the extent and geotransform of the hazard dataset
+#     hazard_gt = hazard_ds.GetGeoTransform()
+#     hazard_x_min = hazard_gt[0]
+#     hazard_y_max = hazard_gt[3]
+#     hazard_x_max = hazard_x_min + hazard_gt[1] * hazard_ds.RasterXSize
+#     hazard_y_min = hazard_y_max + hazard_gt[5] * hazard_ds.RasterYSize
+#
+#     hazard_extent = (hazard_x_min, hazard_y_min, hazard_x_max, hazard_y_max)
+#
+#     logger.info(f"Hazard extent: {hazard_extent}")
+#     if hazard_extent[0] >= hazard_extent[2] or hazard_extent[1] >= hazard_extent[3]:
+#         raise RuntimeError(f"Invalid hazard extent: {hazard_extent}")
+#
+#     # Define GDAL warp options for clipping
+#     warp_options = gdal.WarpOptions(
+#         format="GTiff",
+#         outputBounds=hazard_extent,
+#         xRes=hazard_gt[1],
+#         yRes=abs(hazard_gt[5]),
+#         dstSRS=hazard_ds.GetProjection(),
+#         resampleAlg="nearest"
+#     )
+#
+#     logger.info("Clipping exposure grid to match the hazard grid extent.")
+#
+#     # Perform the warp
+#     gdal.Warp(output_path, exposure_ds, options=warp_options)
+#
+#     # Open the saved clipped dataset
+#     clipped_exposure_ds = gdal.Open(output_path)
+#     if clipped_exposure_ds is None:
+#         logger.error("gdal.Warp failed to produce a valid clipped dataset.")
+#         raise RuntimeError("Failed to clip the exposure grid to the hazard grid extent.")
+#
+#     logger.info(f"Clipped exposure grid saved to: {output_path}")
+#
+#     return clipped_exposure_ds
+
+#######################################################
+##### New check_grid_exact function that checks if exposure grid is larger than the hazard grid
+# def check_grid_exact(haz, exp):
+#     """
+#     Ensure the exposure grid matches the hazard grid in extent and CRS.
+#
+#     Args:
+#         haz (fiat.io.GridSource or gdal.Dataset): Hazard grid dataset.
+#         exp (fiat.io.GridSource or gdal.Dataset): Exposure grid dataset.
+#
+#     Returns:
+#         tuple: Updated hazard and exposure grids as GDAL Datasets.
+#     """
+#     # Extract GDAL Dataset from GridSource if needed
+#     def to_gdal_dataset(grid):
+#         if isinstance(grid, gdal.Dataset):
+#             return grid
+#         elif hasattr(grid, "src") and isinstance(grid.src, gdal.Dataset):
+#             logger.info("Using 'src' attribute to extract GDAL Dataset.")
+#             return grid.src
+#         elif hasattr(grid, "path"):
+#             logger.info(f"Opening dataset from path: {grid.path}")
+#             dataset = gdal.Open(grid.path)
+#             if dataset is not None:
+#                 return dataset
+#         raise ValueError(f"Unable to extract GDAL Dataset from: {type(grid)}")
+#
+#     # Convert hazard and exposure grids to GDAL datasets
+#     haz = to_gdal_dataset(haz)
+#     exp = to_gdal_dataset(exp)
+#
+#     # Check CRS compatibility
+#     if haz.GetProjection() != exp.GetProjection():
+#         logger.error("Spatial reference systems (CRS) do not match.")
+#         sys.exit(1)
+#
+#     # Get dimensions
+#     haz_shape = (haz.RasterYSize, haz.RasterXSize)
+#     exp_shape = (exp.RasterYSize, exp.RasterXSize)
+#
+#     logger.info(f"Hazard grid shape: {haz_shape}")
+#     logger.info(f"Exposure grid shape: {exp_shape}")
+#
+#     # Clip exposure grid if it's larger than the hazard grid
+#     if exp_shape[0] > haz_shape[0] or exp_shape[1] > haz_shape[1]:
+#         logger.warning("Exposure grid is larger than the hazard grid. Clipping it.")
+#         exp = clip_exposure_to_hazard(haz, exp)
+#
+#     # Check if exposure grid is smaller than the hazard grid
+#     if exp_shape[0] < haz_shape[0] or exp_shape[1] < haz_shape[1]:
+#         logger.warning("Exposure grid is smaller than the hazard grid. No clipping performed.")
+#
+#     return haz, exp
+
+
+
+
+
+
+###########################
 def check_grid_exact(
     haz,
     exp,
